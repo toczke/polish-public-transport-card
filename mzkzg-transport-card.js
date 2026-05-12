@@ -104,13 +104,13 @@ const CARD_CSS = `
 * { box-sizing: border-box; margin: 0; padding: 0; }
 ha-card { overflow: hidden; font-family: var(--ha-card-header-font-family, inherit); }
 .header {
-  padding: 10px 14px; display: flex; align-items: center; gap: 10px; user-select: none;
+  padding: 8px 12px; display: flex; align-items: center; gap: 8px; user-select: none;
 }
-.header-icon { display: flex; align-items: center; justify-content: center; flex-shrink: 0; width: 28px; height: 28px; color: #fff; }
-.header-icon svg { width: 22px; height: 22px; }
+.header-icon { display: flex; align-items: center; justify-content: center; flex-shrink: 0; width: 24px; height: 24px; color: #fff; }
+.header-icon svg { width: 18px; height: 18px; }
 .header-body { flex: 1; min-width: 0; }
-.header-title { color: #fff; font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.header-sub { color: rgba(255,255,255,0.72); font-size: 11px; margin-top: 1px; }
+.header-title { color: #fff; font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.header-sub { color: rgba(255,255,255,0.72); font-size: 10px; margin-top: 1px; }
 .dep-list { list-style: none; }
 .dep-row { transition: opacity 0.4s, max-height 0.4s, padding 0.4s; max-height: 80px; overflow: hidden; }
 .dep-row.departing { opacity: 0; max-height: 0; padding-top: 0; padding-bottom: 0; }
