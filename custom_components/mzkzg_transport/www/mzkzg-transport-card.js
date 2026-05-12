@@ -140,6 +140,9 @@ ha-card.e-ink .dep-row { transition: none; }
 .icons svg { color: var(--secondary-text-color, #666); opacity: 0.8; }
 .stop-name { display: block; font-size: 10px; color: var(--secondary-text-color, #888); font-weight: 400; margin-top: 1px; width: 100%; }
 ha-card.compact .stop-name { display: none; }
+ha-card.compact .icons { display: none; }
+ha-card.compact .platform { display: none; }
+ha-card.compact .footer { display: none; }
 .dep-row.cancelled .headsign { text-decoration: line-through; opacity: 0.6; }
 .dep-row.cancelled .badge { opacity: 0.5; }
 .time-main.cancelled { font-size: 12px; color: #dc2626; font-weight: 600; }
