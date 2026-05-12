@@ -725,7 +725,8 @@ class MzkzgTransportCard extends HTMLElement {
     }
     if (!latest) return "";
     const d = new Date(latest);
-    return d.toLocaleTimeString("pl-PL", {hour:"2-digit", minute:"2-digit", second:"2-digit"});
+    const time = d.toLocaleTimeString("pl-PL", {hour:"2-digit", minute:"2-digit", second:"2-digit"});
+    return `Aktualizacja: ${time}`;
   }
 
   _renderTabs() {
