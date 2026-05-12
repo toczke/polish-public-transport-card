@@ -267,6 +267,7 @@ class MzkzgTransportCardEditor extends HTMLElement {
       show_bike: checked("show_bike"),
       show_wheelchair: checked("show_wheelchair"),
       show_ac: checked("show_ac"),
+      show_ticket_machine: checked("show_ticket_machine"),
       refresh_interval: parseInt(val("refresh_interval")) || 60,
     };
 
@@ -420,9 +421,10 @@ class MzkzgTransportCardEditor extends HTMLElement {
           <div class="switch-list">
             <div class="switch-row"><label for="show_delays">Opóźnienia</label><input id="show_delays" type="checkbox" ${c.show_delays !== false ? "checked" : ""}/></div>
             <div class="switch-row"><label for="show_footer">Czas aktualizacji</label><input id="show_footer" type="checkbox" ${c.show_footer !== false ? "checked" : ""}/></div>
-            <div class="switch-row"><label for="show_bike">Ikona roweru</label><input id="show_bike" type="checkbox" ${c.show_bike !== false ? "checked" : ""}/></div>
-            <div class="switch-row"><label for="show_wheelchair">Ikona wózka</label><input id="show_wheelchair" type="checkbox" ${c.show_wheelchair !== false ? "checked" : ""}/></div>
-            <div class="switch-row"><label for="show_ac">Ikona klimatyzacji</label><input id="show_ac" type="checkbox" ${c.show_ac !== false ? "checked" : ""}/></div>
+            <div class="switch-row"><label for="show_bike">Miejsce na rower</label><input id="show_bike" type="checkbox" ${c.show_bike !== false ? "checked" : ""}/></div>
+            <div class="switch-row"><label for="show_wheelchair">Miejsce na wózek</label><input id="show_wheelchair" type="checkbox" ${c.show_wheelchair !== false ? "checked" : ""}/></div>
+            <div class="switch-row"><label for="show_ac">Klimatyzacja</label><input id="show_ac" type="checkbox" ${c.show_ac !== false ? "checked" : ""}/></div>
+            <div class="switch-row"><label for="show_ticket_machine">Biletomat</label><input id="show_ticket_machine" type="checkbox" ${c.show_ticket_machine !== false ? "checked" : ""}/></div>
           </div>
           <div class="field" style="margin-top:8px">
             <label for="refresh_interval">Odświeżanie (s)</label>
@@ -486,9 +488,8 @@ class MzkzgTransportCard extends HTMLElement {
   }
 
   setConfig(config) {
-    if (!config.entities || !config.entities.length) {
-      // Allow empty for editor preview
-    }
+    if (!config) throw new Error("No configuration provided");
+    if (config.entities && !Array.isArray(config.entities)) throw new Error("entities must be an array");
     this._config = {
       ...config,
       max_departures: Math.max(3, Math.min(20, parseInt(config.max_departures) || 10)),
@@ -502,6 +503,7 @@ class MzkzgTransportCard extends HTMLElement {
       show_bike: config.show_bike !== false,
       show_wheelchair: config.show_wheelchair !== false,
       show_ac: config.show_ac !== false,
+      show_ticket_machine: config.show_ticket_machine !== false,
       show_stop_name: config.show_stop_name === true,
       destination_filter: Array.isArray(config.destination_filter) ? config.destination_filter : (config.destination_filter ? String(config.destination_filter).split(",").map(s=>s.trim()).filter(Boolean) : []),
       filter_platform: config.filter_platform || "",
@@ -810,7 +812,7 @@ class MzkzgTransportCard extends HTMLElement {
       if (c.show_wheelchair && d.wheelchair_accessible === true) icons.push(`<ha-icon icon="mdi:wheelchair-accessibility" style="--mdc-icon-size:14px" title="Wózek"></ha-icon>`);
       if (c.show_ac && d.air_conditioning === true) icons.push(`<ha-icon icon="mdi:snowflake" style="--mdc-icon-size:14px" title="Klimatyzacja"></ha-icon>`);
       if (d.usb === true) icons.push(`<ha-icon icon="mdi:usb" style="--mdc-icon-size:14px" title="USB"></ha-icon>`);
-      if (d.ticket_machine === true) icons.push(`<ha-icon icon="mdi:ticket" style="--mdc-icon-size:14px" title="Biletomat"></ha-icon>`);
+      if (d.ticket_machine === true && c.show_ticket_machine) icons.push(`<ha-icon icon="mdi:ticket" style="--mdc-icon-size:14px" title="Biletomat"></ha-icon>`);
       if (icons.length) iconsHTML = `<span class="icons">${icons.join("")}</span>`;
       const vehicleChip = (d.vehicle_code && d.realtime) ? `<span class="platform">${escapeHtml(d.vehicle_code)}</span>` : "";
 

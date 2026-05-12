@@ -34,10 +34,16 @@ class MzkzgTransportSensor(CoordinatorEntity, SensorEntity):
         prov = provider_short.get(entry.data[CONF_PROVIDER], entry.data[CONF_PROVIDER])
         stop = entry.data[CONF_STOP_ID]
         self._attr_unique_id = f"{DOMAIN}_{entry.data[CONF_PROVIDER]}_{stop}"
-        self.entity_id = f"sensor.mzkzg_{prov}_{stop}"
         custom_name = entry.data.get(CONF_NAME, "")
         self._attr_name = custom_name or f"MZKZG {prov.upper()} {stop}"
         self._attr_icon = "mdi:bus-multiple"
+        self._attr_device_info = {
+            "identifiers": {(DOMAIN, f"{entry.data[CONF_PROVIDER]}_{stop}")},
+            "name": custom_name or f"{prov.upper()} {stop}",
+            "manufacturer": "MZKZG Transport",
+            "model": entry.data[CONF_PROVIDER],
+            "entry_type": "service",
+        }
 
     @property
     def native_value(self) -> str | None:

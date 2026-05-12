@@ -49,6 +49,11 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
         hass.data[DOMAIN]["_coordinators"].pop(entry.entry_id, None)
+        # Clean up shared caches if no more entries
+        if not hass.data[DOMAIN]["_coordinators"]:
+            hass.data[DOMAIN].pop("_plk_cache", None)
+            hass.data[DOMAIN].pop("_plk_lock", None)
+            hass.data[DOMAIN].pop("_ztm_fleet", None)
     return unload_ok
 
 

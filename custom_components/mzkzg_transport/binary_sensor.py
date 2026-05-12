@@ -35,10 +35,12 @@ class MzkzgDelayBinarySensor(CoordinatorEntity, BinarySensorEntity):
         prov = provider_short.get(entry.data[CONF_PROVIDER], "")
         stop = entry.data[CONF_STOP_ID]
         self._attr_unique_id = f"{DOMAIN}_{entry.data[CONF_PROVIDER]}_{stop}_delay"
-        self.entity_id = f"binary_sensor.mzkzg_{prov}_{stop}_delay"
         custom_name = entry.data.get(CONF_NAME, "")
         self._attr_name = f"{custom_name or f'{prov.upper()} {stop}'} Delay"
         self._attr_icon = "mdi:clock-alert"
+        self._attr_device_info = {
+            "identifiers": {(DOMAIN, f"{entry.data[CONF_PROVIDER]}_{stop}")},
+        }
 
     @property
     def is_on(self) -> bool | None:
