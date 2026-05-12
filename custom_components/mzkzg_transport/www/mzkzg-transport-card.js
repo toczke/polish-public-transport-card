@@ -666,8 +666,7 @@ class MzkzgTransportCard extends HTMLElement {
       if (s?.attributes?.provider) providers.add(s.attributes.provider);
     }
     if (providers.size === 1 && providers.has("plk_rail")) return `<ha-icon icon="mdi:train" style="color:#fff;--mdc-icon-size:20px"></ha-icon>`;
-    if (providers.size === 1 && providers.has("zkm_gdynia")) return `<ha-icon icon="mdi:bus" style="color:#fff;--mdc-icon-size:20px"></ha-icon>`;
-    return BUS_ICON;
+    return `<ha-icon icon="mdi:bus-stop" style="color:#fff;--mdc-icon-size:20px"></ha-icon>`;
   }
 
   _getHeaderColor() {
