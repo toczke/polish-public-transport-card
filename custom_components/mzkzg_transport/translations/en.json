@@ -1,0 +1,44 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "MZKZG Transport",
+        "description": "Select the transport provider.",
+        "data": {
+          "provider": "Provider"
+        }
+      },
+      "api_key": {
+        "title": "PLK API Key",
+        "description": "Enter your PKP PLK OpenData API key. Get one at https://dane.plk-sa.pl",
+        "data": {
+          "api_key": "API Key"
+        }
+      },
+      "stop": {
+        "title": "Select stop",
+        "description": "Choose a stop from the list or type the ID manually.",
+        "data": {
+          "stop_id": "Stop",
+          "name": "Custom name (optional)"
+        }
+      }
+    },
+    "error": {
+      "invalid_stop_id": "Enter a valid stop ID",
+      "api_key_required": "PLK API key is required"
+    },
+    "abort": {
+      "already_configured": "This stop is already configured"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "data": {
+          "name": "Stop name"
+        }
+      }
+    }
+  }
+}

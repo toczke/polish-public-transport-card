@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MZKZG Transport Card – Dev Preview</title>
+  <style>
+    :root {
+      --primary-color: #005eb8;
+      --primary-text-color: #e5e5e5;
+      --secondary-text-color: #999;
+      --divider-color: #333;
+      --card-background-color: #1c1c1c;
+      --ha-card-header-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    body { font-family: sans-serif; background: #111; margin: 0; padding: 20px; color: #eee; }
+    h1 { font-size: 16px; margin-bottom: 16px; color: #aaa; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 16px; max-width: 1400px; margin: 0 auto; }
+    .label { font-size: 11px; color: #666; margin-bottom: 4px; }
+    ha-card { display: block; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.3); background: var(--card-background-color); }
+  </style>
+</head>
+<body>
+  <h1>MZKZG Transport Card – dev preview (mocked data)</h1>
+  <div class="grid" id="grid"></div>
+
+  <script src="/mzkzg-transport-card.js"></script>
+  <script>
+    function futureISO(minutes) { return new Date(Date.now() + minutes * 60000).toISOString(); }
+
+    const mockHass = { states: {
+      "sensor.mzkzg_ztm_1205": { state: futureISO(2), attributes: {
+        stop_id: "1205", stop_name: "Brama Wyżynna 01", provider: "ztm_gdansk", last_update: new Date().toISOString(),
+        departures: [
+          { route: "154", headsign: "Orunia Górna", estimated_time: futureISO(2), theoretical_time: futureISO(4), delay_seconds: -120, realtime: true, provider: "ztm_gdansk", bike_allowed: null, wheelchair_accessible: null, air_conditioning: null },
+          { route: "132", headsign: "Pruszcz Urząd Skarbowy", estimated_time: futureISO(5), theoretical_time: futureISO(5), delay_seconds: 0, realtime: true, provider: "ztm_gdansk", bike_allowed: null, wheelchair_accessible: null, air_conditioning: null },
+          { route: "289", headsign: "Starogardzka", estimated_time: futureISO(8), theoretical_time: futureISO(6), delay_seconds: 120, realtime: true, provider: "ztm_gdansk", bike_allowed: null, wheelchair_accessible: null, air_conditioning: null },
+          { route: "189", headsign: "Starogardzka", estimated_time: futureISO(12), theoretical_time: futureISO(12), delay_seconds: 0, realtime: false, provider: "ztm_gdansk", bike_allowed: null, wheelchair_accessible: null, air_conditioning: null },
+          { route: "N8", headsign: "Wrzeszcz PKP", estimated_time: futureISO(15), theoretical_time: futureISO(15), delay_seconds: 0, realtime: false, provider: "ztm_gdansk", bike_allowed: null, wheelchair_accessible: null, air_conditioning: null },
+        ]
+      }},
+      "sensor.mzkzg_ztm_2218": { state: futureISO(1), attributes: {
+        stop_id: "2218", stop_name: "Sikorskiego 01", provider: "ztm_gdansk", last_update: new Date().toISOString(),
+        departures: [
+          { route: "2", headsign: "Jelitkowo", estimated_time: futureISO(1), theoretical_time: futureISO(1), delay_seconds: 0, realtime: true, provider: "ztm_gdansk", bike_allowed: null, wheelchair_accessible: null, air_conditioning: null },
+          { route: "3", headsign: "Brzeźno Dom Zdrojowy", estimated_time: futureISO(4), theoretical_time: futureISO(4), delay_seconds: 0, realtime: true, provider: "ztm_gdansk", bike_allowed: null, wheelchair_accessible: null, air_conditioning: null },
+          { route: "10", headsign: "Nowy Port Zajezdnia", estimated_time: futureISO(7), theoretical_time: futureISO(7), delay_seconds: 0, realtime: true, provider: "ztm_gdansk", bike_allowed: null, wheelchair_accessible: null, air_conditioning: null },
+          { route: "92", headsign: "Strzyża PKM", estimated_time: futureISO(11), theoretical_time: futureISO(11), delay_seconds: 0, realtime: true, provider: "ztm_gdansk", bike_allowed: null, wheelchair_accessible: null, air_conditioning: null },
+        ]
+      }},
+      "sensor.mzkzg_zkm_37030": { state: futureISO(3), attributes: {
+        stop_id: "37030", stop_name: "Gdynia Dworzec Gł. PKP 01", provider: "zkm_gdynia", last_update: new Date().toISOString(),
+        departures: [
+          { route: "26", headsign: "Cisowa Sibeliusa 03", estimated_time: futureISO(3), theoretical_time: futureISO(1), delay_seconds: 120, realtime: true, provider: "zkm_gdynia", bike_allowed: null, wheelchair_accessible: null, air_conditioning: null },
+          { route: "22", headsign: "Cisowa SKM 02", estimated_time: futureISO(6), theoretical_time: futureISO(8), delay_seconds: -120, realtime: true, provider: "zkm_gdynia", bike_allowed: null, wheelchair_accessible: null, air_conditioning: null },
+          { route: "141", headsign: "Pogórze Górne 01", estimated_time: futureISO(9), theoretical_time: futureISO(9), delay_seconds: 0, realtime: true, provider: "zkm_gdynia", bike_allowed: null, wheelchair_accessible: null, air_conditioning: null },
+        ]
+      }},
+      "sensor.mzkzg_mzk_292": { state: futureISO(6), attributes: {
+        stop_id: "292", stop_name: "Wejherowo Dworzec PKP 01", provider: "mzk_wejherowo", last_update: new Date().toISOString(),
+        departures: [
+          { route: "1", headsign: "Bolszewo Leśna - Szkoła", estimated_time: futureISO(6), theoretical_time: futureISO(6), delay_seconds: 0, realtime: false, provider: "mzk_wejherowo", bike_allowed: null, wheelchair_accessible: null, air_conditioning: null },
+          { route: "1", headsign: "Wejherowo Os. Fenikowskiego", estimated_time: futureISO(18), theoretical_time: futureISO(18), delay_seconds: 0, realtime: false, provider: "mzk_wejherowo", bike_allowed: null, wheelchair_accessible: null, air_conditioning: null },
+          { route: "4", headsign: "Orle Łąkowa", estimated_time: futureISO(25), theoretical_time: futureISO(25), delay_seconds: 0, realtime: false, provider: "mzk_wejherowo", bike_allowed: null, wheelchair_accessible: null, air_conditioning: null },
+        ]
+      }},
+      "sensor.mzkzg_plk_7534": { state: futureISO(4), attributes: {
+        stop_id: "7534", stop_name: "Gdańsk Wrzeszcz", provider: "plk_rail", last_update: new Date().toISOString(),
+        departures: [
+          { route: "S1", headsign: "Gdynia Główna", estimated_time: futureISO(4), theoretical_time: futureISO(3), delay_seconds: 60, realtime: true, train_number: "95421", carrier: "PKP SKM", platform: "3", provider: "plk_rail", route_stops: ["Gdańsk Wrzeszcz", "Gdańsk Oliwa", "Sopot", "Gdynia Orłowo", "Gdynia Główna"] },
+          { route: "IC", headsign: "Warszawa Centralna", estimated_time: futureISO(9), theoretical_time: futureISO(9), delay_seconds: 0, realtime: true, train_number: "5320", carrier: "PKP Intercity", platform: "1", provider: "plk_rail", route_stops: ["Gdańsk Wrzeszcz", "Tczew", "Malbork", "Warszawa Centralna"] },
+          { route: "R", headsign: "Tczew", estimated_time: futureISO(14), theoretical_time: futureISO(12), delay_seconds: 120, realtime: true, train_number: "78432", carrier: "POLREGIO", platform: "2", provider: "plk_rail", cancelled: false },
+          { route: "S1", headsign: "Wejherowo", estimated_time: futureISO(19), theoretical_time: futureISO(19), delay_seconds: 0, realtime: false, train_number: "95512", carrier: "PKP SKM", platform: "", provider: "plk_rail" },
+          { route: "TLK", headsign: "Kraków Główny", estimated_time: futureISO(22), theoretical_time: futureISO(22), delay_seconds: 0, realtime: false, train_number: "31100", carrier: "PKP Intercity", platform: "", provider: "plk_rail", cancelled: true },
+        ]
+      }},
+    }};
+
+    const cards = [
+      { title: "ZTM Gdańsk (standard)", config: { entities: ["sensor.mzkzg_ztm_1205"], max_departures: 5 } },
+      { title: "ZKM Gdynia", config: { entities: ["sensor.mzkzg_zkm_37030"], max_departures: 5 } },
+      { title: "MZK Wejherowo (no RT)", config: { entities: ["sensor.mzkzg_mzk_292"], max_departures: 4 } },
+      { title: "PLK Rail (SKM/IC/R)", config: { entities: ["sensor.mzkzg_plk_7534"], max_departures: 5 } },
+      { title: "Multi-stop mix (ZTM+ZKM)", config: { entities: ["sensor.mzkzg_ztm_1205", "sensor.mzkzg_zkm_37030"], max_departures: 6 } },
+      { title: "Tabs mode", config: { entities: ["sensor.mzkzg_ztm_2218", "sensor.mzkzg_plk_7534"], view_mode: "tabs", max_departures: 5 } },
+      { title: "Compact preset", config: { entities: ["sensor.mzkzg_ztm_2218", "sensor.mzkzg_zkm_37030"], display_preset: "compact", max_departures: 8 } },
+      { title: "E-ink preset", config: { entities: ["sensor.mzkzg_ztm_1205"], display_preset: "e_ink", max_departures: 6 } },
+      { title: "Highlight mode (131, 154)", config: { entities: ["sensor.mzkzg_ztm_1205"], filter_routes: ["154", "132"], highlight_mode: true, max_departures: 5 } },
+      { title: "Custom color", config: { entities: ["sensor.mzkzg_ztm_2218"], header_color: "#7c3aed", max_departures: 4 } },
+    ];
+
+    const grid = document.getElementById("grid");
+    cards.forEach(({title, config}) => {
+      const wrap = document.createElement("div");
+      wrap.innerHTML = `<div class="label">${title}</div>`;
+      const card = document.createElement("mzkzg-transport-card");
+      card.setConfig({ type: "custom:mzkzg-transport-card", ...config });
+      card.hass = mockHass;
+      wrap.appendChild(card);
+      grid.appendChild(wrap);
+    });
+  </script>
+</body>
+</html>

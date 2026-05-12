@@ -1,0 +1,144 @@
+# MZKZG Transport Card – example configurations
+# Requires mzkzg_transport integration (custom_components/mzkzg_transport)
+# Entity format: sensor.mzkzg_{provider}_{stop_id}
+
+# ── Minimal ───────────────────────────────────────────────────────────────
+type: custom:mzkzg-transport-card
+entities:
+  - sensor.mzkzg_ztm_1327
+
+---
+
+# ── Multi-stop mix (bus + tram same area) ─────────────────────────────────
+type: custom:mzkzg-transport-card
+title: Sikorskiego (tramwaj + bus)
+entities:
+  - sensor.mzkzg_ztm_2218
+  - sensor.mzkzg_ztm_1780
+max_departures: 10
+
+---
+
+# ── Mixed providers (ZTM + ZKM gradient) ──────────────────────────────────
+type: custom:mzkzg-transport-card
+title: Gdańsk + Gdynia
+entities:
+  - sensor.mzkzg_ztm_1205
+  - sensor.mzkzg_zkm_37030
+max_departures: 10
+
+---
+
+# ── All 4 providers ──────────────────────────────────────────────────────
+type: custom:mzkzg-transport-card
+title: Trójmiasto – wszystko
+entities:
+  - sensor.mzkzg_ztm_1205
+  - sensor.mzkzg_zkm_37030
+  - sensor.mzkzg_mzk_292
+  - sensor.mzkzg_plk_7534
+max_departures: 12
+
+---
+
+# ── ZTM + SKM at same location ───────────────────────────────────────────
+type: custom:mzkzg-transport-card
+title: Śródmieście (tramwaj + SKM)
+entities:
+  - sensor.mzkzg_ztm_14464
+  - sensor.mzkzg_plk_258458
+max_departures: 10
+
+---
+
+# ── Tabs mode ─────────────────────────────────────────────────────────────
+type: custom:mzkzg-transport-card
+title: Zakładki
+entities:
+  - sensor.mzkzg_ztm_1205
+  - sensor.mzkzg_zkm_37030
+view_mode: tabs
+max_departures: 8
+
+---
+
+# ── Compact preset ───────────────────────────────────────────────────────
+type: custom:mzkzg-transport-card
+entities:
+  - sensor.mzkzg_ztm_2218
+  - sensor.mzkzg_zkm_35190
+display_preset: compact
+max_departures: 15
+
+---
+
+# ── E-ink preset ─────────────────────────────────────────────────────────
+type: custom:mzkzg-transport-card
+entities:
+  - sensor.mzkzg_ztm_1205
+display_preset: e_ink
+max_departures: 8
+
+---
+
+# ── Route filter ─────────────────────────────────────────────────────────
+type: custom:mzkzg-transport-card
+entities:
+  - sensor.mzkzg_ztm_2218
+filter_routes:
+  - "2"
+  - "3"
+  - "10"
+max_departures: 8
+
+---
+
+# ── Highlight mode (dim non-matching) ────────────────────────────────────
+type: custom:mzkzg-transport-card
+entities:
+  - sensor.mzkzg_ztm_1205
+filter_routes:
+  - "131"
+  - "154"
+highlight_mode: true
+max_departures: 8
+
+---
+
+# ── Destination filter ───────────────────────────────────────────────────
+type: custom:mzkzg-transport-card
+entities:
+  - sensor.mzkzg_zkm_37030
+destination_filter:
+  - "Cisowa"
+  - "Rumia"
+max_departures: 8
+
+---
+
+# ── Custom header color ──────────────────────────────────────────────────
+type: custom:mzkzg-transport-card
+entities:
+  - sensor.mzkzg_ztm_2091
+header_color: "#7c3aed"
+max_departures: 6
+
+---
+
+# ── Realtime only + no footer ────────────────────────────────────────────
+type: custom:mzkzg-transport-card
+entities:
+  - sensor.mzkzg_ztm_1205
+realtime_only: true
+show_footer: false
+show_delays: true
+max_departures: 8
+
+---
+
+# ── PLK only (SKM) ──────────────────────────────────────────────────────
+type: custom:mzkzg-transport-card
+entities:
+  - sensor.mzkzg_plk_7534
+title: SKM Gdańsk Wrzeszcz
+max_departures: 8

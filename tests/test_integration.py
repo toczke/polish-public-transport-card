@@ -1,0 +1,239 @@
+"""Tests for MZKZG Transport integration."""
+
+import asyncio
+from datetime import datetime, timedelta
+from unittest.mock import patch, MagicMock
+
+import pytest
+from aioresponses import aioresponses
+
+from mzkzg_transport.const import (
+    DOMAIN,
+    PROVIDER_ZKM,
+    PROVIDER_ZTM,
+    ZKM_GDYNIA_DELAYS_URL,
+    ZKM_GDYNIA_ROUTES_URL,
+    ZTM_GDANSK_DEPARTURES_URL,
+)
+from mzkzg_transport.coordinator import MzkzgTransportCoordinator
+
+
+# ── Patch HA frame helper globally ───────────────────────────────────────────
+
+@pytest.fixture(autouse=True)
+def patch_ha_frame():
+    """Patch HA frame helper."""
+    with patch("homeassistant.helpers.frame.report_usage"):
+        yield
+
+
+@pytest.fixture(autouse=True)
+def patch_session():
+    """Make coordinator._get_session return a fresh aiohttp.ClientSession (intercepted by aioresponses)."""
+    import aiohttp
+
+    original_get = MzkzgTransportCoordinator._get_session
+
+    async def _patched_get(self):
+        return aiohttp.ClientSession()
+
+    with patch.object(MzkzgTransportCoordinator, "_get_session", _patched_get):
+        yield
+
+
+@pytest.fixture
+def mock_hass():
+    """Create a minimal hass mock."""
+    hass = MagicMock()
+    hass.data = {}
+    return hass
+
+
+# ── ZTM Gdańsk tests ────────────────────────────────────────────────────────
+
+@pytest.fixture
+def ztm_response():
+    now = datetime.now()
+    return {
+        "departures": [
+            {
+                "routeShortName": "131",
+                "headsign": "Oliwa PKP",
+                "estimatedTime": (now + timedelta(minutes=3)).isoformat(),
+                "theoreticalTime": (now + timedelta(minutes=2)).isoformat(),
+                "delayInSeconds": 60,
+                "status": "REALTIME",
+                "wheelchairAccessible": True,
+                "bikeAllowed": False,
+            },
+            {
+                "routeShortName": "9",
+                "headsign": "Jelitkowo",
+                "estimatedTime": (now + timedelta(minutes=8)).isoformat(),
+                "theoreticalTime": (now + timedelta(minutes=8)).isoformat(),
+                "delayInSeconds": 0,
+                "status": "REALTIME",
+                "wheelchairAccessible": True,
+                "bikeAllowed": True,
+            },
+            {
+                "routeShortName": "N8",
+                "headsign": "Wrzeszcz",
+                "estimatedTime": (now - timedelta(minutes=5)).isoformat(),
+                "theoreticalTime": (now - timedelta(minutes=5)).isoformat(),
+                "delayInSeconds": 0,
+                "status": "SCHEDULED",
+            },
+        ]
+    }
+
+
+@pytest.mark.asyncio
+async def test_ztm_fetch_departures(mock_hass, ztm_response):
+    """Test ZTM Gdańsk departure fetching and parsing."""
+    coordinator = MzkzgTransportCoordinator(mock_hass, "1327", PROVIDER_ZTM, "Test Stop")
+
+    with aioresponses() as m:
+        m.get(f"{ZTM_GDANSK_DEPARTURES_URL}?stopId=1327", payload=ztm_response)
+        result = await coordinator._fetch_ztm()
+
+    assert result["provider"] == PROVIDER_ZTM
+    assert result["stop_id"] == "1327"
+    assert result["stop_name"] == "Test Stop"
+    # Should filter out the departed one (N8, -5 min)
+    assert len(result["departures"]) == 2
+    assert result["departures"][0]["route"] == "131"
+    assert result["departures"][0]["realtime"] is True
+    assert result["departures"][0]["delay_seconds"] == 60
+    assert result["departures"][0]["wheelchair_accessible"] is True
+    assert result["departures"][0]["bike_allowed"] is False
+    assert result["departures"][1]["route"] == "9"
+    assert result["departures"][1]["bike_allowed"] is True
+    assert result["departures"][0]["vehicle_type"] == "bus"
+    assert result["departures"][1]["vehicle_type"] == "tram"
+
+
+
+@pytest.mark.asyncio
+async def test_ztm_vehicle_type():
+    """Test vehicle type detection for ZTM."""
+    assert MzkzgTransportCoordinator._ztm_vehicle_type("9") == "tram"
+    assert MzkzgTransportCoordinator._ztm_vehicle_type("12") == "tram"
+    assert MzkzgTransportCoordinator._ztm_vehicle_type("99") == "tram"
+    assert MzkzgTransportCoordinator._ztm_vehicle_type("100") == "bus"
+    assert MzkzgTransportCoordinator._ztm_vehicle_type("131") == "bus"
+    assert MzkzgTransportCoordinator._ztm_vehicle_type("N8") == "bus"
+
+
+# ── ZKM Gdynia tests ────────────────────────────────────────────────────────
+
+@pytest.fixture
+def zkm_routes_response():
+    return [
+        {"routeId": 1, "routeShortName": "21"},
+        {"routeId": 2, "routeShortName": "22"},
+        {"routeId": 3, "routeShortName": "181"},
+    ]
+
+
+@pytest.fixture
+def zkm_delays_response():
+    now = datetime.now()
+    return {
+        "delay": [
+            {
+                "routeId": 1,
+                "headsign": "Dworzec Główny",
+                "estimatedTime": (now + timedelta(minutes=5)).strftime("%H:%M:%S"),
+                "theoreticalTime": (now + timedelta(minutes=4)).strftime("%H:%M:%S"),
+                "delayInSeconds": 60,
+                "status": "REALTIME",
+            },
+            {
+                "routeId": 3,
+                "headsign": "Obłuże",
+                "estimatedTime": (now + timedelta(minutes=12)).strftime("%H:%M:%S"),
+                "theoreticalTime": (now + timedelta(minutes=12)).strftime("%H:%M:%S"),
+                "delayInSeconds": 0,
+                "status": "REALTIME",
+            },
+        ]
+    }
+
+
+@pytest.mark.asyncio
+async def test_zkm_fetch_departures(mock_hass, zkm_routes_response, zkm_delays_response):
+    """Test ZKM Gdynia departure fetching and parsing."""
+    coordinator = MzkzgTransportCoordinator(mock_hass, "38220", PROVIDER_ZKM, "Chylonia")
+
+    with aioresponses() as m:
+        m.get(ZKM_GDYNIA_ROUTES_URL, payload=zkm_routes_response)
+        m.get(f"{ZKM_GDYNIA_DELAYS_URL}?stopId=38220", payload=zkm_delays_response)
+        result = await coordinator._fetch_zkm()
+
+    assert result["provider"] == PROVIDER_ZKM
+    assert result["stop_id"] == "38220"
+    assert len(result["departures"]) == 2
+    assert result["departures"][0]["route"] == "21"
+    assert result["departures"][0]["headsign"] == "Dworzec Główny"
+    assert result["departures"][0]["realtime"] is True
+    assert result["departures"][0]["vehicle_type"] == "trolleybus"
+    assert result["departures"][1]["route"] == "181"
+    assert result["departures"][1]["vehicle_type"] == "bus"
+
+
+
+@pytest.mark.asyncio
+async def test_zkm_vehicle_type():
+    """Test vehicle type detection for ZKM."""
+    assert MzkzgTransportCoordinator._zkm_vehicle_type("21") == "trolleybus"
+    assert MzkzgTransportCoordinator._zkm_vehicle_type("25") == "trolleybus"
+    assert MzkzgTransportCoordinator._zkm_vehicle_type("181") == "bus"
+    assert MzkzgTransportCoordinator._zkm_vehicle_type("N21") == "bus"
+
+
+# ── Constant and import tests ────────────────────────────────────────────────
+
+def test_const_values():
+    """Test that constants are properly defined."""
+    assert DOMAIN == "mzkzg_transport"
+    assert "zdiz.gdynia.pl" in ZKM_GDYNIA_DELAYS_URL
+    assert "multimediagdansk.pl" in ZTM_GDANSK_DEPARTURES_URL
+
+
+def test_import_all_modules():
+    """Test that all modules can be imported."""
+    from mzkzg_transport import const
+    from mzkzg_transport import coordinator
+    from mzkzg_transport import config_flow
+    from mzkzg_transport import sensor
+    assert const.DOMAIN == "mzkzg_transport"
+
+
+@pytest.mark.asyncio
+async def test_ztm_empty_response(mock_hass):
+    """Test handling of empty departures."""
+    coordinator = MzkzgTransportCoordinator(mock_hass, "9999", PROVIDER_ZTM, "Empty")
+
+    with aioresponses() as m:
+        m.get(f"{ZTM_GDANSK_DEPARTURES_URL}?stopId=9999", payload={"departures": []})
+        result = await coordinator._fetch_ztm()
+
+    assert result["departures"] == []
+
+
+@pytest.mark.asyncio
+async def test_zkm_routes_caching(mock_hass, zkm_routes_response, zkm_delays_response):
+    """Test that ZKM routes are cached after first load."""
+    coordinator = MzkzgTransportCoordinator(mock_hass, "38220", PROVIDER_ZKM, "Test")
+
+    with aioresponses() as m:
+        m.get(ZKM_GDYNIA_ROUTES_URL, payload=zkm_routes_response)
+        m.get(f"{ZKM_GDYNIA_DELAYS_URL}?stopId=38220", payload=zkm_delays_response)
+        await coordinator._fetch_zkm()
+
+    # Routes should be cached now
+    assert coordinator._routes_map["1"] == "21"
+    assert coordinator._routes_map["2"] == "22"
+    assert coordinator._routes_map["3"] == "181"
+

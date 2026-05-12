@@ -1,0 +1,12 @@
+{
+  "domain": "mzkzg_transport",
+  "name": "MZKZG Transport",
+  "codeowners": ["@toczke"],
+  "config_flow": true,
+  "documentation": "https://github.com/toczke/mzkzg-transport-card",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/toczke/mzkzg-transport-card/issues",
+  "requirements": ["aiohttp>=3.8.0"],
+  "version": "1.0.0",
+  "integration_type": "hub"
+}

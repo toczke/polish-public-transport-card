@@ -1,0 +1,44 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "MZKZG Transport",
+        "description": "Wybierz operatora transportu.",
+        "data": {
+          "provider": "Operator"
+        }
+      },
+      "api_key": {
+        "title": "Klucz API PLK",
+        "description": "Podaj klucz API PKP PLK OpenData. Uzyskaj na https://dane.plk-sa.pl",
+        "data": {
+          "api_key": "Klucz API"
+        }
+      },
+      "stop": {
+        "title": "Wybierz przystanek",
+        "description": "Wybierz przystanek z listy lub wpisz ID ręcznie.",
+        "data": {
+          "stop_id": "Przystanek",
+          "name": "Własna nazwa (opcjonalna)"
+        }
+      }
+    },
+    "error": {
+      "invalid_stop_id": "Podaj prawidłowe ID przystanku",
+      "api_key_required": "Klucz API PLK jest wymagany"
+    },
+    "abort": {
+      "already_configured": "Ten przystanek jest już skonfigurowany"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "data": {
+          "name": "Nazwa przystanku"
+        }
+      }
+    }
+  }
+}

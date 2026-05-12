@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+.env
+node_modules/
+.pytest_cache/
+ha-test-config/
+dev/server.out.log
+dev/server.err.log
+*.zip
+.gtfs_cache/
+.coverage
