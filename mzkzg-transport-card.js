@@ -167,6 +167,7 @@ ha-card.compact .footer { display: none; }
 ha-card.e-ink { background: #fff; color: #000; border: 0; border-radius: 0; box-shadow: none; }
 ha-card.e-ink .header { background: #fff !important; border-bottom: 2px solid #000; }
 ha-card.e-ink .header-title, ha-card.e-ink .header-sub, ha-card.e-ink .header-icon { color: #000; }
+ha-card.e-ink .header-icon ha-icon { color: #000 !important; --mdc-icon-size: 20px; }
 ha-card.e-ink .stop-name, ha-card.e-ink .platform, ha-card.e-ink .icons, ha-card.e-ink .time-sub, ha-card.e-ink .footer { display: none; }
 ha-card.e-ink .badge { background: #fff !important; border: 2px solid #000; color: #000; }
 ha-card.e-ink .dep-row { border-bottom-color: #000; }
