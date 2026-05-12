@@ -251,8 +251,8 @@ async def test_ztm_vehicle_code_and_fleet(mock_hass):
 
     with aioresponses() as m:
         m.get(re_compile(r".*departures.*"), payload={"departures": [
-            {"routeShortName": "154", "headsign": "Orunia", "estimatedTime": "2026-05-12T18:00:00Z",
-             "theoreticalTime": "2026-05-12T17:58:00Z", "delayInSeconds": 120, "status": "REALTIME", "vehicleCode": 2742}
+            {"routeShortName": "154", "headsign": "Orunia", "estimatedTime": "2099-12-31T23:00:00Z",
+             "theoreticalTime": "2099-12-31T22:58:00Z", "delayInSeconds": 120, "status": "REALTIME", "vehicleCode": 2742}
         ]})
         m.get(re_compile(r".*baza-pojazdow.*"), payload=fleet_response)
 
