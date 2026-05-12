@@ -3,66 +3,80 @@
 [![HACS](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
 [![Version](https://img.shields.io/badge/version-1.1.0-blue.svg)](https://github.com/toczke/mzkzg-transport-card/releases)
 
-Tablica odjazdów komunikacji miejskiej Trójmiasta i okolic dla Home Assistant. Integracja + karta Lovelace.
+Real-time departure board for Tricity (Gdańsk, Gdynia, Sopot) and surrounding area public transport in Home Assistant. Integration + Lovelace card.
 
 ![Preview](docs/screenshots/card-1.png)
 
-## Obsługiwani operatorzy
+## Supported operators
 
-| Operator | Dane | Realtime |
-|----------|------|----------|
-| **ZTM Gdańsk** | API TRISTAR + baza pojazdów | ✅ opóźnienia, capabilities pojazdu |
-| **ZKM Gdynia** | API ZDiZ | ✅ opóźnienia |
-| **MZK Wejherowo** | GTFS statyczny | ❌ tylko rozkład |
-| **PKP/SKM/Polregio** | PLK OpenData API | ✅ opóźnienia, peron, tor |
+| Operator | Data source | Realtime |
+|----------|-------------|----------|
+| **ZTM Gdańsk** | TRISTAR API + vehicle fleet DB | ✅ delays, vehicle capabilities |
+| **ZKM Gdynia** | ZDiZ API | ✅ delays |
+| **MZK Wejherowo** | Static GTFS | ❌ schedule only |
+| **PKP/SKM/Polregio** | PLK OpenData API | ✅ delays, platform, track |
 
-## Instalacja
+## Installation
 
-### HACS (zalecane)
-1. Dodaj repozytorium custom: `https://github.com/toczke/mzkzg-transport-card`
-2. Zainstaluj "MZKZG Transport"
+### HACS (recommended)
+1. Add custom repository: `https://github.com/toczke/mzkzg-transport-card`
+2. Install "MZKZG Transport"
 3. Restart Home Assistant
 
-### Ręczna
-1. Skopiuj `custom_components/mzkzg_transport/` do swojego HA
+### Manual
+1. Copy `custom_components/mzkzg_transport/` to your HA config directory
 2. Restart Home Assistant
 
-## Konfiguracja integracji
+## Integration setup
 
 Settings → Devices & Services → Add Integration → **MZKZG Transport**
 
-Wybierz operatora, przystanek i gotowe. Dla PKP/SKM potrzebny klucz API z [dane.plk-sa.pl](https://dane.plk-sa.pl).
+Select a provider, pick a stop, done.
 
-## Karta Lovelace
+### PKP/PLK API key
 
-Karta rejestruje się automatycznie. Dodaj przez UI: **Add Card → MZKZG Transport Card**.
+For railway data (PKP, SKM, Polregio, IC), you need a free API key from PLK OpenData:
 
-### Opcje konfiguracji
+1. Go to [https://dane.plk-sa.pl](https://dane.plk-sa.pl)
+2. Create an account (free registration)
+3. Navigate to **API** → **Klucze API** (API Keys)
+4. Generate a new key (tier "basic" gives 100 requests/hour — sufficient for up to 4 stations)
+5. Copy the key and paste it during integration setup
 
-| Opcja | Opis | Domyślnie |
-|-------|------|-----------|
-| `entities` | Lista sensorów | wymagane |
-| `title` | Tytuł karty | auto z nazwy przystanku |
+The integration automatically manages rate limits based on your tier and number of configured stations.
+
+## Lovelace card
+
+The card registers automatically. Add via UI: **Add Card → MZKZG Transport Card**.
+
+All options are available in the visual editor.
+
+### Configuration options
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `entities` | Sensor entity list | required |
+| `title` | Card title | auto from stop name |
 | `display_preset` | `standard` / `compact` / `e_ink` | `standard` |
-| `view_mode` | `mixed` / `tabs` | `mixed` |
-| `max_departures` | Maks. odjazdów (3-20) | 10 |
-| `header_color` | Kolor nagłówka (hex) | auto z providera |
-| `filter_routes` | Filtruj linie (lista) | brak |
-| `destination_filter` | Filtruj kierunki | brak |
-| `filter_platform` | Filtruj po peronie | brak |
-| `filter_track` | Filtruj po torze | brak |
-| `highlight_mode` | Podświetlaj zamiast ukrywać | `false` |
-| `hide_terminus` | Ukryj kończące bieg/trasę | `true` |
-| `realtime_only` | Tylko odjazdy realtime | `false` |
-| `show_delays` | Pokaż opóźnienia | `true` |
-| `show_footer` | Czas aktualizacji | `true` |
-| `show_bike` | Ikona miejsca na rower | `true` |
-| `show_wheelchair` | Ikona miejsca na wózek | `true` |
-| `show_ac` | Ikona klimatyzacji | `true` |
-| `show_ticket_machine` | Ikona biletomatu | `true` |
-| `refresh_interval` | Odświeżanie countdownu (s) | 60 |
+| `view_mode` | `mixed` / `tabs` (multi-entity) | `mixed` |
+| `max_departures` | Max departures shown (3-20) | 10 |
+| `header_color` | Header color (hex) | auto from provider |
+| `filter_routes` | Show only these routes | none |
+| `destination_filter` | Filter by destination | none |
+| `filter_platform` | Filter by platform number | none |
+| `filter_track` | Filter by track number | none |
+| `highlight_mode` | Dim non-matching instead of hiding | `false` |
+| `hide_terminus` | Hide departures ending at this stop | `true` |
+| `realtime_only` | Show only realtime departures | `false` |
+| `show_delays` | Show delay information | `true` |
+| `show_footer` | Show last update time | `true` |
+| `show_bike` | Show bike rack icon | `true` |
+| `show_wheelchair` | Show wheelchair ramp icon | `true` |
+| `show_ac` | Show air conditioning icon | `true` |
+| `show_ticket_machine` | Show ticket machine icon | `true` |
+| `refresh_interval` | Countdown refresh interval (seconds) | 60 |
 
-## Galeria
+## Gallery
 
 <details>
 <summary><strong>ZTM Gdańsk — Standard</strong></summary>
@@ -77,19 +91,19 @@ Karta rejestruje się automatycznie. Dodaj przez UI: **Add Card → MZKZG Transp
 </details>
 
 <details>
-<summary><strong>MZK Wejherowo — GTFS (brak realtime)</strong></summary>
+<summary><strong>MZK Wejherowo — Static GTFS</strong></summary>
 
 ![MZK](docs/screenshots/card-3.png)
 </details>
 
 <details>
-<summary><strong>PKP/SKM — Kolej z peronem i torem</strong></summary>
+<summary><strong>PKP/SKM — Railway with platform & track</strong></summary>
 
 ![PLK](docs/screenshots/card-4.png)
 </details>
 
 <details>
-<summary><strong>Preset: Kompakt</strong></summary>
+<summary><strong>Preset: Compact</strong></summary>
 
 ![Compact](docs/screenshots/card-5.png)
 </details>
@@ -101,19 +115,19 @@ Karta rejestruje się automatycznie. Dodaj przez UI: **Add Card → MZKZG Transp
 </details>
 
 <details>
-<summary><strong>Multi-provider — widok mieszany</strong></summary>
+<summary><strong>Multi-provider — mixed view</strong></summary>
 
 ![Mixed](docs/screenshots/card-7.png)
 </details>
 
 <details>
-<summary><strong>Multi-provider — zakładki</strong></summary>
+<summary><strong>Multi-provider — tabs</strong></summary>
 
 ![Tabs](docs/screenshots/card-8.png)
 </details>
 
 <details>
-<summary><strong>Filtr linii</strong></summary>
+<summary><strong>Route filter</strong></summary>
 
 ![Filter routes](docs/screenshots/card-9.png)
 </details>
@@ -125,67 +139,68 @@ Karta rejestruje się automatycznie. Dodaj przez UI: **Add Card → MZKZG Transp
 </details>
 
 <details>
-<summary><strong>Filtr kierunku</strong></summary>
+<summary><strong>Destination filter</strong></summary>
 
 ![Destination filter](docs/screenshots/card-11.png)
 </details>
 
 <details>
-<summary><strong>Tylko realtime</strong></summary>
+<summary><strong>Realtime only</strong></summary>
 
 ![Realtime only](docs/screenshots/card-12.png)
 </details>
 
 <details>
-<summary><strong>Custom kolor nagłówka</strong></summary>
+<summary><strong>Custom header color</strong></summary>
 
 ![Custom color](docs/screenshots/card-13.png)
 </details>
 
 <details>
-<summary><strong>Bez opóźnień i stopki</strong></summary>
+<summary><strong>No delays, no footer</strong></summary>
 
 ![No delays](docs/screenshots/card-14.png)
 </details>
 
-## Capabilities pojazdów (ZTM Gdańsk)
+## Vehicle capabilities (ZTM Gdańsk)
 
-Karta automatycznie pobiera bazę pojazdów ZTM i wyświetla ikony:
-- 🚲 Miejsce na rower
-- ♿ Miejsce na wózek
-- ❄️ Klimatyzacja
-- 🔌 USB
-- 🎫 Biletomat
+The card automatically fetches the ZTM vehicle fleet database and displays icons for the actual vehicle serving each departure:
 
-Dane aktualizowane co 7 dni.
+- 🚲 Bike rack
+- ♿ Wheelchair ramp
+- ❄️ Air conditioning
+- 🔌 USB charging
+- 🎫 Ticket machine
 
-## PLK — rate limiting
+Fleet data is refreshed every 7 days.
 
-Integracja dynamicznie oblicza interwał odświeżania na podstawie:
-- Tier API (basic: 100 req/h, standard: 500, premium: 2000)
-- Liczby skonfigurowanych stacji
+## PLK rate limiting
 
-Rozkład cachowany na cały dzień, realtime odpytywany w bezpiecznych interwałach.
+The integration dynamically calculates refresh intervals based on:
+- API tier (basic: 100 req/h, standard: 500, premium: 2000)
+- Number of configured stations
+
+Schedule data is cached for the entire day. Realtime data is polled at safe intervals that never exceed your tier limit.
 
 ## Changelog
 
 ### 1.1.0
-- Capabilities pojazdów ZTM (rower, wózek, klima, USB, biletomat)
-- Numer boczny pojazdu
-- PLK: peron i tor jako chipy
-- Filtrowanie po peronie/torze
-- Dynamiczny rate limiting PLK
-- Edytor: wszystkie opcje dostępne wizualnie
-- Fix: focus w edytorze konfiguracji
-- Fix: e-ink nie resetuje ustawień
-- Zgodność z HA 2026.3+ (brand/, device_info, async_unload)
+- Vehicle capabilities from ZTM fleet database (bike, wheelchair, AC, USB, ticket machine)
+- Vehicle number display
+- PLK: platform and track as chips
+- Filter by platform/track
+- Dynamic PLK rate limiting
+- Visual editor: all options available
+- Fix: editor focus loss
+- Fix: e-ink preset no longer resets settings
+- HA 2026.3+ compliance (brand/, device_info, async_unload)
 
 ### 1.0.0
-- Pierwsza wersja
-- ZTM, ZKM, MZK, PLK
-- Presety: standard, compact, e-ink
-- Filtrowanie, highlight, tabs
+- Initial release
+- ZTM, ZKM, MZK, PLK providers
+- Presets: standard, compact, e-ink
+- Filtering, highlight, tabs
 
-## Licencja
+## License
 
 MIT
