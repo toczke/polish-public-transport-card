@@ -1,6 +1,6 @@
 /**
  * MZKZG Transport Card
- * Unified Lovelace card for ZTM Gdańsk + ZKM Gdynia departures
+ * Unified Lovelace card for ZTM Gdańsk, ZKM Gdynia and kiedyPrzyjedzie.pl carriers
  * Reads data from mzkzg_transport HA integration sensors.
  */
 
@@ -675,7 +675,24 @@ class MzkzgTransportCard extends HTMLElement {
       const c = this._config.header_color.replace(/[;"'{}]/g, "");
       return c;
     }
-    const colors = { ztm_gdansk: "#DA2128", zkm_gdynia: "#005eb8", mzk_wejherowo: "#478AC9", plk_rail: "#1a1a2e" };
+    const colors = {
+      ztm_gdansk: "#DA2128",
+      zkm_gdynia: "#005eb8",
+      mzk_wejherowo: "#478AC9",
+      plk_rail: "#1a1a2e",
+      kiedyprzyjedzie_pks_gdansk: "#0f766e",
+      kiedyprzyjedzie_albatros: "#1d4ed8",
+      kiedyprzyjedzie_gryf: "#f59e0b",
+      kiedyprzyjedzie_nord_express: "#0f172a",
+      kiedyprzyjedzie_pks_gdynia: "#0e7490",
+      kiedyprzyjedzie_zkm_gdynia: "#2563eb",
+      kiedyprzyjedzie_mzk_malbork: "#ea580c",
+      kiedyprzyjedzie_pks_slupsk: "#4f46e5",
+      kiedyprzyjedzie_mzk_starogard: "#be123c",
+      kiedyprzyjedzie_pks_starogard: "#7c3aed",
+      kiedyprzyjedzie_bytow: "#16a34a",
+      kiedyprzyjedzie_czluchow: "#64748b",
+    };
     const providers = new Set();
     if (this._hass && this._config.entities?.length) {
       for (const eid of this._config.entities) {
@@ -707,7 +724,24 @@ class MzkzgTransportCard extends HTMLElement {
     for (const eid of this._config.entities) {
       const s = this._hass.states[eid];
       if (s?.attributes?.provider) {
-        const map = { ztm_gdansk: "ZTM Gdańsk", zkm_gdynia: "ZKM Gdynia", mzk_wejherowo: "MZK Wejherowo", plk_rail: "PKP/SKM" };
+        const map = {
+          ztm_gdansk: "ZTM Gdańsk",
+          zkm_gdynia: "ZKM Gdynia",
+          mzk_wejherowo: "MZK Wejherowo",
+          plk_rail: "PKP/SKM",
+          kiedyprzyjedzie_pks_gdansk: "PKS Gdańsk",
+          kiedyprzyjedzie_albatros: "Albatros",
+          kiedyprzyjedzie_gryf: "GRYF",
+          kiedyprzyjedzie_nord_express: "Nord Express",
+          kiedyprzyjedzie_pks_gdynia: "PKS Gdynia",
+          kiedyprzyjedzie_zkm_gdynia: "ZKM Gdynia",
+          kiedyprzyjedzie_mzk_malbork: "MZK Malbork",
+          kiedyprzyjedzie_pks_slupsk: "PKS Słupsk",
+          kiedyprzyjedzie_mzk_starogard: "MZK Starogard",
+          kiedyprzyjedzie_pks_starogard: "PKS Starogard",
+          kiedyprzyjedzie_bytow: "Bytów",
+          kiedyprzyjedzie_czluchow: "Powiat Człuchowski",
+        };
         providers.add(map[s.attributes.provider] || s.attributes.provider);
       }
     }

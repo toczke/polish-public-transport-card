@@ -8,7 +8,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import CONF_NAME, CONF_PROVIDER, CONF_STOP_ID, DOMAIN
+from .const import CONF_NAME, CONF_PROVIDER, CONF_STOP_ID, DOMAIN, PROVIDER_SHORT_NAMES
 from .coordinator import MzkzgTransportCoordinator
 
 
@@ -36,8 +36,7 @@ class MzkzgTransportSensor(CoordinatorEntity, SensorEntity):
     def __init__(self, coordinator: MzkzgTransportCoordinator, entry: ConfigEntry) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator)
-        provider_short = {"ztm_gdansk": "ztm", "zkm_gdynia": "zkm", "mzk_wejherowo": "mzk", "plk_rail": "plk"}
-        prov = provider_short.get(entry.data[CONF_PROVIDER], entry.data[CONF_PROVIDER])
+        prov = PROVIDER_SHORT_NAMES.get(entry.data[CONF_PROVIDER], entry.data[CONF_PROVIDER])
         stop = entry.data[CONF_STOP_ID]
         self._attr_unique_id = f"{DOMAIN}_{entry.data[CONF_PROVIDER]}_{stop}"
         custom_name = entry.data.get(CONF_NAME, "")

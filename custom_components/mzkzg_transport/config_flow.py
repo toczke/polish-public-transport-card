@@ -19,12 +19,27 @@ from .const import (
     CONF_PROVIDER,
     CONF_STOP_ID,
     DOMAIN,
+    KIEDYPRZYJEDZIE_BASE_URLS,
+    KIEDYPRZYJEDZIE_PROVIDERS,
     PLK_API_BASE,
     PLK_TIER_LIMITS,
+    PROVIDER_ALBATROS,
+    PROVIDER_BYTOW,
+    PROVIDER_CZLUCHOW,
+    PROVIDER_GRYF,
+    PROVIDER_KIEDYPRZYJEDZIE_ZKM_GDYNIA,
     PROVIDER_MZK,
+    PROVIDER_MZK_MALBORK,
+    PROVIDER_MZK_STAROGARD,
+    PROVIDER_NORD_EXPRESS,
+    PROVIDER_PKS_GDANSK,
+    PROVIDER_PKS_GDYNIA,
+    PROVIDER_PKS_SLUPSK,
+    PROVIDER_PKS_STAROGARD,
     PROVIDER_PLK,
     PROVIDER_ZKM,
     PROVIDER_ZTM,
+    STOP_ID_PATTERN,
     ZKM_GDYNIA_STOPS_URL,
     ZTM_GDANSK_STOPS_URL,
 )
@@ -36,6 +51,18 @@ PROVIDER_OPTIONS = {
     PROVIDER_ZKM: "ZKM Gdynia",
     PROVIDER_MZK: "MZK Wejherowo",
     PROVIDER_PLK: "PKP / SKM / PR (PLK API)",
+    PROVIDER_PKS_GDANSK: "PKS GdaÅ„sk Sp. z o.o.",
+    PROVIDER_ALBATROS: "Albatros",
+    PROVIDER_GRYF: "Przewozy Autobusowe GRYF",
+    PROVIDER_NORD_EXPRESS: "Nord Express",
+    PROVIDER_PKS_GDYNIA: "PKS Gdynia S.A.",
+    PROVIDER_KIEDYPRZYJEDZIE_ZKM_GDYNIA: "ZKM Gdynia (kiedyPrzyjedzie)",
+    PROVIDER_MZK_MALBORK: "Miejski Zakład Komunikacji w Malborku",
+    PROVIDER_PKS_SLUPSK: "PKS Słupsk S.A.",
+    PROVIDER_MZK_STAROGARD: "MZK Starogard Gdański",
+    PROVIDER_PKS_STAROGARD: "PKS Starogard Gdański S.A.",
+    PROVIDER_BYTOW: "Bytów",
+    PROVIDER_CZLUCHOW: "Powiat Człuchowski",
 }
 
 
@@ -115,7 +142,7 @@ class MzkzgTransportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             stop_id = str(user_input[CONF_STOP_ID]).strip()
             name = user_input.get(CONF_NAME, "").strip()
 
-            if not stop_id or not re.match(r"^[a-zA-Z0-9_-]+$", stop_id):
+            if not stop_id or not re.match(STOP_ID_PATTERN, stop_id):
                 errors[CONF_STOP_ID] = "invalid_stop_id"
             else:
                 await self.async_set_unique_id(f"{self._provider}_{stop_id}")
@@ -190,9 +217,34 @@ class MzkzgTransportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 return await self._load_mzk_stops()
             if provider == PROVIDER_PLK:
                 return await self._load_plk_stations()
+            if provider in KIEDYPRZYJEDZIE_PROVIDERS:
+                return await self._load_kiedyprzyjedzie_stops(provider)
         except Exception as err:
             _LOGGER.warning("Could not load stops for %s: %s", provider, err)
         return []
+
+    async def _load_kiedyprzyjedzie_stops(self, provider: str) -> list[dict]:
+        """Load stops from kiedyPrzyjedzie for bus carriers."""
+        session = async_get_clientsession(self.hass)
+        base_url = KIEDYPRZYJEDZIE_BASE_URLS[provider]
+
+        async with session.get(
+            f"{base_url}/stops", timeout=aiohttp.ClientTimeout(total=20)
+        ) as resp:
+            resp.raise_for_status()
+            data = await resp.json()
+
+        stops_raw = data.get("stops", []) if isinstance(data, dict) else []
+        stops = []
+        for stop in stops_raw:
+            if not isinstance(stop, (list, tuple)) or len(stop) < 3:
+                continue
+            stop_id = stop[0]
+            stop_name = stop[2]
+            stops.append({"id": stop_id, "name": stop_name})
+
+        stops.sort(key=lambda x: x["name"])
+        return stops
 
     async def _load_ztm_stops(self) -> list[dict]:
         """Load ZTM Gdańsk stops."""

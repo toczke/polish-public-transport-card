@@ -50,6 +50,18 @@ A custom Home Assistant integration and Lovelace card providing real-time depart
 | **ZTM Gdańsk** | Buses and trams in Gdańsk and surrounding municipalities | ✅ |
 | **ZKM Gdynia** | Buses and trolleybuses in Gdynia | ✅ |
 | **MZK Wejherowo** | Buses in Wejherowo area | ❌ (schedule only) |
+| **PKS Gdańsk Sp. z o.o.** | Intercity and regional bus departures on kiedyprzyjedzie.pl | ✅ |
+| **Albatros** | Bus departures on kiedyprzyjedzie.pl | ✅ |
+| **Przewozy Autobusowe GRYF** | Bus departures on kiedyprzyjedzie.pl | ✅ |
+| **Nord Express** | Bus departures on kiedyprzyjedzie.pl | ✅ |
+| **PKS Gdynia S.A.** | Bus departures on kiedyprzyjedzie.pl | ✅ |
+| **ZKM Gdynia (kiedyPrzyjedzie)** | Bus departures on kiedyprzyjedzie.pl | ✅ |
+| **Miejski Zakład Komunikacji w Malborku** | Bus departures on kiedyprzyjedzie.pl | ✅ |
+| **PKS Słupsk S.A.** | Bus departures on kiedyprzyjedzie.pl | ✅ |
+| **MZK Starogard Gdański** | Bus departures on kiedyprzyjedzie.pl | ✅ |
+| **PKS Starogard Gdański S.A.** | Bus departures on kiedyprzyjedzie.pl | ✅ |
+| **Bytów** | Bus departures on kiedyprzyjedzie.pl | ✅ |
+| **Powiat Człuchowski** | Bus departures on kiedyprzyjedzie.pl | ✅ |
 | **PKP / SKM / Polregio / IC** | Railway stations across Poland (via PLK) | ✅ |
 
 ---
@@ -79,7 +91,7 @@ Restart Home Assistant.
 
 **Settings → Devices & Services → Add Integration → MZKZG Transport**
 
-1. Select provider (ZTM / ZKM / MZK / PLK)
+1. Select provider (ZTM / ZKM / MZK / PKS Gdańsk / Albatros / GRYF / Nord Express / PKS Gdynia / ZKM Gdynia / MZK Malbork / PKS Słupsk / MZK Starogard / PKS Starogard / Bytów / Powiat Człuchowski / PLK)
 2. For PLK: enter your API key (see below)
 3. Select a stop from the list
 4. Done — sensor and binary sensor are created automatically
@@ -219,6 +231,42 @@ Each provider uses different APIs and data strategies. Below is a detailed break
 2. Every 30 seconds, the current time is compared against `stop_times.txt` to compute upcoming departures.
 3. Supports night services with times exceeding 24:00 (e.g., `25:15:00` = 01:15 next day).
 4. No real-time data — all times are from the static schedule.
+
+---
+
+### kiedyPrzyjedzie.pl carriers
+
+| Carrier | Endpoint | Purpose | Refresh |
+|---------|----------|---------|---------|
+| **PKS Gdańsk Sp. z o.o.** | `GET https://pksgdansk.kiedyprzyjedzie.pl/stops` | Stop list for config flow | On setup |
+| **PKS Gdańsk Sp. z o.o.** | `GET https://pksgdansk.kiedyprzyjedzie.pl/api/departures/{stopId}` | Departure board with normalized timestamps | Every 30s |
+| **Albatros** | `GET https://albatros.kiedyprzyjedzie.pl/stops` | Stop list for config flow | On setup |
+| **Albatros** | `GET https://albatros.kiedyprzyjedzie.pl/api/departures/{stopId}` | Departure board with normalized timestamps | Every 30s |
+| **Przewozy Autobusowe GRYF** | `GET https://gryf.kiedyprzyjedzie.pl/stops` | Stop list for config flow | On setup |
+| **Przewozy Autobusowe GRYF** | `GET https://gryf.kiedyprzyjedzie.pl/api/departures/{stopId}` | Departure board with normalized timestamps | Every 30s |
+| **Nord Express** | `GET https://nordexpress.kiedyprzyjedzie.pl/stops` | Stop list for config flow | On setup |
+| **Nord Express** | `GET https://nordexpress.kiedyprzyjedzie.pl/api/departures/{stopId}` | Departure board with normalized timestamps | Every 30s |
+| **PKS Gdynia S.A.** | `GET https://pksgdynia.kiedyprzyjedzie.pl/stops` | Stop list for config flow | On setup |
+| **PKS Gdynia S.A.** | `GET https://pksgdynia.kiedyprzyjedzie.pl/api/departures/{stopId}` | Departure board with normalized timestamps | Every 30s |
+| **ZKM Gdynia (kiedyPrzyjedzie)** | `GET https://gdynia.kiedyprzyjedzie.pl/stops` | Stop list for config flow | On setup |
+| **ZKM Gdynia (kiedyPrzyjedzie)** | `GET https://gdynia.kiedyprzyjedzie.pl/api/departures/{stopId}` | Departure board with normalized timestamps | Every 30s |
+| **Miejski Zakład Komunikacji w Malborku** | `GET https://malbork.kiedyprzyjedzie.pl/stops` | Stop list for config flow | On setup |
+| **Miejski Zakład Komunikacji w Malborku** | `GET https://malbork.kiedyprzyjedzie.pl/api/departures/{stopId}` | Departure board with normalized timestamps | Every 30s |
+| **PKS Słupsk S.A.** | `GET https://pksslupsk.kiedyprzyjedzie.pl/stops` | Stop list for config flow | On setup |
+| **PKS Słupsk S.A.** | `GET https://pksslupsk.kiedyprzyjedzie.pl/api/departures/{stopId}` | Departure board with normalized timestamps | Every 30s |
+| **MZK Starogard Gdański** | `GET https://starogard.kiedyprzyjedzie.pl/stops` | Stop list for config flow | On setup |
+| **MZK Starogard Gdański** | `GET https://starogard.kiedyprzyjedzie.pl/api/departures/{stopId}` | Departure board with normalized timestamps | Every 30s |
+| **PKS Starogard Gdański S.A.** | `GET https://pksstarogard.kiedyprzyjedzie.pl/stops` | Stop list for config flow | On setup |
+| **PKS Starogard Gdański S.A.** | `GET https://pksstarogard.kiedyprzyjedzie.pl/api/departures/{stopId}` | Departure board with normalized timestamps | Every 30s |
+| **Bytów** | `GET https://bytow.kiedyprzyjedzie.pl/stops` | Stop list for config flow | On setup |
+| **Bytów** | `GET https://bytow.kiedyprzyjedzie.pl/api/departures/{stopId}` | Departure board with normalized timestamps | Every 30s |
+| **Powiat Człuchowski** | `GET https://czluchow.kiedyprzyjedzie.pl/stops` | Stop list for config flow | On setup |
+| **Powiat Człuchowski** | `GET https://czluchow.kiedyprzyjedzie.pl/api/departures/{stopId}` | Departure board with normalized timestamps | Every 30s |
+
+**Data flow:**
+1. `stops` returns a flat list of all stops, each with a composite stop ID like `1564032:1635414`.
+2. `departures/{stopId}` returns rows with relative or clock-based times plus a server timestamp.
+3. The integration converts those values into ISO timestamps so the existing card and sensors can reuse the same rendering logic.
 
 ---
 

@@ -15,6 +15,8 @@ from homeassistant.util import dt as dt_util
 from .const import (
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
+    KIEDYPRZYJEDZIE_BASE_URLS,
+    KIEDYPRZYJEDZIE_PROVIDERS,
     PLK_API_BASE,
     PROVIDER_MZK,
     PROVIDER_PLK,
@@ -23,10 +25,11 @@ from .const import (
     ZKM_GDYNIA_DELAYS_URL,
     ZKM_GDYNIA_ROUTES_URL,
     ZTM_GDANSK_DEPARTURES_URL,
+    STOP_ID_PATTERN,
 )
 
 _LOGGER = logging.getLogger(__name__)
-_STOP_ID_RE = re.compile(r"^[a-zA-Z0-9_-]+$")
+_STOP_ID_RE = re.compile(STOP_ID_PATTERN)
 
 
 class MzkzgTransportCoordinator(DataUpdateCoordinator):
@@ -42,21 +45,26 @@ class MzkzgTransportCoordinator(DataUpdateCoordinator):
         plk_tier: str = "basic",
     ) -> None:
         """Initialize coordinator."""
-        from .const import PLK_TIER_LIMITS
+        from .const import PLK_DAILY_LIMITS, PLK_TIER_LIMITS
 
         # Count PLK stations to calculate safe interval
         plk_stations = sum(1 for e in hass.data.get(DOMAIN, {}).get("_coordinators", {}).values()
                           if getattr(e, "provider", None) == PROVIDER_PLK) + (1 if provider == PROVIDER_PLK else 0)
         hourly_limit = PLK_TIER_LIMITS.get(plk_tier, 100)
+        daily_limit = PLK_DAILY_LIMITS.get(plk_tier, 1000)
         # 1 operations req (shared) + 1 schedules req (daily, negligible) per refresh
         # Use 80% of limit as safety margin
         safe_refreshes = int(hourly_limit * 0.8) // max(plk_stations, 1)
         plk_interval = max(60, 3600 // max(safe_refreshes, 1))
+        safe_daily_ops = max(int(daily_limit * 0.8) - plk_stations, 1)
+        plk_daily_interval = max(60, -(-86400 // safe_daily_ops))
         super().__init__(
             hass,
             _LOGGER,
             name=f"{DOMAIN}_{stop_id}",
-            update_interval=timedelta(seconds=plk_interval if provider == PROVIDER_PLK else DEFAULT_SCAN_INTERVAL),
+            update_interval=timedelta(
+                seconds=max(plk_interval, plk_daily_interval) if provider == PROVIDER_PLK else DEFAULT_SCAN_INTERVAL
+            ),
         )
         self.stop_id = stop_id
         if not _STOP_ID_RE.match(str(stop_id)):
@@ -79,6 +87,8 @@ class MzkzgTransportCoordinator(DataUpdateCoordinator):
                 return await self._fetch_mzk()
             if self.provider == PROVIDER_PLK:
                 return await self._fetch_plk()
+            if self.provider in KIEDYPRZYJEDZIE_PROVIDERS:
+                return await self._fetch_kiedyprzyjedzie()
             return await self._fetch_zkm()
         except Exception as err:
             raise UpdateFailed(f"Error fetching data: {err}") from err
@@ -215,6 +225,128 @@ class MzkzgTransportCoordinator(DataUpdateCoordinator):
             "departures": departures,
             "last_update": now.isoformat(),
         }
+
+    async def _fetch_kiedyprzyjedzie(self) -> dict:
+        """Fetch departures from kiedyPrzyjedzie carriers."""
+        session = await self._get_session()
+        base_url = self._kiedyprzyjedzie_base_url()
+        now = dt_util.now()
+
+        async with session.get(
+            f"{base_url}/api/departures/{self.stop_id}",
+            timeout=aiohttp.ClientTimeout(total=15),
+        ) as resp:
+            resp.raise_for_status()
+            data = await resp.json()
+
+        api_timestamp = data.get("timestamp")
+        reference_dt = (
+            datetime.fromtimestamp(api_timestamp, tz=dt_util.get_default_time_zone())
+            if isinstance(api_timestamp, (int, float))
+            else now
+        )
+        directions = {
+            str(k): str(v)
+            for k, v in (data.get("directions") or {}).items()
+            if k is not None and v is not None
+        }
+
+        if not self.stop_name:
+            self.stop_name = str(data.get("station_name") or f"Przystanek {self.stop_id}")
+
+        departures = []
+        for row in data.get("rows", []):
+            estimated_dt, estimated_realtime = self._parse_kiedyprzyjedzie_time(
+                row.get("time"), reference_dt
+            )
+            theoretical_dt, _ = self._parse_kiedyprzyjedzie_time(
+                row.get("static_time") or row.get("time"), reference_dt
+            )
+            if estimated_dt is None:
+                continue
+            if theoretical_dt is None:
+                theoretical_dt = estimated_dt
+
+            time_diff = row.get("time_diff")
+            delay_seconds = 0
+            if time_diff not in (None, "", 0, 0.0):
+                try:
+                    delay_minutes = int(float(time_diff))
+                except (TypeError, ValueError):
+                    delay_minutes = 0
+                if delay_minutes:
+                    delay_seconds = delay_minutes * 60
+                estimated_dt = theoretical_dt + timedelta(seconds=delay_seconds)
+            else:
+                delay_seconds = int((estimated_dt - theoretical_dt).total_seconds())
+
+            if estimated_dt < now - timedelta(minutes=1):
+                continue
+
+            direction_id = row.get("direction_id")
+            direction = directions.get(str(direction_id)) or "â€”"
+            vehicle_attributes = [str(attr) for attr in row.get("vehicle_attributes", []) if attr]
+            realtime = bool(row.get("is_estimated")) or estimated_realtime or delay_seconds != 0
+
+            departures.append({
+                "route": str(row.get("line_name") or "?"),
+                "headsign": direction,
+                "estimated_time": estimated_dt.isoformat(),
+                "theoretical_time": theoretical_dt.isoformat(),
+                "delay_seconds": delay_seconds,
+                "realtime": realtime,
+                "vehicle_type": "bus",
+                "bike_allowed": "bike_transport" in vehicle_attributes,
+                "wheelchair_accessible": "low_floor" in vehicle_attributes or "wheelchair" in vehicle_attributes,
+                "air_conditioning": "ac" in vehicle_attributes,
+                "vehicle_attributes": vehicle_attributes,
+                "platform": row.get("platform"),
+                "trip_id": row.get("trip_id"),
+                "trip_execution_id": row.get("trip_execution_id"),
+                "trip_index": row.get("trip_index"),
+                "cancelled": row.get("canceled", False),
+                "provider": self.provider,
+            })
+
+        departures.sort(key=lambda x: x.get("estimated_time") or "")
+        return {
+            "stop_id": self.stop_id,
+            "stop_name": self.stop_name,
+            "provider": self.provider,
+            "departures": departures,
+            "last_update": now.isoformat(),
+        }
+
+    def _kiedyprzyjedzie_base_url(self) -> str:
+        """Return the base URL for the configured kiedyPrzyjedzie carrier."""
+        return KIEDYPRZYJEDZIE_BASE_URLS[self.provider]
+
+    @staticmethod
+    def _parse_kiedyprzyjedzie_time(value, reference_dt: datetime) -> tuple[datetime | None, bool]:
+        """Parse kiedyPrzyjedzie time strings into absolute datetimes."""
+        if value is None:
+            return None, False
+
+        text = str(value).strip()
+        if not text:
+            return None, False
+
+        relative_match = re.match(r"^(\d+)\s*min(?:\.|utes?)?$", text, re.IGNORECASE)
+        if relative_match:
+            minutes = int(relative_match.group(1))
+            return reference_dt + timedelta(minutes=minutes), True
+
+        clock_match = re.match(r"^(\d{1,2}):(\d{2})(?::(\d{2}))?$", text)
+        if clock_match:
+            hour = int(clock_match.group(1))
+            minute = int(clock_match.group(2))
+            second = int(clock_match.group(3) or 0)
+            dep_dt = reference_dt.replace(hour=hour, minute=minute, second=second, microsecond=0)
+            if (dep_dt - reference_dt).total_seconds() < -3600:
+                dep_dt += timedelta(days=1)
+            return dep_dt, False
+
+        return None, False
 
     async def _fetch_plk(self) -> dict:
         """Fetch departures from PLK OpenData API (PR/SKM/IC)."""

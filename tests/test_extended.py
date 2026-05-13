@@ -306,3 +306,9 @@ def test_plk_time_parsing_iso_duration():
     result = MzkzgTransportCoordinator._plk_time_to_datetime("2026-05-12", "PT12H30M0S")
     assert result.hour == 12
     assert result.minute == 30
+
+
+def test_plk_update_interval_respects_daily_cap(mock_hass):
+    """Test PLK coordinator stays below the daily hard cap for a single station."""
+    coordinator = MzkzgTransportCoordinator(mock_hass, "7534", PROVIDER_PLK, "Test", "fake-key")
+    assert coordinator.update_interval.total_seconds() >= 108

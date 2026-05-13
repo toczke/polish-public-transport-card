@@ -9,6 +9,31 @@ from aioresponses import aioresponses
 
 from mzkzg_transport.const import (
     DOMAIN,
+    KIEDYPRZYJEDZIE_BASE_URLS,
+    KIEDYPRZYJEDZIE_ALBATROS_URL,
+    KIEDYPRZYJEDZIE_BYTOW_URL,
+    KIEDYPRZYJEDZIE_CZLUCHOW_URL,
+    KIEDYPRZYJEDZIE_GRYF_URL,
+    KIEDYPRZYJEDZIE_MZK_MALBORK_URL,
+    KIEDYPRZYJEDZIE_MZK_STAROGARD_URL,
+    KIEDYPRZYJEDZIE_NORD_EXPRESS_URL,
+    KIEDYPRZYJEDZIE_PKS_GDANSK_URL,
+    KIEDYPRZYJEDZIE_PKS_GDYNIA_URL,
+    KIEDYPRZYJEDZIE_PKS_SLUPSK_URL,
+    KIEDYPRZYJEDZIE_PKS_STAROGARD_URL,
+    KIEDYPRZYJEDZIE_ZKM_GDYNIA_URL,
+    PROVIDER_ALBATROS,
+    PROVIDER_BYTOW,
+    PROVIDER_CZLUCHOW,
+    PROVIDER_GRYF,
+    PROVIDER_KIEDYPRZYJEDZIE_ZKM_GDYNIA,
+    PROVIDER_MZK_MALBORK,
+    PROVIDER_MZK_STAROGARD,
+    PROVIDER_NORD_EXPRESS,
+    PROVIDER_PKS_GDANSK,
+    PROVIDER_PKS_GDYNIA,
+    PROVIDER_PKS_SLUPSK,
+    PROVIDER_PKS_STAROGARD,
     PROVIDER_ZKM,
     PROVIDER_ZTM,
     ZKM_GDYNIA_DELAYS_URL,
@@ -192,6 +217,101 @@ async def test_zkm_vehicle_type():
     assert MzkzgTransportCoordinator._zkm_vehicle_type("N21") == "bus"
 
 
+# â”€â”€ kiedyPrzyjedzie.pl tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+
+@pytest.fixture
+def kiedyprzyjedzie_response():
+    """Sample kiedyPrzyjedzie API response."""
+    now = datetime.now()
+    return {
+        "timestamp": int(now.timestamp()),
+        "rows": [
+            {
+                "time": "42 min",
+                "static_time": "40 min",
+                "time_diff": 2,
+                "at_stop": False,
+                "canceled": False,
+                "is_estimated": True,
+                "direction_id": 1635414000,
+                "platform": "1",
+                "deviation_id": None,
+                "line_name": "854",
+                "show_line_name": True,
+                "vehicle_type": 0,
+                "vehicle_attributes": ["ac", "bike_transport", "low_floor"],
+                "trip_id": 38682560,
+                "trip_execution_id": "854-9A:739749:3",
+                "trip_index": 0,
+                "passenger_load": None,
+            },
+            {
+                "time": (now + timedelta(hours=2)).strftime("%H:%M"),
+                "static_time": (now + timedelta(hours=2)).strftime("%H:%M"),
+                "time_diff": 0,
+                "at_stop": False,
+                "canceled": False,
+                "is_estimated": False,
+                "direction_id": 1635414001,
+                "platform": "1",
+                "deviation_id": None,
+                "line_name": "870",
+                "show_line_name": True,
+                "vehicle_type": 0,
+                "vehicle_attributes": ["ac", "bike_transport"],
+                "trip_id": 35966917,
+                "trip_execution_id": "870-06SS:739749:1",
+                "trip_index": 0,
+                "passenger_load": None,
+            },
+        ],
+        "directions": {
+            "1635414000": "Buszkowy",
+            "1635414001": "Krynica Morska, Dworzec",
+        },
+        "deviations": {},
+        "designator": 1,
+        "station_name": "GdaÅ„sk, Dworzec Autobusowy",
+        "only_disembarking": False,
+    }
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("provider", "base_url", "stop_id", "station_name"),
+    [
+        (PROVIDER_PKS_GDANSK, KIEDYPRZYJEDZIE_PKS_GDANSK_URL, "1564032:1635414", "GdaÅ„sk, Dworzec Autobusowy"),
+        (PROVIDER_ALBATROS, KIEDYPRZYJEDZIE_ALBATROS_URL, "1979970:2052519", "GdaÅ„sk, Dworzec GÅ‚Ã³wny 20"),
+    ],
+)
+async def test_kiedyprzyjedzie_fetch_departures(mock_hass, kiedyprzyjedzie_response, provider, base_url, stop_id, station_name):
+    """Test kiedyPrzyjedzie departure fetching and parsing."""
+    coordinator = MzkzgTransportCoordinator(mock_hass, stop_id, provider, "Test Stop")
+
+    response = dict(kiedyprzyjedzie_response)
+    response["station_name"] = station_name
+
+    with aioresponses() as m:
+        m.get(f"{base_url}/api/departures/{stop_id}", payload=response)
+        result = await coordinator._fetch_kiedyprzyjedzie()
+
+    assert result["provider"] == provider
+    assert result["stop_id"] == stop_id
+    assert result["stop_name"] == station_name
+    assert len(result["departures"]) == 2
+    assert result["departures"][0]["route"] == "854"
+    assert result["departures"][0]["headsign"] == "Buszkowy"
+    assert result["departures"][0]["bike_allowed"] is True
+    assert result["departures"][0]["wheelchair_accessible"] is True
+    assert result["departures"][0]["air_conditioning"] is True
+    assert result["departures"][0]["realtime"] is True
+    assert result["departures"][0]["cancelled"] is False
+    assert result["departures"][1]["route"] == "870"
+    assert result["departures"][1]["realtime"] is False
+    assert datetime.fromisoformat(result["departures"][0]["estimated_time"])
+
+
 # ── Constant and import tests ────────────────────────────────────────────────
 
 def test_const_values():
@@ -199,6 +319,8 @@ def test_const_values():
     assert DOMAIN == "mzkzg_transport"
     assert "zdiz.gdynia.pl" in ZKM_GDYNIA_DELAYS_URL
     assert "multimediagdansk.pl" in ZTM_GDANSK_DEPARTURES_URL
+    assert KIEDYPRZYJEDZIE_PKS_GDANSK_URL.endswith("pksgdansk.kiedyprzyjedzie.pl")
+    assert KIEDYPRZYJEDZIE_ALBATROS_URL.endswith("albatros.kiedyprzyjedzie.pl")
 
 
 def test_import_all_modules():
