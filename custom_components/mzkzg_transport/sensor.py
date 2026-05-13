@@ -8,7 +8,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import CONF_NAME, CONF_PROVIDER, CONF_STOP_ID, DOMAIN, PROVIDER_SHORT_NAMES
+from .const import CONF_NAME, CONF_PROVIDER, CONF_STOP_ID, DOMAIN, PROVIDER_LABELS
 from .coordinator import MzkzgTransportCoordinator
 
 
@@ -36,17 +36,18 @@ class MzkzgTransportSensor(CoordinatorEntity, SensorEntity):
     def __init__(self, coordinator: MzkzgTransportCoordinator, entry: ConfigEntry) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator)
-        prov = PROVIDER_SHORT_NAMES.get(entry.data[CONF_PROVIDER], entry.data[CONF_PROVIDER])
+        provider = entry.data[CONF_PROVIDER]
+        provider_label = PROVIDER_LABELS.get(provider, provider)
         stop = entry.data[CONF_STOP_ID]
-        self._attr_unique_id = f"{DOMAIN}_{entry.data[CONF_PROVIDER]}_{stop}"
+        self._attr_unique_id = f"{DOMAIN}_{provider}_{stop}"
         custom_name = entry.data.get(CONF_NAME, "")
-        self._attr_name = custom_name or f"MZKZG {prov.upper()} {stop}"
+        self._attr_name = "Odjazdy"
         self._attr_icon = "mdi:bus-multiple"
         self._attr_device_info = {
-            "identifiers": {(DOMAIN, f"{entry.data[CONF_PROVIDER]}_{stop}")},
-            "name": custom_name or f"{prov.upper()} {stop}",
+            "identifiers": {(DOMAIN, f"{provider}_{stop}")},
+            "name": custom_name or f"{provider_label} {stop}",
             "manufacturer": "MZKZG Transport",
-            "model": entry.data[CONF_PROVIDER],
+            "model": provider,
             "entry_type": "service",
         }
 

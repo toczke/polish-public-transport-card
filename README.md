@@ -50,6 +50,7 @@ A custom Home Assistant integration and Lovelace card providing real-time depart
 | **ZTM Gdańsk** | Buses and trams in Gdańsk and surrounding municipalities | ✅ |
 | **ZKM Gdynia** | Buses and trolleybuses in Gdynia | ✅ |
 | **MZK Wejherowo** | Buses in Wejherowo area | ❌ (schedule only) |
+| **Tczew (Time4BUS)** | Bus departures with live fallback to schedule | ? |
 | **PKS Gdańsk Sp. z o.o.** | Intercity and regional bus departures on kiedyprzyjedzie.pl | ✅ |
 | **Albatros** | Bus departures on kiedyprzyjedzie.pl | ✅ |
 | **Przewozy Autobusowe GRYF** | Bus departures on kiedyprzyjedzie.pl | ✅ |
@@ -90,7 +91,7 @@ Restart Home Assistant.
 
 **Settings → Devices & Services → Add Integration → MZKZG Transport**
 
-1. Select provider (ZTM / ZKM / MZK / PKS Gdańsk / Albatros / GRYF / Nord Express / PKS Gdynia / ZKM Gdynia / MZK Malbork / PKS Słupsk / MZK Starogard / PKS Starogard / Bytów / Powiat Człuchowski / PLK)
+1. Select provider (ZTM / ZKM / MZK / Tczew / PKS Gda?sk / Albatros / GRYF / Nord Express / PKS Gdynia / ZKM Gdynia / MZK Malbork / PKS S?upsk / MZK Starogard / PKS Starogard / Byt?w / Powiat Cz?uchowski / PLK)
 2. For PLK: enter your API key (see below)
 3. Select a stop from the list
 4. Done — sensor and binary sensor are created automatically
@@ -230,6 +231,21 @@ Each provider uses different APIs and data strategies. Below is a detailed break
 2. Every 30 seconds, the current time is compared against `stop_times.txt` to compute upcoming departures.
 3. Supports night services with times exceeding 24:00 (e.g., `25:15:00` = 01:15 next day).
 4. No real-time data — all times are from the static schedule.
+
+---
+
+### Tczew (Time4BUS)
+
+| Endpoint | Purpose | Refresh |
+|----------|---------|---------|
+| `GET https://time4bus.com/t4b/operators/tczew/stops?limit=1000&offset=0` | Stop list for config flow | On setup |
+| `GET https://time4bus.com/t4b/live/schedules/tczew/stops/{stopId}/departures` | Live departures | Every 30s |
+| `GET https://time4bus.com/t4b/operators/tczew/stops/{stopId}/departures?date=YYYY-MM-DD` | Schedule fallback | On live failure / empty live |
+
+**Data flow:**
+1. The integration uses `fullcode` as the stop ID.
+2. It tries live departures first.
+3. If live data is unavailable or empty, it falls back to the schedule endpoint for the same stop and date.
 
 ---
 

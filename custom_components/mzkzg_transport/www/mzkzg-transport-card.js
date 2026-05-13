@@ -69,6 +69,7 @@ function formatMins(min) {
 function routeColor(route, provider) {
   const s = String(route || "");
   if (/^[Nn]/.test(s)) return "#1e293b";  // Night lines (all providers)
+  if (PROVIDER_BADGE_COLORS[provider]) return PROVIDER_BADGE_COLORS[provider];
   const n = parseInt(s, 10);
   if (provider === "zkm_gdynia") {
     if (!isNaN(n) && n >= 20 && n <= 29) return "#0891b2";
@@ -96,6 +97,36 @@ function routeColor(route, provider) {
 function normalizeText(t) {
   return (t || "").replace(/\s/g, "").toLowerCase().replace(/\d+$/, "");
 }
+
+const PROVIDER_HEADER_COLORS = {
+  kiedyprzyjedzie_pks_gdansk: "#475569",
+  kiedyprzyjedzie_albatros: "#166534",
+  kiedyprzyjedzie_gryf: "#2f2f2f",
+  kiedyprzyjedzie_nord_express: "#9d174d",
+  kiedyprzyjedzie_pks_gdynia: "#0f766e",
+  kiedyprzyjedzie_mzk_malbork: "#14532d",
+  kiedyprzyjedzie_pks_slupsk: "#0f172a",
+  kiedyprzyjedzie_mzk_starogard: "#7f1d1d",
+  kiedyprzyjedzie_pks_starogard: "#1e3a8a",
+  kiedyprzyjedzie_bytow: "#155e75",
+  kiedyprzyjedzie_czluchow: "#991b1b",
+  time4bus_tczew: "#1d4ed8",
+};
+
+const PROVIDER_BADGE_COLORS = {
+  kiedyprzyjedzie_pks_gdansk: "#0f766e",
+  kiedyprzyjedzie_albatros: "#22c55e",
+  kiedyprzyjedzie_gryf: "#facc15",
+  kiedyprzyjedzie_nord_express: "#ec4899",
+  kiedyprzyjedzie_pks_gdynia: "#16a34a",
+  kiedyprzyjedzie_mzk_malbork: "#d97706",
+  kiedyprzyjedzie_pks_slupsk: "#2563eb",
+  kiedyprzyjedzie_mzk_starogard: "#dc2626",
+  kiedyprzyjedzie_pks_starogard: "#0ea5e9",
+  kiedyprzyjedzie_bytow: "#14b8a6",
+  kiedyprzyjedzie_czluchow: "#f97316",
+  time4bus_tczew: "#dc2626",
+};
 
 /* ── CSS ─────────────────────────────────────────────────────────────────── */
 
@@ -680,17 +711,7 @@ class MzkzgTransportCard extends HTMLElement {
       zkm_gdynia: "#005eb8",
       mzk_wejherowo: "#478AC9",
       plk_rail: "#1a1a2e",
-      kiedyprzyjedzie_pks_gdansk: "#0f766e",
-      kiedyprzyjedzie_albatros: "#1d4ed8",
-      kiedyprzyjedzie_gryf: "#f59e0b",
-      kiedyprzyjedzie_nord_express: "#0f172a",
-      kiedyprzyjedzie_pks_gdynia: "#0e7490",
-      kiedyprzyjedzie_mzk_malbork: "#ea580c",
-      kiedyprzyjedzie_pks_slupsk: "#4f46e5",
-      kiedyprzyjedzie_mzk_starogard: "#be123c",
-      kiedyprzyjedzie_pks_starogard: "#7c3aed",
-      kiedyprzyjedzie_bytow: "#16a34a",
-      kiedyprzyjedzie_czluchow: "#64748b",
+      ...PROVIDER_HEADER_COLORS,
     };
     const providers = new Set();
     if (this._hass && this._config.entities?.length) {
@@ -739,6 +760,7 @@ class MzkzgTransportCard extends HTMLElement {
           kiedyprzyjedzie_pks_starogard: "PKS Starogard",
           kiedyprzyjedzie_bytow: "Bytów",
           kiedyprzyjedzie_czluchow: "Powiat Człuchowski",
+          time4bus_tczew: "Tczew",
         };
         providers.add(map[s.attributes.provider] || s.attributes.provider);
       }
@@ -892,7 +914,10 @@ class MzkzgTransportCard extends HTMLElement {
           if (d.track) chips += `<span class="platform">${t("track")} ${escapeHtml(d.track)}</span>`;
           return chips;
         }
-        return d.platform ? `<span class="platform">${t("track")} ${escapeHtml(d.platform)}</span>` : "";
+        let chips = "";
+        if (d.platform) chips += `<span class="platform">peron ${escapeHtml(d.platform)}</span>`;
+        if (d.track) chips += `<span class="platform">${t("track")} ${escapeHtml(d.track)}</span>`;
+        return chips;
       })();
 
       // Vehicle info + feature icons

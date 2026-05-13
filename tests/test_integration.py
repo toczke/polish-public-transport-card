@@ -34,6 +34,10 @@ from mzkzg_transport.const import (
     PROVIDER_PKS_STAROGARD,
     PROVIDER_ZKM,
     PROVIDER_ZTM,
+    PROVIDER_TCZEW,
+    TIME4BUS_TCZEW_LIVE_DEPARTURES_URL,
+    TIME4BUS_TCZEW_SCHEDULE_DEPARTURES_URL,
+    TIME4BUS_TCZEW_STOPS_URL,
     ZKM_GDYNIA_DELAYS_URL,
     ZKM_GDYNIA_ROUTES_URL,
     ZTM_GDANSK_DEPARTURES_URL,
@@ -317,6 +321,10 @@ def test_const_values():
     assert DOMAIN == "mzkzg_transport"
     assert "zdiz.gdynia.pl" in ZKM_GDYNIA_DELAYS_URL
     assert "multimediagdansk.pl" in ZTM_GDANSK_DEPARTURES_URL
+    assert PROVIDER_TCZEW == "time4bus_tczew"
+    assert TIME4BUS_TCZEW_STOPS_URL.endswith("/operators/tczew/stops")
+    assert TIME4BUS_TCZEW_LIVE_DEPARTURES_URL.endswith("/live/schedules/tczew/stops")
+    assert TIME4BUS_TCZEW_SCHEDULE_DEPARTURES_URL.endswith("/operators/tczew/stops")
     assert KIEDYPRZYJEDZIE_PKS_GDANSK_URL.endswith("pksgdansk.kiedyprzyjedzie.pl")
     assert KIEDYPRZYJEDZIE_ALBATROS_URL.endswith("albatros.kiedyprzyjedzie.pl")
 
