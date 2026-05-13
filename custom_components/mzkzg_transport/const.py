@@ -18,7 +18,6 @@ KIEDYPRZYJEDZIE_ALBATROS_URL = "https://albatros.kiedyprzyjedzie.pl"
 KIEDYPRZYJEDZIE_GRYF_URL = "https://gryf.kiedyprzyjedzie.pl"
 KIEDYPRZYJEDZIE_NORD_EXPRESS_URL = "https://nordexpress.kiedyprzyjedzie.pl"
 KIEDYPRZYJEDZIE_PKS_GDYNIA_URL = "https://pksgdynia.kiedyprzyjedzie.pl"
-KIEDYPRZYJEDZIE_ZKM_GDYNIA_URL = "https://gdynia.kiedyprzyjedzie.pl"
 KIEDYPRZYJEDZIE_MZK_MALBORK_URL = "https://malbork.kiedyprzyjedzie.pl"
 KIEDYPRZYJEDZIE_PKS_SLUPSK_URL = "https://pksslupsk.kiedyprzyjedzie.pl"
 KIEDYPRZYJEDZIE_MZK_STAROGARD_URL = "https://starogard.kiedyprzyjedzie.pl"
@@ -36,7 +35,6 @@ PROVIDER_ALBATROS = "kiedyprzyjedzie_albatros"
 PROVIDER_GRYF = "kiedyprzyjedzie_gryf"
 PROVIDER_NORD_EXPRESS = "kiedyprzyjedzie_nord_express"
 PROVIDER_PKS_GDYNIA = "kiedyprzyjedzie_pks_gdynia"
-PROVIDER_KIEDYPRZYJEDZIE_ZKM_GDYNIA = "kiedyprzyjedzie_zkm_gdynia"
 PROVIDER_MZK_MALBORK = "kiedyprzyjedzie_mzk_malbork"
 PROVIDER_PKS_SLUPSK = "kiedyprzyjedzie_pks_slupsk"
 PROVIDER_MZK_STAROGARD = "kiedyprzyjedzie_mzk_starogard"
@@ -50,7 +48,6 @@ KIEDYPRZYJEDZIE_BASE_URLS = {
     PROVIDER_GRYF: KIEDYPRZYJEDZIE_GRYF_URL,
     PROVIDER_NORD_EXPRESS: KIEDYPRZYJEDZIE_NORD_EXPRESS_URL,
     PROVIDER_PKS_GDYNIA: KIEDYPRZYJEDZIE_PKS_GDYNIA_URL,
-    PROVIDER_KIEDYPRZYJEDZIE_ZKM_GDYNIA: KIEDYPRZYJEDZIE_ZKM_GDYNIA_URL,
     PROVIDER_MZK_MALBORK: KIEDYPRZYJEDZIE_MZK_MALBORK_URL,
     PROVIDER_PKS_SLUPSK: KIEDYPRZYJEDZIE_PKS_SLUPSK_URL,
     PROVIDER_MZK_STAROGARD: KIEDYPRZYJEDZIE_MZK_STAROGARD_URL,
@@ -71,7 +68,6 @@ PROVIDER_LABELS = {
     PROVIDER_GRYF: "Przewozy Autobusowe GRYF",
     PROVIDER_NORD_EXPRESS: "Nord Express",
     PROVIDER_PKS_GDYNIA: "PKS Gdynia S.A.",
-    PROVIDER_KIEDYPRZYJEDZIE_ZKM_GDYNIA: "ZKM Gdynia (kiedyPrzyjedzie)",
     PROVIDER_MZK_MALBORK: "Miejski Zakład Komunikacji w Malborku",
     PROVIDER_PKS_SLUPSK: "PKS Słupsk S.A.",
     PROVIDER_MZK_STAROGARD: "MZK Starogard Gdański",
@@ -90,7 +86,6 @@ PROVIDER_SHORT_NAMES = {
     PROVIDER_GRYF: "gryf",
     PROVIDER_NORD_EXPRESS: "nord",
     PROVIDER_PKS_GDYNIA: "pksgd",
-    PROVIDER_KIEDYPRZYJEDZIE_ZKM_GDYNIA: "kpgd",
     PROVIDER_MZK_MALBORK: "malb",
     PROVIDER_PKS_SLUPSK: "slupsk",
     PROVIDER_MZK_STAROGARD: "starog",
@@ -109,7 +104,6 @@ PROVIDER_COLORS = {
     PROVIDER_GRYF: "#f59e0b",
     PROVIDER_NORD_EXPRESS: "#0f172a",
     PROVIDER_PKS_GDYNIA: "#0e7490",
-    PROVIDER_KIEDYPRZYJEDZIE_ZKM_GDYNIA: "#2563eb",
     PROVIDER_MZK_MALBORK: "#ea580c",
     PROVIDER_PKS_SLUPSK: "#4f46e5",
     PROVIDER_MZK_STAROGARD: "#be123c",

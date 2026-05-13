@@ -55,7 +55,6 @@ A custom Home Assistant integration and Lovelace card providing real-time depart
 | **Przewozy Autobusowe GRYF** | Bus departures on kiedyprzyjedzie.pl | ✅ |
 | **Nord Express** | Bus departures on kiedyprzyjedzie.pl | ✅ |
 | **PKS Gdynia S.A.** | Bus departures on kiedyprzyjedzie.pl | ✅ |
-| **ZKM Gdynia (kiedyPrzyjedzie)** | Bus departures on kiedyprzyjedzie.pl | ✅ |
 | **Miejski Zakład Komunikacji w Malborku** | Bus departures on kiedyprzyjedzie.pl | ✅ |
 | **PKS Słupsk S.A.** | Bus departures on kiedyprzyjedzie.pl | ✅ |
 | **MZK Starogard Gdański** | Bus departures on kiedyprzyjedzie.pl | ✅ |
@@ -248,8 +247,6 @@ Each provider uses different APIs and data strategies. Below is a detailed break
 | **Nord Express** | `GET https://nordexpress.kiedyprzyjedzie.pl/api/departures/{stopId}` | Departure board with normalized timestamps | Every 30s |
 | **PKS Gdynia S.A.** | `GET https://pksgdynia.kiedyprzyjedzie.pl/stops` | Stop list for config flow | On setup |
 | **PKS Gdynia S.A.** | `GET https://pksgdynia.kiedyprzyjedzie.pl/api/departures/{stopId}` | Departure board with normalized timestamps | Every 30s |
-| **ZKM Gdynia (kiedyPrzyjedzie)** | `GET https://gdynia.kiedyprzyjedzie.pl/stops` | Stop list for config flow | On setup |
-| **ZKM Gdynia (kiedyPrzyjedzie)** | `GET https://gdynia.kiedyprzyjedzie.pl/api/departures/{stopId}` | Departure board with normalized timestamps | Every 30s |
 | **Miejski Zakład Komunikacji w Malborku** | `GET https://malbork.kiedyprzyjedzie.pl/stops` | Stop list for config flow | On setup |
 | **Miejski Zakład Komunikacji w Malborku** | `GET https://malbork.kiedyprzyjedzie.pl/api/departures/{stopId}` | Departure board with normalized timestamps | Every 30s |
 | **PKS Słupsk S.A.** | `GET https://pksslupsk.kiedyprzyjedzie.pl/stops` | Stop list for config flow | On setup |

@@ -18,11 +18,9 @@ from mzkzg_transport.const import (
     KIEDYPRZYJEDZIE_PKS_GDYNIA_URL,
     KIEDYPRZYJEDZIE_PKS_SLUPSK_URL,
     KIEDYPRZYJEDZIE_PKS_STAROGARD_URL,
-    KIEDYPRZYJEDZIE_ZKM_GDYNIA_URL,
     PROVIDER_BYTOW,
     PROVIDER_CZLUCHOW,
     PROVIDER_GRYF,
-    PROVIDER_KIEDYPRZYJEDZIE_ZKM_GDYNIA,
     PROVIDER_MZK_MALBORK,
     PROVIDER_MZK_STAROGARD,
     PROVIDER_NORD_EXPRESS,
@@ -167,7 +165,7 @@ def mock_hass():
                 "station_name": "Banino, Pszenna",
             },
             "expected_departures": 2,
-            "checks": [
+                "checks": [
                 (0, "realtime", True),
                 (0, "bike_allowed", True),
                 (0, "wheelchair_accessible", True),
@@ -204,7 +202,6 @@ def test_kiedyprzyjedzie_extra_urls():
         KIEDYPRZYJEDZIE_GRYF_URL: "gryf.kiedyprzyjedzie.pl",
         KIEDYPRZYJEDZIE_NORD_EXPRESS_URL: "nordexpress.kiedyprzyjedzie.pl",
         KIEDYPRZYJEDZIE_PKS_GDYNIA_URL: "pksgdynia.kiedyprzyjedzie.pl",
-        KIEDYPRZYJEDZIE_ZKM_GDYNIA_URL: "gdynia.kiedyprzyjedzie.pl",
         KIEDYPRZYJEDZIE_MZK_MALBORK_URL: "malbork.kiedyprzyjedzie.pl",
         KIEDYPRZYJEDZIE_PKS_SLUPSK_URL: "pksslupsk.kiedyprzyjedzie.pl",
         KIEDYPRZYJEDZIE_MZK_STAROGARD_URL: "starogard.kiedyprzyjedzie.pl",
