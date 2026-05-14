@@ -11,6 +11,7 @@ const LOCALE = {
     no_entities: "Dodaj encje sensorów w konfiguracji",
     no_departures: "Brak nadchodzących odjazdów",
     unavailable: "Dane niedostępne — sprawdź połączenie",
+    missing_entities: "Brak encji w HA — sprawdź konfigurację karty",
     plk_rate_limit: "Limit API wyczerpany — dane odświeżą się automatycznie",
     cancelled: "odwołany",
     track: "tor",
@@ -21,6 +22,7 @@ const LOCALE = {
     no_entities: "Add sensor entities in configuration",
     no_departures: "No upcoming departures",
     unavailable: "Data unavailable — check connection",
+    missing_entities: "Configured entities were not found in Home Assistant",
     plk_rate_limit: "API rate limit reached — data will refresh automatically",
     cancelled: "cancelled",
     track: "track",
@@ -170,9 +172,24 @@ const PROVIDER_BADGE_COLORS = {
 /* ── CSS ─────────────────────────────────────────────────────────────────── */
 
 const CARD_CSS = `
-:host { display: block; }
+:host {
+  display: block;
+  --mzkzg-text: var(--primary-text-color, #111);
+  --mzkzg-muted: var(--secondary-text-color, #888);
+  --mzkzg-divider: var(--divider-color, #e5e5e5);
+  --mzkzg-focus: var(--primary-color, #3b82f6);
+  --mzkzg-live-dot: #10b981;
+}
 * { box-sizing: border-box; margin: 0; padding: 0; }
-ha-card { overflow: hidden; font-family: var(--ha-card-header-font-family, inherit); }
+ha-card {
+  display: block;
+  overflow: hidden;
+  font-family: var(--ha-card-header-font-family, inherit);
+  background: var(--card-background-color, #fff);
+  color: var(--primary-text-color, #111);
+  border-radius: var(--ha-card-border-radius, 12px);
+  box-shadow: var(--ha-card-box-shadow, none);
+}
 .header {
   padding: 8px 12px; display: flex; align-items: center; gap: 8px; user-select: none;
 }
@@ -186,15 +203,15 @@ ha-card { overflow: hidden; font-family: var(--ha-card-header-font-family, inher
 .dep-row.departing { opacity: 0; max-height: 0; padding-top: 0; padding-bottom: 0; }
 ha-card.e-ink .dep-row { transition: none; }
 .tabs { display: flex; border-bottom: 1px solid var(--divider-color, #e5e5e5); }
-.tab { flex: 1; padding: 8px 14px; font-size: 12px; font-weight: 600; color: var(--secondary-text-color, #888); cursor: pointer; white-space: nowrap; border-bottom: 2px solid transparent; text-align: center; }
-.tab.active { color: var(--primary-text-color, #111); border-bottom-color: var(--primary-color, #005eb8); }
-.tab:hover { color: var(--primary-text-color, #111); }
+.tab { flex: 1; padding: 8px 14px; font-size: 12px; font-weight: 600; color: var(--mzkzg-muted); cursor: pointer; white-space: nowrap; border-bottom: 2px solid transparent; text-align: center; }
+.tab.active { color: var(--mzkzg-text); border-bottom-color: var(--primary-color, #005eb8); }
+.tab:hover { color: var(--mzkzg-text); }
 .dep-row {
   display: flex; align-items: center; gap: 10px;
-  padding: 10px 14px; border-bottom: 1px solid var(--divider-color, #f0f0f0); min-height: 52px;
+  padding: 10px 14px; border-bottom: 1px solid var(--mzkzg-divider); min-height: 52px;
 }
 .dep-row.interactive { cursor: pointer; }
-.dep-row:focus-visible { outline: 2px solid var(--primary-color, #3b82f6); outline-offset: -2px; }
+.dep-row:focus-visible { outline: 2px solid var(--mzkzg-focus); outline-offset: -2px; }
 .dep-row:last-child { border-bottom: none; }
 .dep-row.imminent { }
 .dep-row.dimmed { opacity: 0.35; }
@@ -204,35 +221,38 @@ ha-card.e-ink .dep-row { transition: none; }
   color: #fff; min-width: 40px; flex-shrink: 0;
 }
 .headsign {
-  font-size: 13px; font-weight: 500; color: var(--primary-text-color, #111);
+  font-size: 13px; font-weight: 500; color: var(--mzkzg-text);
   flex: 1; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 2px 6px;
 }
-.headsign-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; min-width: 0; width: auto; }
-.icons { display: inline-flex; gap: 3px; align-items: center; flex-shrink: 0; white-space: nowrap; }
-.icons svg { color: var(--secondary-text-color, #666); opacity: 0.8; }
-.stop-name { display: block; font-size: 10px; color: var(--secondary-text-color, #888); font-weight: 400; margin-top: 1px; width: 100%; }
+.head-main { display: inline-flex; align-items: center; gap: 6px; width: 100%; min-width: 0; }
+.headsign-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 0 1 auto; min-width: 0; max-width: 100%; }
+.icons { display: inline-flex; gap: 3px; align-items: center; flex-shrink: 0; white-space: nowrap; flex-basis: 100%; width: 100%; margin-top: 1px; }
+.icons svg { color: var(--mzkzg-muted); opacity: 0.8; }
+.meta-row { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; width: 100%; margin-top: 1px; }
+.stop-name { display: block; font-size: 10px; color: var(--mzkzg-muted); font-weight: 400; margin-top: 1px; width: 100%; }
 ha-card.compact .stop-name { display: none; }
 ha-card.compact .icons { display: none; }
+ha-card.compact .meta-row { display: none; }
 ha-card.compact .platform { display: none; }
 ha-card.compact .footer { display: none; }
 .dep-row.cancelled .headsign { text-decoration: line-through; opacity: 0.6; }
 .dep-row.cancelled .badge { opacity: 0.5; }
 .time-main.cancelled { font-size: 12px; color: #dc2626; font-weight: 600; }
-.platform { display: inline-block; font-size: 10px; color: var(--secondary-text-color, #888); background: var(--divider-color, #e5e5e5); border-radius: 3px; padding: 1px 5px; vertical-align: middle; flex-shrink: 0; }
+.platform { display: inline-block; font-size: 10px; color: var(--mzkzg-muted); background: var(--mzkzg-divider); border-radius: 3px; padding: 1px 5px; vertical-align: middle; flex-shrink: 0; }
 
 .time-col { text-align: right; flex-shrink: 0; display: flex; flex-direction: column; align-items: flex-end; gap: 1px; }
-.time-main { font-size: 15px; font-weight: 600; color: var(--primary-text-color, #111); white-space: nowrap; }
+.time-main { font-size: 15px; font-weight: 600; color: var(--mzkzg-text); white-space: nowrap; }
 .time-struck { text-decoration: line-through; opacity: 0.5; font-size: 13px; font-weight: 400; }
-.time-sub { font-size: 11px; color: var(--secondary-text-color, #888); white-space: nowrap; display: flex; align-items: center; gap: 4px; }
-.time-sub .dot { color: #10b981; font-weight: 700; display: inline-block; animation: live-dot-pulse 2s ease-in-out infinite; transform-origin: center; }
+.time-sub { font-size: 11px; color: var(--mzkzg-muted); white-space: nowrap; display: flex; align-items: center; gap: 4px; }
+.time-sub .dot { color: var(--mzkzg-live-dot); font-weight: 700; display: inline-block; animation: live-dot-pulse 2s ease-in-out infinite; transform-origin: center; }
 @keyframes live-dot-pulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: .35; transform: scale(.72); } }
 @media (prefers-reduced-motion: reduce) { .time-sub .dot { animation: none; } }
 .delay-badge { font-size: 11px; font-weight: 600; }
 .delay-badge.late { color: #dc2626; }
 .delay-badge.early { color: #0369a1; }
-.state-msg { padding: 24px 16px; text-align: center; color: var(--secondary-text-color, #888); font-size: 13px; }
+.state-msg { padding: 24px 16px; text-align: center; color: var(--mzkzg-muted); font-size: 13px; }
 .state-msg .icon { font-size: 28px; display: block; margin-bottom: 8px; }
-.footer { padding: 5px 14px; font-size: 10px; color: var(--secondary-text-color, #aaa); text-align: right; border-top: 1px solid var(--divider-color, #f0f0f0); }
+.footer { padding: 5px 14px; font-size: 10px; color: var(--mzkzg-muted); text-align: right; border-top: 1px solid var(--mzkzg-divider); }
 .skel { background: var(--divider-color, #e5e5e5); border-radius: 4px; }
 @keyframes shimmer { 0%,100%{opacity:.5} 50%{opacity:1} }
 .skel { animation: shimmer 1.4s ease-in-out infinite; }
@@ -581,7 +601,7 @@ class MzkzgTransportCardEditor extends HTMLElement {
       </style>
       <div class="form">
         <div class="section">
-          <div class="section-title">Sensory</div>
+          <div class="section-title">Dane</div>
           <div class="field">
             <select id="entities" multiple size="${Math.min(Math.max(entities.length, 3), 8)}">
               ${entityOptions}
@@ -692,49 +712,49 @@ class MzkzgTransportCardEditor extends HTMLElement {
           <div class="section-title">Interakcje</div>
           <div class="field-row">
             <div class="field">
-              <label for="tap_action_type">Tap</label>
+              <label for="tap_action_type">Klik</label>
               <select id="tap_action_type">
-                <option value="more-info" ${tapAction.action === "more-info" ? "selected" : ""}>more-info</option>
-                <option value="none" ${tapAction.action === "none" ? "selected" : ""}>none</option>
-                <option value="navigate" ${tapAction.action === "navigate" ? "selected" : ""}>navigate</option>
+                <option value="more-info" ${tapAction.action === "more-info" ? "selected" : ""}>Więcej informacji</option>
+                <option value="none" ${tapAction.action === "none" ? "selected" : ""}>Brak</option>
+                <option value="navigate" ${tapAction.action === "navigate" ? "selected" : ""}>Nawigacja</option>
                 <option value="url" ${tapAction.action === "url" ? "selected" : ""}>url</option>
-                <option value="perform-action" ${tapAction.action === "perform-action" ? "selected" : ""}>perform-action</option>
+                <option value="perform-action" ${tapAction.action === "perform-action" ? "selected" : ""}>Wywołaj akcję</option>
               </select>
             </div>
             <div class="field">
-              <label for="tap_action_value">Tap value</label>
+              <label for="tap_action_value">Wartość</label>
               <input id="tap_action_value" type="text" value="${escapeHtml(tapAction.navigation_path || tapAction.url_path || tapAction.perform_action || tapAction.service || "")}" placeholder="/lovelace/1 lub https://... lub domain.service" />
             </div>
           </div>
           <div class="field-row">
             <div class="field">
-              <label for="hold_action_type">Hold</label>
+              <label for="hold_action_type">Przytrzymanie</label>
               <select id="hold_action_type">
-                <option value="none" ${holdAction.action === "none" ? "selected" : ""}>none</option>
-                <option value="more-info" ${holdAction.action === "more-info" ? "selected" : ""}>more-info</option>
-                <option value="navigate" ${holdAction.action === "navigate" ? "selected" : ""}>navigate</option>
+                <option value="none" ${holdAction.action === "none" ? "selected" : ""}>Brak</option>
+                <option value="more-info" ${holdAction.action === "more-info" ? "selected" : ""}>Więcej informacji</option>
+                <option value="navigate" ${holdAction.action === "navigate" ? "selected" : ""}>Nawigacja</option>
                 <option value="url" ${holdAction.action === "url" ? "selected" : ""}>url</option>
-                <option value="perform-action" ${holdAction.action === "perform-action" ? "selected" : ""}>perform-action</option>
+                <option value="perform-action" ${holdAction.action === "perform-action" ? "selected" : ""}>Wywołaj akcję</option>
               </select>
             </div>
             <div class="field">
-              <label for="hold_action_value">Hold value</label>
+              <label for="hold_action_value">Wartość</label>
               <input id="hold_action_value" type="text" value="${escapeHtml(holdAction.navigation_path || holdAction.url_path || holdAction.perform_action || holdAction.service || "")}" placeholder="/lovelace/1 lub https://... lub domain.service" />
             </div>
           </div>
           <div class="field-row">
             <div class="field">
-              <label for="double_tap_action_type">Double tap</label>
+              <label for="double_tap_action_type">Dwuklik</label>
               <select id="double_tap_action_type">
-                <option value="none" ${doubleTapAction.action === "none" ? "selected" : ""}>none</option>
-                <option value="more-info" ${doubleTapAction.action === "more-info" ? "selected" : ""}>more-info</option>
-                <option value="navigate" ${doubleTapAction.action === "navigate" ? "selected" : ""}>navigate</option>
+                <option value="none" ${doubleTapAction.action === "none" ? "selected" : ""}>Brak</option>
+                <option value="more-info" ${doubleTapAction.action === "more-info" ? "selected" : ""}>Więcej informacji</option>
+                <option value="navigate" ${doubleTapAction.action === "navigate" ? "selected" : ""}>Nawigacja</option>
                 <option value="url" ${doubleTapAction.action === "url" ? "selected" : ""}>url</option>
-                <option value="perform-action" ${doubleTapAction.action === "perform-action" ? "selected" : ""}>perform-action</option>
+                <option value="perform-action" ${doubleTapAction.action === "perform-action" ? "selected" : ""}>Wywołaj akcję</option>
               </select>
             </div>
             <div class="field">
-              <label for="double_tap_action_value">Double tap value</label>
+              <label for="double_tap_action_value">Wartość</label>
               <input id="double_tap_action_value" type="text" value="${escapeHtml(doubleTapAction.navigation_path || doubleTapAction.url_path || doubleTapAction.perform_action || doubleTapAction.service || "")}" placeholder="/lovelace/1 lub https://... lub domain.service" />
             </div>
           </div>
@@ -742,7 +762,7 @@ class MzkzgTransportCardEditor extends HTMLElement {
 
         ${!isEink ? `
         <div class="section">
-          <div class="section-title">Wyświetlanie</div>
+          <div class="section-title">Zaawansowane</div>
           <div class="switch-list">
             <div class="switch-row"><label for="show_delays">Opóźnienia</label><input id="show_delays" type="checkbox" ${c.show_delays !== false ? "checked" : ""}/></div>
             <div class="switch-row"><label for="show_footer">Czas aktualizacji</label><input id="show_footer" type="checkbox" ${c.show_footer !== false ? "checked" : ""}/></div>
@@ -1050,9 +1070,9 @@ class MzkzgTransportCard extends HTMLElement {
           kiedyprzyjedzie_pks_slupsk: "PKS Słupsk",
           kiedyprzyjedzie_mzk_starogard: "MZK Starogard",
           kiedyprzyjedzie_pks_starogard: "PKS Starogard",
-          kiedyprzyjedzie_bytow: "Bytów",
+          kiedyprzyjedzie_bytow: "Komunikacja Miejska Bytów",
           kiedyprzyjedzie_czluchow: "Powiat Człuchowski",
-          time4bus_tczew: "Tczew",
+          time4bus_tczew: "Komunikacja Miejska Tczew",
         };
         providers.add(map[s.attributes.provider] || s.attributes.provider);
       }
@@ -1250,6 +1270,11 @@ class MzkzgTransportCard extends HTMLElement {
 
     const deps = this._getDepartures();
     if (!deps.length) {
+      const missing = this._getEntityIds().filter(eid => !this._hass.states[eid]);
+      if (missing.length) {
+        const names = missing.map(e => e.replace("sensor.", "")).join(", ");
+        return `<div class="state-msg"><span class="icon">⚠️</span>${t("missing_entities")}<br><small>${escapeHtml(names)}</small></div>`;
+      }
       // Check if any entity is unavailable (e.g. rate limit)
       const unavailable = this._getEntityIds().filter(eid => {
         const s = this._hass.states[eid];
@@ -1314,6 +1339,9 @@ class MzkzgTransportCard extends HTMLElement {
       const vehicleChip = (d._provider !== "plk_rail" && d.vehicle_code && d.realtime)
         ? `<span class="platform">${escapeHtml(d.vehicle_code)}</span>`
         : "";
+      const metaRow = (iconsHTML || platformHTML)
+        ? `<span class="meta-row">${iconsHTML}${platformHTML}</span>`
+        : "";
 
       // Auto show_stop_name when multiple entities
       const showStop = c.show_stop_name && c.entities.length > 1 && c.view_mode !== "tabs" && d._stopName;
@@ -1328,7 +1356,7 @@ class MzkzgTransportCard extends HTMLElement {
       const rowLabel = `${d.route} ${d.headsign} ${formatTime(d.estimated_time || d.theoretical_time)}`;
       return `<div class="dep-row${hasRowActions ? " interactive" : ""}${imminent ? " imminent" : ""}${d._dimmed ? " dimmed" : ""}${cancelled ? " cancelled" : ""}" ${hasRowActions ? `tabindex="0" role="button" aria-label="${escapeHtml(rowLabel)}" data-entity-id="${escapeHtml(d._entityId || "")}"` : ""}>
         <span class="badge" style="background:${routeColor(d.route, d._provider || d.provider)}">${escapeHtml(d.route)}</span>
-        <span class="headsign"><span class="headsign-text">${escapeHtml(d.headsign)}</span>${vehicleChip}${iconsHTML}${platformHTML}${trainInfo || (showStop ? `<span class="stop-name">${escapeHtml(cleanStopName)}</span>` : "")}</span>
+        <span class="headsign"><span class="head-main"><span class="headsign-text">${escapeHtml(d.headsign)}</span>${vehicleChip}</span>${metaRow}${trainInfo || (showStop ? `<span class="stop-name">${escapeHtml(cleanStopName)}</span>` : "")}</span>
         <div class="time-col">${timeHTML}</div>
       </div>`;
     }).join("");

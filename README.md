@@ -7,6 +7,19 @@
 
 Home Assistant integration + Lovelace card for real-time departures in Tricity and nearby operators.
 
+![Gallery light](docs/screenshots/gallery-light.png)
+![Gallery dark](docs/screenshots/gallery-dark.png)
+
+## Visual Gallery
+
+The gallery below shows the main card layout combinations:
+
+- `standard`, `compact`, `e_ink`
+- `mixed`, `tabs`
+- `light`, `dark`
+
+Open the standalone gallery locally at `dev/gallery.html`.
+
 ![Preview](docs/screenshots/ztm-standard.png)
 
 ## Features
@@ -137,6 +150,23 @@ python -c "import asyncio,sys,pytest; asyncio.set_event_loop_policy(asyncio.Wind
 
 Current test status: **36 passed, 1 skipped**.
 
+## Local Preview (without HA release build)
+
+You can preview all providers except PLK in a standalone page:
+
+1. Run local static server in repo root:
+   ```bash
+   python -m http.server 8125
+   ```
+2. Open:
+   `http://localhost:8125/dev/preview.html`
+
+The preview page supports auto-reload with cache-busting, so JS card changes are visible immediately.
+
+For the configuration gallery, open:
+
+`http://localhost:8125/dev/gallery.html`
+
 ## Contributing
 
 - Open an issue with provider, stop ID, steps, expected vs actual behavior.
@@ -144,6 +174,7 @@ Current test status: **36 passed, 1 skipped**.
 - Keep both card files in sync:
   - `custom_components/mzkzg_transport/www/mzkzg-transport-card.js`
   - `mzkzg-transport-card.js`
+  - You can sync with: `powershell -ExecutionPolicy Bypass -File dev/sync-card.ps1`
 
 ## Project Funding
 

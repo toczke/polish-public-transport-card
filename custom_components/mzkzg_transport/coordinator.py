@@ -584,7 +584,7 @@ class MzkzgTransportCoordinator(DataUpdateCoordinator):
 
             direction_id = row.get("direction_id")
 
-            direction = directions.get(str(direction_id)) or "â€”"
+            direction = directions.get(str(direction_id)) or "—"
 
             vehicle_attributes = [str(attr) for attr in row.get("vehicle_attributes", []) if attr]
 
