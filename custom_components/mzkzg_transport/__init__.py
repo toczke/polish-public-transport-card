@@ -14,7 +14,7 @@ from .const import CONF_API_KEY, CONF_NAME, CONF_PLK_TIER, CONF_PROVIDER, CONF_S
 from .coordinator import MzkzgTransportCoordinator
 
 PLATFORMS = ["sensor", "binary_sensor"]
-CARD_URL = "/mzkzg_transport/mzkzg-transport-card.js"
+CARD_URL = "/mzkzg_transport/mzkzg-transport-card.js?v=1.2.6"
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:

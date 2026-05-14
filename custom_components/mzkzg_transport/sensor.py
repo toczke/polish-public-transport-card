@@ -56,8 +56,10 @@ class MzkzgTransportSensor(CoordinatorEntity, SensorEntity):
     def native_value(self) -> str | None:
         """Return the next departure time as state."""
         data = self.coordinator.data
-        if not data or not data.get("departures"):
+        if not data:
             return None
+        if not data.get("departures"):
+            return "brak"
         return data["departures"][0].get("estimated_time")
 
     @property

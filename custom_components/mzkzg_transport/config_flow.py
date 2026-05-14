@@ -156,11 +156,21 @@ from .const import (
 
     PROVIDER_LODZ,
 
-    PROVIDER_KRAKOW,
-
     PROVIDER_POZNAN,
+    PROVIDER_LUBLIN,
+    PROVIDER_KIELCE,
+    PROVIDER_RADOM,
+    PROVIDER_CZESTOCHOWA,
+    PROVIDER_ELBLAG,
+    PROVIDER_GORZOW,
+    PROVIDER_SUWALKI,
+    PROVIDER_PRZEMYSL,
+    PROVIDER_RYBNIK,
+    PROVIDER_KUTNO,
+    PROVIDER_LEGNICA,
+    PROVIDER_GZM,
 
-    PROVIDER_BIALYSTOK,
+    GTFSRT_PROVIDERS,
 
     PROVIDER_ZKM,
 
@@ -203,82 +213,6 @@ _LOGGER = logging.getLogger(__name__)
 
 
 PROVIDER_OPTIONS = {
-
-
-
-    PROVIDER_ZTM: "ZTM Gdańsk",
-
-
-
-    PROVIDER_ZKM: "ZKM Gdynia",
-
-
-
-    PROVIDER_MZK: "MZK Wejherowo",
-
-
-
-    PROVIDER_PLK: "PKP / SKM / PR (PLK API)",
-
-
-
-    PROVIDER_PKS_GDANSK: "PKS GdaÅ„sk Sp. z o.o.",
-
-
-
-    PROVIDER_ALBATROS: "Albatros",
-
-
-
-    PROVIDER_GRYF: "Przewozy Autobusowe GRYF",
-
-
-
-    PROVIDER_NORD_EXPRESS: "Nord Express",
-
-
-
-    PROVIDER_PKS_GDYNIA: "PKS Gdynia S.A.",
-
-
-
-    PROVIDER_MZK_MALBORK: "Miejski Zakład Komunikacji w Malborku",
-
-
-
-    PROVIDER_PKS_SLUPSK: "PKS Słupsk S.A.",
-
-
-
-    PROVIDER_MZK_STAROGARD: "MZK Starogard Gdański",
-
-
-
-    PROVIDER_PKS_STAROGARD: "PKS Starogard Gdański S.A.",
-
-
-
-    PROVIDER_BYTOW: "Bytów",
-
-
-
-    PROVIDER_CZLUCHOW: "Powiat Cz?uchowski",
-
-
-
-    PROVIDER_TCZEW: "Tczew (Time4BUS)",
-
-    PROVIDER_LODZ: "MPK \u0141\u00f3d\u017a",
-    PROVIDER_KRAKOW: "ZTP Krak\u00f3w",
-    PROVIDER_POZNAN: "ZTM Pozna\u0144",
-    PROVIDER_BIALYSTOK: "BKM Bia\u0142ystok",
-
-
-
-}
-
-# Override provider labels with clean UTF-8 values.
-PROVIDER_OPTIONS = {
     PROVIDER_ZTM: "ZTM Gda\u0144sk",
     PROVIDER_ZKM: "ZKM Gdynia",
     PROVIDER_MZK: "MZK Wejherowo",
@@ -296,9 +230,19 @@ PROVIDER_OPTIONS = {
     PROVIDER_CZLUCHOW: "Powiat Cz\u0142uchowski",
     PROVIDER_TCZEW: "Tczew (Time4BUS)",
     PROVIDER_LODZ: "MPK \u0141\u00f3d\u017a",
-    PROVIDER_KRAKOW: "ZTP Krak\u00f3w",
     PROVIDER_POZNAN: "ZTM Pozna\u0144",
-    PROVIDER_BIALYSTOK: "BKM Bia\u0142ystok",
+    PROVIDER_LUBLIN: "ZTM Lublin",
+    PROVIDER_KIELCE: "MPK Kielce",
+    PROVIDER_RADOM: "MZDiK Radom",
+    PROVIDER_CZESTOCHOWA: "MPK Cz\u0119stochowa",
+    PROVIDER_ELBLAG: "ZKM Elbl\u0105g",
+    PROVIDER_GORZOW: "MZK Gorz\u00f3w Wlkp.",
+    PROVIDER_SUWALKI: "PGK Suwa\u0142ki",
+    PROVIDER_PRZEMYSL: "MZK Przemy\u015bl",
+    PROVIDER_RYBNIK: "ZTZ Rybnik",
+    PROVIDER_KUTNO: "MZK Kutno",
+    PROVIDER_LEGNICA: "MPK Legnica",
+    PROVIDER_GZM: "ZTM GZM (Katowice)",
 }
 
 PROVIDER_OPTIONS_SORTED = dict(
@@ -933,7 +877,11 @@ class MzkzgTransportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
                 return await self._load_kiedyprzyjedzie_stops(provider)
 
+            if provider in GTFSRT_PROVIDERS:
+                return await self._load_gtfsrt_stops(provider)
 
+            if provider == PROVIDER_LODZ:
+                return await self._load_gtfs_stops("https://cdn.zbiorkom.live/gtfs/lodz.zip")
 
         except Exception as err:
 
@@ -1508,6 +1456,47 @@ class MzkzgTransportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
 
         return MzkzgTransportOptionsFlow(config_entry)
+
+    async def _load_gtfsrt_stops(self, provider: str) -> list[dict]:
+        """Load stops from GTFS-RT provider's static GTFS zip."""
+        from .provider_gtfsrt import GTFSRT_CITIES
+
+        city_cfg = GTFSRT_CITIES.get(provider)
+        if not city_cfg:
+            return []
+        return await self._load_gtfs_stops(city_cfg["gtfs_url"])
+
+    async def _load_gtfs_stops(self, gtfs_url: str) -> list[dict]:
+        """Download a GTFS zip and parse stops.txt."""
+        import csv
+        import zipfile
+        from io import BytesIO, StringIO
+
+        session = async_get_clientsession(self.hass)
+        async with session.get(
+            gtfs_url, timeout=aiohttp.ClientTimeout(total=60)
+        ) as resp:
+            resp.raise_for_status()
+            data = await resp.read()
+
+        stops = []
+        with zipfile.ZipFile(BytesIO(data)) as zf:
+            if "stops.txt" not in zf.namelist():
+                return []
+            text = zf.read("stops.txt").decode("utf-8-sig")
+            reader = csv.reader(StringIO(text))
+            header = next(reader)
+            id_idx = header.index("stop_id")
+            name_idx = header.index("stop_name")
+            for parts in reader:
+                if len(parts) > max(id_idx, name_idx):
+                    sid = parts[id_idx]
+                    name = parts[name_idx]
+                    if sid and name:
+                        stops.append({"id": sid, "name": name})
+
+        stops.sort(key=lambda x: x["name"])
+        return stops
 
 
 

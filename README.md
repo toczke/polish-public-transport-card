@@ -1,11 +1,11 @@
 # MZKZG Transport Card
 
 [![HACS](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
-[![Version](https://img.shields.io/badge/version-1.2.5-blue.svg)](https://github.com/toczke/mzkzg-transport-card/releases)
+[![Version](https://img.shields.io/badge/version-1.2.6-blue.svg)](https://github.com/toczke/mzkzg-transport-card/releases)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Tests](https://img.shields.io/badge/tests-36%20passing-brightgreen.svg)](#testing)
 
-Home Assistant integration + Lovelace card for real-time departures in Tricity and nearby operators.
+Home Assistant integration + Lovelace card for real-time departures across Poland — Tricity, Poznań, Katowice/GZM, Łódź, Lublin, and 10+ more cities.
 
 ## Screenshots
 
@@ -64,6 +64,20 @@ Home Assistant integration + Lovelace card for real-time departures in Tricity a
 | Komunikacja Bytów | Bytów (city bus) | kiedyPrzyjedzie API (`bytow.kiedyprzyjedzie.pl`) | ✅ | bike, wheelchair, AC, ticket machine |
 | Powiat Człuchowski | Człuchów region (bus) | kiedyPrzyjedzie API (`czluchow.kiedyprzyjedzie.pl`) | ✅ | bike, wheelchair, AC, ticket machine |
 | PKP / SKM / Polregio / IC | Railway stations | PLK OpenData API (`pdp-api.plk-sa.pl`) | ✅ | platform, track, carrier, train number, cancellation |
+| MPK Łódź | Łódź (bus, tram) | rozklady.lodz.pl XML API | ✅ | bike, wheelchair, AC, ticket machine |
+| ZTM Poznań | Poznań (bus, tram) | GTFS + GTFS-RT (`ztm.poznan.pl`) | ✅ | ramp, AC, bike, ticket machine, USB (vehicle dict) |
+| ZTM GZM (Katowice) | Metropolia GZM (bus, tram) | GTFS + GTFS-RT (`otwartedane.metropoliagzm.pl`) | ✅ | low floor (from GTFS ext) |
+| ZTM Lublin | Lublin (bus, trolleybus) | GTFS + GTFS-RT (`cdn.zbiorkom.live`) | ✅ | side number |
+| MPK Kielce | Kielce (bus) | GTFS + GTFS-RT (`cdn.zbiorkom.live`) | ✅ | side number |
+| MPK Częstochowa | Częstochowa (bus, tram) | GTFS + GTFS-RT (`cdn.zbiorkom.live`) | ✅ | side number |
+| ZKM Elbląg | Elbląg (bus, tram) | GTFS + GTFS-RT (`cdn.zbiorkom.live`) | ✅ | side number |
+| MZK Gorzów Wlkp. | Gorzów (bus, tram) | GTFS + GTFS-RT (`cdn.zbiorkom.live`) | ✅ | side number |
+| ZTZ Rybnik | Rybnik (bus) | GTFS + GTFS-RT (`cdn.zbiorkom.live`) | ✅ | side number |
+| MZDiK Radom | Radom (bus) | GTFS + GTFS-RT (`cdn.zbiorkom.live`) | ✅ | side number |
+| PGK Suwałki | Suwałki (bus) | GTFS + GTFS-RT (`cdn.zbiorkom.live`) | ✅ | side number |
+| MZK Przemyśl | Przemyśl (bus) | GTFS + GTFS-RT (`cdn.zbiorkom.live`) | ✅ | side number |
+| MZK Kutno | Kutno (bus) | GTFS + GTFS-RT (`cdn.zbiorkom.live`) | ✅ | side number |
+| MPK Legnica | Legnica (bus) | GTFS + GTFS-RT (`cdn.zbiorkom.live`) | ✅ | side number |
 
 ## Features
 

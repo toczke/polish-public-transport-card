@@ -1,0 +1,40 @@
+feat: add GTFS-RT provider with 12 Polish cities (experimental)
+
+Add nationwide GTFS-RT support for real-time departures using
+zbiorkom.live and official transit feeds. This is an experimental
+feature covering cities beyond the original Tricity scope.
+
+New cities with live realtime data:
+- ZTM Poznań (official GTFS + GTFS-RT, vehicle capabilities)
+- ZTM GZM / Katowice (official open data portal, 22k+ trips)
+- ZTM Lublin (trolleybus + bus)
+- MPK Kielce
+- MPK Częstochowa (tram + bus)
+- ZKM Elbląg (tram + bus)
+- MZK Gorzów Wlkp. (tram + bus)
+- ZTZ Rybnik
+- MZDiK Radom
+- PGK Suwałki
+- MZK Przemyśl
+- MZK Kutno
+- MPK Legnica
+
+Key changes:
+- provider_gtfsrt.py: full GTFS-RT provider with calendar filtering,
+  on-demand stop_times parsing, headsign derivation from last stop,
+  vehicle capabilities (Poznań vehicle_dictionary.csv), deduplication,
+  proper CSV parsing (handles quoted fields with commas)
+- Card JS: per-provider header colors, badge colors by vehicle type
+  (tram/bus/trolleybus/night), display names for all new providers
+- provider_ztm.py: removed dead schedule fallback code, added dedup
+- sensor.py: return "brak" instead of None when no departures
+- config_flow.py: stop dropdown for GTFS-RT cities, proper CSV parsing
+- const.py: cleanup duplicate dicts, add new provider constants
+- Removed: Kraków (incompatible GTFS/RT IDs), Białystok (no RT feed),
+  Warszawa (39MB GTFS too heavy)
+- Added: tests/test_provider_gtfsrt.py (10 unit tests)
+
+Data sources:
+- cdn.zbiorkom.live GTFS + GTFS-RT (MIT licensed app, public CDN)
+- ztm.poznan.pl official open data
+- otwartedane.metropoliagzm.pl (CC0 licensed)

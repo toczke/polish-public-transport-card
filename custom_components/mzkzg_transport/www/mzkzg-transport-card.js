@@ -83,9 +83,8 @@ function formatMins(min) {
 function routeColor(route, provider) {
   const s = String(route || "");
   if (/^[Nn]/.test(s)) return "#1e293b";  // Night lines (all providers)
-  if (PROVIDER_BADGE_COLORS[provider]) return PROVIDER_BADGE_COLORS[provider];
-  const n = parseInt(s, 10);
   if (provider === "zkm_gdynia") {
+    const n = parseInt(s, 10);
     if (!isNaN(n) && n >= 20 && n <= 29) return "#0891b2";
     return "#ea580c";
   }
@@ -98,14 +97,66 @@ function routeColor(route, provider) {
     if (r === "TLK") return "#7b1fa2";
     return "#d32f2f";  // Polregio R, RE, PKM, Os
   }
-  // ztm_gdansk
-  if (!isNaN(n) && n < 100) {
-    if (n >= 90) return "#8b5cf6";  // 9x special
-    if (n >= 60 && n < 70) return "#f59e0b";  // 6x seasonal summer
-    if (n <= 15) return "#0369a1";  // regular tram (1-13 + reserves)
-    return "#DA2128";  // bus lines 16-59, 70-89
+  if (provider === "ztm_gdansk") {
+    const n = parseInt(s, 10);
+    if (!isNaN(n) && n < 100) {
+      if (n >= 90) return "#8b5cf6";  // 9x special
+      if (n >= 60 && n < 70) return "#f59e0b";  // 6x seasonal summer
+      if (n <= 15) return "#0369a1";  // tram (1-13)
+      return "#DA2128";  // bus
+    }
+    return "#DA2128";
   }
-  return "#DA2128";
+  if (provider === "gtfsrt_poznan") {
+    const n = parseInt(s, 10);
+    if (!isNaN(n) && n <= 18) return "#006b3f";  // tram
+    if (!isNaN(n) && n >= 100) return "#15803d";  // bus 100+
+    return "#2d8a4e";
+  }
+  if (provider === "gtfsrt_lublin") {
+    const n = parseInt(s, 10);
+    if (!isNaN(n) && n <= 10) return "#1565c0";  // trolejbus
+    if (!isNaN(n) && n >= 150) return "#0d47a1";  // express
+    return "#1976d2";  // bus
+  }
+  if (provider === "gtfsrt_kielce") {
+    const n = parseInt(s, 10);
+    if (!isNaN(n) && n <= 5) return "#004d40";  // tram (Kielce has none but future-proof)
+    return "#00796b";  // bus
+  }
+  if (provider === "gtfsrt_czestochowa") {
+    const n = parseInt(s, 10);
+    if (!isNaN(n) && n <= 15) return "#b71c1c";  // tram
+    return "#d32f2f";  // bus
+  }
+  if (provider === "gtfsrt_elblag") {
+    const n = parseInt(s, 10);
+    if (!isNaN(n) && n <= 5) return "#01579b";  // tram
+    return "#0277bd";  // bus
+  }
+  if (provider === "gtfsrt_gorzow") {
+    const n = parseInt(s, 10);
+    if (!isNaN(n) && n <= 3) return "#1b5e20";  // tram
+    return "#2e7d32";  // bus
+  }
+  if (provider === "gtfsrt_rybnik") return "#880e4f";
+  if (provider === "gtfsrt_gzm") {
+    const n = parseInt(s, 10);
+    if (!isNaN(n) && n <= 43) return "#009b3a";  // tram
+    return "#1565c0";  // bus
+  }
+  if (provider === "gtfsrt_radom") return "#4a148c";
+  if (provider === "gtfsrt_suwalki") return "#283593";
+  if (provider === "gtfsrt_przemysl") return "#e65100";
+  if (provider === "gtfsrt_kutno") return "#006064";
+  if (provider === "gtfsrt_legnica") return "#b71c1c";
+  if (provider === "mpk_lodz") {
+    const n = parseInt(s, 10);
+    if (!isNaN(n) && n <= 20) return "#ad1457";  // tram
+    return "#c62828";  // bus
+  }
+  if (PROVIDER_BADGE_COLORS[provider]) return PROVIDER_BADGE_COLORS[provider];
+  return "#005eb8";
 }
 
 function normalizeText(t) {
@@ -162,6 +213,20 @@ const PROVIDER_HEADER_COLORS = {
   kiedyprzyjedzie_bytow: "#155e75",
   kiedyprzyjedzie_czluchow: "#991b1b",
   time4bus_tczew: "#1d4ed8",
+  gtfsrt_poznan: "#15803d",
+  gtfsrt_lublin: "#0054a0",
+  gtfsrt_kielce: "#006d3f",
+  gtfsrt_radom: "#4a2080",
+  gtfsrt_czestochowa: "#e30613",
+  gtfsrt_elblag: "#003d7c",
+  gtfsrt_gorzow: "#009640",
+  gtfsrt_suwalki: "#2e5090",
+  gtfsrt_przemysl: "#d4760a",
+  gtfsrt_rybnik: "#8b1a2d",
+  gtfsrt_kutno: "#0072bc",
+  gtfsrt_legnica: "#d4213d",
+  gtfsrt_gzm: "#009b3a",
+  mpk_lodz: "#e11d48",
 };
 
 const PROVIDER_DISPLAY_NAMES = {
@@ -181,6 +246,20 @@ const PROVIDER_DISPLAY_NAMES = {
   kiedyprzyjedzie_bytow: "Komunikacja Miejska Bytów",
   kiedyprzyjedzie_czluchow: "Powiat Człuchowski",
   time4bus_tczew: "Komunikacja Miejska Tczew",
+  gtfsrt_poznan: "ZTM Poznań",
+  gtfsrt_lublin: "ZTM Lublin",
+  gtfsrt_kielce: "MPK Kielce",
+  gtfsrt_radom: "MZDiK Radom",
+  gtfsrt_czestochowa: "MPK Częstochowa",
+  gtfsrt_elblag: "ZKM Elbląg",
+  gtfsrt_gorzow: "MZK Gorzów Wlkp.",
+  gtfsrt_suwalki: "PGK Suwałki",
+  gtfsrt_przemysl: "MZK Przemyśl",
+  gtfsrt_rybnik: "ZTZ Rybnik",
+  gtfsrt_kutno: "MZK Kutno",
+  gtfsrt_legnica: "MPK Legnica",
+  gtfsrt_gzm: "ZTM GZM (Katowice)",
+  mpk_lodz: "MPK Łódź",
 };
 
 const PROVIDER_BADGE_COLORS = {
@@ -196,6 +275,20 @@ const PROVIDER_BADGE_COLORS = {
   kiedyprzyjedzie_bytow: "#14b8a6",
   kiedyprzyjedzie_czluchow: "#f97316",
   time4bus_tczew: "#dc2626",
+  gtfsrt_poznan: "#22c55e",
+  gtfsrt_lublin: "#3b82f6",
+  gtfsrt_kielce: "#10b981",
+  gtfsrt_radom: "#8b5cf6",
+  gtfsrt_czestochowa: "#ef4444",
+  gtfsrt_elblag: "#0ea5e9",
+  gtfsrt_gorzow: "#34d399",
+  gtfsrt_suwalki: "#6366f1",
+  gtfsrt_przemysl: "#f59e0b",
+  gtfsrt_rybnik: "#e11d48",
+  gtfsrt_kutno: "#06b6d4",
+  gtfsrt_legnica: "#f43f5e",
+  gtfsrt_gzm: "#22c55e",
+  mpk_lodz: "#fb7185",
 };
 
 /* ── CSS ─────────────────────────────────────────────────────────────────── */
