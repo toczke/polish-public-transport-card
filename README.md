@@ -45,6 +45,26 @@ A custom Home Assistant integration and Lovelace card providing real-time depart
 
 ## Supported Operators
 
+| Operator | Coverage | Realtime | Supported capabilities |
+|----------|----------|----------|------------------------|
+| **ZTM Gdańsk** | Buses and trams in Gdańsk and surrounding municipalities | Yes | bike, wheelchair, AC, USB, ticket machine, side number |
+| **ZKM Gdynia** | Buses and trolleybuses in Gdynia | Yes | side number; bike/wheelchair/AC when API provides |
+| **MZK Wejherowo** | Buses in Wejherowo area | No (schedule only) | none (no vehicle capability metadata) |
+| **Tczew (Time4BUS)** | Bus departures with live fallback to schedule | Yes | side number; wheelchair/AC/ticket machine when API provides |
+| **PKS Gdańsk Sp. z o.o.** | Intercity and regional bus departures on kiedyprzyjedzie.pl | Yes | bike/wheelchair/AC/ticket machine from `vehicle_attributes` |
+| **Albatros** | Bus departures on kiedyprzyjedzie.pl | Yes | bike/wheelchair/AC/ticket machine from `vehicle_attributes` |
+| **Przewozy Autobusowe GRYF** | Bus departures on kiedyprzyjedzie.pl | Yes | bike/wheelchair/AC/ticket machine from `vehicle_attributes` |
+| **Nord Express** | Bus departures on kiedyprzyjedzie.pl | Yes | bike/wheelchair/AC/ticket machine from `vehicle_attributes` |
+| **PKS Gdynia S.A.** | Bus departures on kiedyprzyjedzie.pl | Yes | bike/wheelchair/AC/ticket machine from `vehicle_attributes` |
+| **Miejski Zakład Komunikacji w Malborku** | Bus departures on kiedyprzyjedzie.pl | Yes | bike/wheelchair/AC/ticket machine from `vehicle_attributes` |
+| **PKS Słupsk S.A.** | Bus departures on kiedyprzyjedzie.pl | Yes | bike/wheelchair/AC/ticket machine from `vehicle_attributes` |
+| **MZK Starogard Gdański** | Bus departures on kiedyprzyjedzie.pl | Yes | bike/wheelchair/AC/ticket machine from `vehicle_attributes` |
+| **PKS Starogard Gdański S.A.** | Bus departures on kiedyprzyjedzie.pl | Yes | bike/wheelchair/AC/ticket machine from `vehicle_attributes` |
+| **Bytów** | Bus departures on kiedyprzyjedzie.pl | Yes | bike/wheelchair/AC/ticket machine from `vehicle_attributes` |
+| **Powiat Człuchowski** | Bus departures on kiedyprzyjedzie.pl | Yes | bike/wheelchair/AC/ticket machine from `vehicle_attributes` |
+| **PKP / SKM / Polregio / IC** | Railway stations across Poland (via PLK) | Yes | platform, track, carrier, train number, cancellation |
+
+<!-- Legacy table kept temporarily for reference:
 | Operator | Coverage | Realtime |
 |----------|----------|----------|
 | **ZTM Gdańsk** | Buses and trams in Gdańsk and surrounding municipalities | ✅ |
@@ -67,6 +87,7 @@ A custom Home Assistant integration and Lovelace card providing real-time depart
 | **Supported capabilities** | ZTM: bike/wheelchair/AC/USB/ticket machine + side number; ZKM: side number (+ bike/wheelchair/AC if API provides); Time4BUS: side number + wheelchair/AC/ticket machine if available; kiedyPrzyjedzie carriers: bike/wheelchair/AC/ticket machine from vehicle attributes; PLK: platform/track/train metadata | - |
 
 Note: Time4BUS supports realtime departures with schedule fallback.
+-->
 
 ---
 
