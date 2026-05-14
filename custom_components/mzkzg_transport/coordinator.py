@@ -24,6 +24,10 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from homeassistant.util import dt as dt_util
 
+# Compatible timezone getter (works on HA 2024.4+ and newer)
+def _get_tz():
+    return getattr(dt_util, "get_default_time_zone", lambda: dt_util.DEFAULT_TIME_ZONE)()
+
 
 
 from .const import (
@@ -195,7 +199,7 @@ class MzkzgTransportCoordinator(DataUpdateCoordinator):
             return await self._fetch_zkm()
 
         except Exception as err:
-
+            _LOGGER.debug("Fetch error for %s (%s): %s", self.stop_id, self.provider, err, exc_info=True)
             raise UpdateFailed(f"Error fetching data: {err}") from err
 
 
@@ -498,7 +502,7 @@ class MzkzgTransportCoordinator(DataUpdateCoordinator):
 
         reference_dt = (
 
-            datetime.fromtimestamp(api_timestamp, tz=dt_util.get_default_time_zone())
+            datetime.fromtimestamp(api_timestamp, tz=_get_tz())
 
             if isinstance(api_timestamp, (int, float))
 
@@ -906,7 +910,7 @@ class MzkzgTransportCoordinator(DataUpdateCoordinator):
 
             try:
 
-                estimated_dt = datetime.fromtimestamp(float(leave_time) / 1000, tz=dt_util.get_default_time_zone())
+                estimated_dt = datetime.fromtimestamp(float(leave_time) / 1000, tz=_get_tz())
 
             except (TypeError, ValueError, OSError):
 
@@ -916,7 +920,7 @@ class MzkzgTransportCoordinator(DataUpdateCoordinator):
 
                 try:
 
-                    theoretical_dt = datetime.fromtimestamp(float(plan_time) / 1000, tz=dt_util.get_default_time_zone())
+                    theoretical_dt = datetime.fromtimestamp(float(plan_time) / 1000, tz=_get_tz())
 
                 except (TypeError, ValueError, OSError):
 
@@ -1526,7 +1530,7 @@ class MzkzgTransportCoordinator(DataUpdateCoordinator):
 
             h, m, s = 0, 0, 0
 
-        base = datetime.strptime(operating_date[:10], "%Y-%m-%d").replace(tzinfo=dt_util.get_default_time_zone())
+        base = datetime.strptime(operating_date[:10], "%Y-%m-%d").replace(tzinfo=_get_tz())
 
         return base.replace(hour=0, minute=0, second=0) + timedelta(days=day_offset, hours=h, minutes=m, seconds=s)
 
