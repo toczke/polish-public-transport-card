@@ -30,10 +30,19 @@ def patch_ha():
 @pytest.fixture(autouse=True)
 def patch_session():
     import aiohttp
+    sessions = []
+
     async def _patched_get(self):
-        return aiohttp.ClientSession()
+        session = aiohttp.ClientSession()
+        sessions.append(session)
+        return session
+
     with patch.object(MzkzgTransportCoordinator, "_get_session", _patched_get):
         yield
+
+    for session in sessions:
+        if not session.closed:
+            asyncio.run(session.close())
 
 
 @pytest.fixture

@@ -1,5 +1,6 @@
 """Extra tests for kiedyPrzyjedzie carrier coverage."""
 
+import asyncio
 from datetime import datetime
 from unittest.mock import MagicMock, patch
 
@@ -40,12 +41,20 @@ def patch_ha_frame():
 
 @pytest.fixture(autouse=True)
 def patch_session():
-    """Make coordinator._get_session return a fresh aiohttp.ClientSession."""
+    """Make coordinator._get_session return tracked sessions and close them after each test."""
+    sessions = []
+
     async def _patched_get(self):
-        return aiohttp.ClientSession()
+        session = aiohttp.ClientSession()
+        sessions.append(session)
+        return session
 
     with patch.object(MzkzgTransportCoordinator, "_get_session", _patched_get):
         yield
+
+    for session in sessions:
+        if not session.closed:
+            asyncio.run(session.close())
 
 
 @pytest.fixture
