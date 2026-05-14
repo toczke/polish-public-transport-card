@@ -11,19 +11,23 @@ const LOCALE = {
     no_entities: "Dodaj encje sensorów w konfiguracji",
     no_departures: "Brak nadchodzących odjazdów",
     unavailable: "Dane niedostępne — sprawdź połączenie",
+    missing_entities: "Brak encji w HA — sprawdź konfigurację karty",
     plk_rate_limit: "Limit API wyczerpany — dane odświeżą się automatycznie",
     cancelled: "odwołany",
     track: "tor",
     min: "min",
+    departing: "Odjeżdża",
   },
   en: {
     no_entities: "Add sensor entities in configuration",
     no_departures: "No upcoming departures",
     unavailable: "Data unavailable — check connection",
+    missing_entities: "Configured entities were not found in Home Assistant",
     plk_rate_limit: "API rate limit reached — data will refresh automatically",
     cancelled: "cancelled",
     track: "track",
     min: "min",
+    departing: "Departing",
   },
 };
 
@@ -98,6 +102,43 @@ function normalizeText(t) {
   return (t || "").replace(/\s/g, "").toLowerCase().replace(/\d+$/, "");
 }
 
+function normalizeList(value) {
+  if (Array.isArray(value)) return value.map(v => String(v).trim()).filter(Boolean);
+  if (value === undefined || value === null) return [];
+  return String(value).split(",").map(v => v.trim()).filter(Boolean);
+}
+
+function normalizeEntityEntry(item) {
+  if (typeof item === "string") return { entity: item };
+  if (!item || typeof item !== "object" || typeof item.entity !== "string") return null;
+  const entry = { entity: item.entity };
+  if ("filter_routes" in item) entry.filter_routes = normalizeList(item.filter_routes);
+  if ("destination_filter" in item) entry.destination_filter = normalizeList(item.destination_filter);
+  if ("filter_platform" in item) entry.filter_platform = item.filter_platform == null ? "" : String(item.filter_platform);
+  if ("filter_track" in item) entry.filter_track = item.filter_track == null ? "" : String(item.filter_track);
+  if ("realtime_only" in item) entry.realtime_only = item.realtime_only === true;
+  if ("hide_terminus" in item) entry.hide_terminus = item.hide_terminus === true;
+  if ("highlight_mode" in item) entry.highlight_mode = item.highlight_mode === true;
+  return entry;
+}
+
+function normalizeActionConfig(cfg, fallbackAction = "none") {
+  if (!cfg || typeof cfg !== "object") return { action: fallbackAction };
+  const action = String(cfg.action || fallbackAction).toLowerCase();
+  const out = { action };
+  if (cfg.navigation_path) out.navigation_path = String(cfg.navigation_path);
+  if (cfg.url_path) out.url_path = String(cfg.url_path);
+  if (cfg.perform_action) out.perform_action = String(cfg.perform_action);
+  if (cfg.service) out.service = String(cfg.service);
+  if (cfg.data && typeof cfg.data === "object") out.data = cfg.data;
+  if (cfg.target && typeof cfg.target === "object") out.target = cfg.target;
+  return out;
+}
+
+function fireHassEvent(node, type, detail = {}) {
+  node.dispatchEvent(new CustomEvent(type, { detail, bubbles: true, composed: true }));
+}
+
 const PROVIDER_HEADER_COLORS = {
   kiedyprzyjedzie_pks_gdansk: "#475569",
   kiedyprzyjedzie_albatros: "#166534",
@@ -131,9 +172,24 @@ const PROVIDER_BADGE_COLORS = {
 /* ── CSS ─────────────────────────────────────────────────────────────────── */
 
 const CARD_CSS = `
-:host { display: block; }
+:host {
+  display: block;
+  --mzkzg-text: var(--primary-text-color, #111);
+  --mzkzg-muted: var(--secondary-text-color, #888);
+  --mzkzg-divider: var(--divider-color, #e5e5e5);
+  --mzkzg-focus: var(--primary-color, #3b82f6);
+  --mzkzg-live-dot: #10b981;
+}
 * { box-sizing: border-box; margin: 0; padding: 0; }
-ha-card { overflow: hidden; font-family: var(--ha-card-header-font-family, inherit); }
+ha-card {
+  display: block;
+  overflow: hidden;
+  font-family: var(--ha-card-header-font-family, inherit);
+  background: var(--card-background-color, #fff);
+  color: var(--primary-text-color, #111);
+  border-radius: var(--ha-card-border-radius, 12px);
+  box-shadow: var(--ha-card-box-shadow, none);
+}
 .header {
   padding: 8px 12px; display: flex; align-items: center; gap: 8px; user-select: none;
 }
@@ -147,13 +203,15 @@ ha-card { overflow: hidden; font-family: var(--ha-card-header-font-family, inher
 .dep-row.departing { opacity: 0; max-height: 0; padding-top: 0; padding-bottom: 0; }
 ha-card.e-ink .dep-row { transition: none; }
 .tabs { display: flex; border-bottom: 1px solid var(--divider-color, #e5e5e5); }
-.tab { flex: 1; padding: 8px 14px; font-size: 12px; font-weight: 600; color: var(--secondary-text-color, #888); cursor: pointer; white-space: nowrap; border-bottom: 2px solid transparent; text-align: center; }
-.tab.active { color: var(--primary-text-color, #111); border-bottom-color: var(--primary-color, #005eb8); }
-.tab:hover { color: var(--primary-text-color, #111); }
+.tab { flex: 1; padding: 8px 14px; font-size: 12px; font-weight: 600; color: var(--mzkzg-muted); cursor: pointer; white-space: nowrap; border-bottom: 2px solid transparent; text-align: center; }
+.tab.active { color: var(--mzkzg-text); border-bottom-color: var(--primary-color, #005eb8); }
+.tab:hover { color: var(--mzkzg-text); }
 .dep-row {
   display: flex; align-items: center; gap: 10px;
-  padding: 10px 14px; border-bottom: 1px solid var(--divider-color, #f0f0f0); min-height: 46px;
+  padding: 10px 14px; border-bottom: 1px solid var(--mzkzg-divider); min-height: 52px;
 }
+.dep-row.interactive { cursor: pointer; }
+.dep-row:focus-visible { outline: 2px solid var(--mzkzg-focus); outline-offset: -2px; }
 .dep-row:last-child { border-bottom: none; }
 .dep-row.imminent { }
 .dep-row.dimmed { opacity: 0.35; }
@@ -163,35 +221,38 @@ ha-card.e-ink .dep-row { transition: none; }
   color: #fff; min-width: 40px; flex-shrink: 0;
 }
 .headsign {
-  font-size: 13px; font-weight: 500; color: var(--primary-text-color, #111);
+  font-size: 13px; font-weight: 500; color: var(--mzkzg-text);
   flex: 1; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 2px 6px;
 }
-.headsign-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; }
-.icons { display: inline-flex; gap: 3px; align-items: center; flex-shrink: 0; white-space: nowrap; }
-.icons svg { color: var(--secondary-text-color, #666); opacity: 0.8; }
-.stop-name { display: block; font-size: 10px; color: var(--secondary-text-color, #888); font-weight: 400; margin-top: 1px; width: 100%; }
+.head-main { display: inline-flex; align-items: center; gap: 6px; width: 100%; min-width: 0; }
+.headsign-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 0 1 auto; min-width: 0; max-width: 100%; }
+.icons { display: inline-flex; gap: 3px; align-items: center; flex-shrink: 0; white-space: nowrap; flex-basis: 100%; width: 100%; margin-top: 1px; }
+.icons svg { color: var(--mzkzg-muted); opacity: 0.8; }
+.meta-row { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; width: 100%; margin-top: 1px; }
+.stop-name { display: block; font-size: 10px; color: var(--mzkzg-muted); font-weight: 400; margin-top: 1px; width: 100%; }
 ha-card.compact .stop-name { display: none; }
 ha-card.compact .icons { display: none; }
+ha-card.compact .meta-row { display: none; }
 ha-card.compact .platform { display: none; }
 ha-card.compact .footer { display: none; }
 .dep-row.cancelled .headsign { text-decoration: line-through; opacity: 0.6; }
 .dep-row.cancelled .badge { opacity: 0.5; }
 .time-main.cancelled { font-size: 12px; color: #dc2626; font-weight: 600; }
-.platform { display: inline-block; font-size: 10px; color: var(--secondary-text-color, #888); background: var(--divider-color, #e5e5e5); border-radius: 3px; padding: 1px 5px; vertical-align: middle; flex-shrink: 0; }
+.platform { display: inline-block; font-size: 10px; color: var(--mzkzg-muted); background: var(--mzkzg-divider); border-radius: 3px; padding: 1px 5px; vertical-align: middle; flex-shrink: 0; }
 
 .time-col { text-align: right; flex-shrink: 0; display: flex; flex-direction: column; align-items: flex-end; gap: 1px; }
-.time-main { font-size: 15px; font-weight: 600; color: var(--primary-text-color, #111); white-space: nowrap; }
+.time-main { font-size: 15px; font-weight: 600; color: var(--mzkzg-text); white-space: nowrap; }
 .time-struck { text-decoration: line-through; opacity: 0.5; font-size: 13px; font-weight: 400; }
-.time-sub { font-size: 11px; color: var(--secondary-text-color, #888); white-space: nowrap; display: flex; align-items: center; gap: 4px; }
-.time-sub .dot { color: #10b981; font-weight: 700; display: inline-block; animation: live-dot-pulse 1.2s ease-in-out infinite; transform-origin: center; }
+.time-sub { font-size: 11px; color: var(--mzkzg-muted); white-space: nowrap; display: flex; align-items: center; gap: 4px; }
+.time-sub .dot { color: var(--mzkzg-live-dot); font-weight: 700; display: inline-block; animation: live-dot-pulse 2s ease-in-out infinite; transform-origin: center; }
 @keyframes live-dot-pulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: .35; transform: scale(.72); } }
 @media (prefers-reduced-motion: reduce) { .time-sub .dot { animation: none; } }
 .delay-badge { font-size: 11px; font-weight: 600; }
 .delay-badge.late { color: #dc2626; }
 .delay-badge.early { color: #0369a1; }
-.state-msg { padding: 24px 16px; text-align: center; color: var(--secondary-text-color, #888); font-size: 13px; }
+.state-msg { padding: 24px 16px; text-align: center; color: var(--mzkzg-muted); font-size: 13px; }
 .state-msg .icon { font-size: 28px; display: block; margin-bottom: 8px; }
-.footer { padding: 5px 14px; font-size: 10px; color: var(--secondary-text-color, #aaa); text-align: right; border-top: 1px solid var(--divider-color, #f0f0f0); }
+.footer { padding: 5px 14px; font-size: 10px; color: var(--mzkzg-muted); text-align: right; border-top: 1px solid var(--mzkzg-divider); }
 .skel { background: var(--divider-color, #e5e5e5); border-radius: 4px; }
 @keyframes shimmer { 0%,100%{opacity:.5} 50%{opacity:1} }
 .skel { animation: shimmer 1.4s ease-in-out infinite; }
@@ -218,7 +279,7 @@ ha-card.compact .header-icon svg { width: 19px; height: 19px; }
 ha-card.compact .header-title { font-size: 14px; }
 ha-card.compact .header-sub { font-size: 10px; }
 ha-card.compact .dep-list { padding-top: 4px; }
-ha-card.compact .dep-row { min-height: 36px; padding: 6px 12px; gap: 8px; }
+ha-card.compact .dep-row { min-height: 40px; padding: 6px 12px; gap: 8px; }
 ha-card.compact .badge { min-width: 34px; padding: 2px 6px; font-size: 12px; }
 ha-card.compact .headsign { font-size: 12px; }
 ha-card.compact .time-main { font-size: 13px; }
@@ -232,7 +293,7 @@ ha-card.compact .footer { padding: 5px 12px; }
   .header-icon svg { width: 17px; height: 17px; }
   .header-title { font-size: 13px; }
   .header-sub { font-size: 9px; }
-  .dep-row { padding: 8px 10px; gap: 8px; min-height: 38px; }
+  .dep-row { padding: 8px 10px; gap: 8px; min-height: 40px; }
   .badge { min-width: 34px; padding: 2px 5px; font-size: 11px; }
   .headsign { font-size: 12px; }
   .time-main { font-size: 13px; }
@@ -294,11 +355,93 @@ class MzkzgTransportCardEditor extends HTMLElement {
     else this._render();
   }
 
+  _selectedEntityIds() {
+    const raw = Array.isArray(this._config.entities) ? this._config.entities : [];
+    const ids = [];
+    for (const item of raw) {
+      if (typeof item === "string") ids.push(item);
+      else if (item && typeof item === "object" && typeof item.entity === "string") ids.push(item.entity);
+    }
+    return ids;
+  }
+
   _getEntities() {
     if (!this._hass) return [];
     return Object.keys(this._hass.states)
       .filter(e => e.startsWith("sensor.") && this._hass.states[e].attributes?.departures !== undefined)
       .sort();
+  }
+
+  _getEntityEntryById() {
+    const currentEntities = Array.isArray(this._config.entities) ? this._config.entities : [];
+    return new Map(
+      currentEntities
+        .filter(e => e && typeof e === "object" && typeof e.entity === "string")
+        .map(e => [e.entity, e])
+    );
+  }
+
+  _getActiveOverrideTarget() {
+    const targetEl = this.shadowRoot.getElementById("entity_filter_target");
+    return targetEl?.value || "";
+  }
+
+  _setEntityOverrideFieldsFor(entityId) {
+    const routesEl = this.shadowRoot.getElementById("entity_filter_routes");
+    const destEl = this.shadowRoot.getElementById("entity_destination_filter");
+    const platformEl = this.shadowRoot.getElementById("entity_filter_platform");
+    const trackEl = this.shadowRoot.getElementById("entity_filter_track");
+    const realtimeEl = this.shadowRoot.getElementById("entity_realtime_only");
+    const hideTerminusEl = this.shadowRoot.getElementById("entity_hide_terminus");
+    const highlightEl = this.shadowRoot.getElementById("entity_highlight_mode");
+    if (!routesEl || !destEl || !platformEl || !trackEl || !realtimeEl || !hideTerminusEl || !highlightEl) return;
+
+    const entry = this._getEntityEntryById().get(entityId);
+    routesEl.value = Array.isArray(entry?.filter_routes) ? entry.filter_routes.join(", ") : "";
+    destEl.value = Array.isArray(entry?.destination_filter) ? entry.destination_filter.join(", ") : "";
+    platformEl.value = entry?.filter_platform || "";
+    trackEl.value = entry?.filter_track || "";
+    realtimeEl.checked = entry?.realtime_only === true;
+    hideTerminusEl.checked = entry?.hide_terminus === true;
+    highlightEl.checked = entry?.highlight_mode === true;
+  }
+
+  _readEntityOverrideFields() {
+    const val = id => this.shadowRoot.getElementById(id)?.value ?? "";
+    const checked = id => this.shadowRoot.getElementById(id)?.checked === true;
+    return {
+      filter_routes: normalizeList(val("entity_filter_routes")),
+      destination_filter: normalizeList(val("entity_destination_filter")),
+      filter_platform: val("entity_filter_platform").trim(),
+      filter_track: val("entity_filter_track").trim(),
+      realtime_only: checked("entity_realtime_only"),
+      hide_terminus: checked("entity_hide_terminus"),
+      highlight_mode: checked("entity_highlight_mode"),
+    };
+  }
+
+  _refreshEntityFilterTargetOptions() {
+    const targetEl = this.shadowRoot.getElementById("entity_filter_target");
+    const entitiesEl = this.shadowRoot.getElementById("entities");
+    if (!targetEl || !entitiesEl) return;
+    const selectedEntityIds = [...entitiesEl.selectedOptions].map(o => o.value);
+    const previousValue = targetEl.value;
+    targetEl.innerHTML = selectedEntityIds.map(eid =>
+      `<option value="${escapeHtml(eid)}">${escapeHtml(eid.replace("sensor.", ""))}</option>`
+    ).join("");
+    const nextValue = selectedEntityIds.includes(previousValue) ? previousValue : (selectedEntityIds[0] || "");
+    targetEl.value = nextValue;
+    this._setEntityOverrideFieldsFor(nextValue);
+  }
+
+  _buildActionConfig(prefix, fallbackAction) {
+    const action = (this.shadowRoot.getElementById(`${prefix}_action_type`)?.value || fallbackAction).toLowerCase();
+    const value = (this.shadowRoot.getElementById(`${prefix}_action_value`)?.value || "").trim();
+    const cfg = { action };
+    if (action === "navigate" && value) cfg.navigation_path = value;
+    if (action === "url" && value) cfg.url_path = value;
+    if ((action === "perform-action" || action === "call-service") && value) cfg.perform_action = value;
+    return cfg;
   }
 
   _fire() {
@@ -316,13 +459,41 @@ class MzkzgTransportCardEditor extends HTMLElement {
     const checked = id => { const el = this.shadowRoot.getElementById(id); return el ? el.checked : (this._config[id.replace(/-/g,"_")] ?? false); };
 
     const entitiesEl = this.shadowRoot.getElementById("entities");
-    const entities = entitiesEl ? [...entitiesEl.selectedOptions].map(o => o.value) : [];
+    const selectedEntityIds = entitiesEl ? [...entitiesEl.selectedOptions].map(o => o.value) : [];
+    const entityEntryById = this._getEntityEntryById();
+    const targetEntityId = this._getActiveOverrideTarget();
+    const targetOverride = this._readEntityOverrideFields();
+    const entities = selectedEntityIds.map(eid => {
+      const existing = entityEntryById.get(eid);
+      const merged = { entity: eid, ...(existing || {}) };
+      if (eid === targetEntityId) Object.assign(merged, targetOverride);
+      const hasLocalOverride = (
+        (Array.isArray(merged.filter_routes) && merged.filter_routes.length > 0) ||
+        (Array.isArray(merged.destination_filter) && merged.destination_filter.length > 0) ||
+        !!merged.filter_platform ||
+        !!merged.filter_track ||
+        merged.realtime_only === true ||
+        merged.hide_terminus === true ||
+        merged.highlight_mode === true
+      );
+      if (!hasLocalOverride) return eid;
+      const clean = { entity: eid };
+      if (Array.isArray(merged.filter_routes) && merged.filter_routes.length) clean.filter_routes = merged.filter_routes;
+      if (Array.isArray(merged.destination_filter) && merged.destination_filter.length) clean.destination_filter = merged.destination_filter;
+      if (merged.filter_platform) clean.filter_platform = String(merged.filter_platform);
+      if (merged.filter_track) clean.filter_track = String(merged.filter_track);
+      if (merged.realtime_only === true) clean.realtime_only = true;
+      if (merged.hide_terminus === true) clean.hide_terminus = true;
+      if (merged.highlight_mode === true) clean.highlight_mode = true;
+      return clean;
+    });
     const filterRoutes = val("filter_routes").split(",").map(r => r.trim()).filter(Boolean);
     const autoColor = checked("header_color_auto");
 
     const config = {
+      ...this._config,
       type: "custom:mzkzg-transport-card",
-      entities: entities.length ? entities : (this._config.entities || undefined),
+      entities: entities.length ? entities : undefined,
       title: val("title") || undefined,
       icon: val("icon") || undefined,
       header_color: autoColor ? undefined : (val("header_color") || undefined),
@@ -343,6 +514,9 @@ class MzkzgTransportCardEditor extends HTMLElement {
       show_ac: checked("show_ac"),
       show_ticket_machine: checked("show_ticket_machine"),
       refresh_interval: parseInt(val("refresh_interval")) || 60,
+      tap_action: this._buildActionConfig("tap", "more-info"),
+      hold_action: this._buildActionConfig("hold", "none"),
+      double_tap_action: this._buildActionConfig("double_tap", "none"),
     };
 
     this._config = config;
@@ -360,18 +534,20 @@ class MzkzgTransportCardEditor extends HTMLElement {
     const entities = this._getEntities();
     const current = [...el.options].map(o => o.value);
     if (entities.length === current.length && entities.every((e, i) => e === current[i])) return;
-    const selected = new Set(this._config.entities || []);
+    const selected = new Set(this._selectedEntityIds());
     el.innerHTML = entities.map(e =>
       `<option value="${escapeHtml(e)}" ${selected.has(e) ? "selected" : ""}>${escapeHtml(e.replace("sensor.",""))}</option>`
     ).join("");
+    this._refreshEntityFilterTargetOptions();
   }
 
   _updateValues() {
     const el = this.shadowRoot.getElementById("entities");
     if (el) {
-      const selected = new Set(this._config.entities || []);
+      const selected = new Set(this._selectedEntityIds());
       for (const opt of el.options) opt.selected = selected.has(opt.value);
     }
+    this._refreshEntityFilterTargetOptions();
   }
 
   _render() {
@@ -381,10 +557,16 @@ class MzkzgTransportCardEditor extends HTMLElement {
     const isEink = preset === "e_ink";
     const autoColor = !c.header_color;
 
-    const selectedEntities = new Set(c.entities || []);
+    const selectedEntities = new Set(this._selectedEntityIds());
     const entityOptions = entities.map(e =>
       `<option value="${escapeHtml(e)}" ${selectedEntities.has(e) ? "selected" : ""}>${escapeHtml(e.replace("sensor.",""))}</option>`
     ).join("");
+    const selectedEntityList = [...selectedEntities];
+    const activeOverrideTarget = selectedEntityList[0] || "";
+    const activeEntry = this._getEntityEntryById().get(activeOverrideTarget);
+    const tapAction = normalizeActionConfig(c.tap_action, "more-info");
+    const holdAction = normalizeActionConfig(c.hold_action, "none");
+    const doubleTapAction = normalizeActionConfig(c.double_tap_action, "none");
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -395,6 +577,7 @@ class MzkzgTransportCardEditor extends HTMLElement {
         .field { display: flex; flex-direction: column; gap: 4px; }
         .field-row { display: flex; gap: 10px; }
         .field-row .field { flex: 1; min-width: 0; }
+        .muted { font-size: 11px; color: var(--secondary-text-color, #6b7280); }
         label { font-size: 12px; font-weight: 500; color: var(--secondary-text-color, #6b7280); margin: 0; }
         input[type="text"], select { width: 100%; height: 40px; padding: 8px 12px; border: 1px solid var(--divider-color, #d1d5db); border-radius: 8px; font-size: 14px; background: var(--card-background-color, #fff); color: var(--primary-text-color); font-family: inherit; box-sizing: border-box; }
         select[multiple] { height: auto; min-height: 60px; }
@@ -418,10 +601,10 @@ class MzkzgTransportCardEditor extends HTMLElement {
       </style>
       <div class="form">
         <div class="section">
-          <div class="section-title">Sensory</div>
+          <div class="section-title">Dane</div>
           <div class="field">
             <select id="entities" multiple size="${Math.min(Math.max(entities.length, 3), 8)}">
-              ${entities.map(e => `<option value="${escapeHtml(e)}" ${(c.entities || []).includes(e) ? "selected" : ""}>${escapeHtml(e.replace("sensor.",""))}</option>`).join("")}
+              ${entityOptions}
             </select>
           </div>
         </div>
@@ -491,11 +674,95 @@ class MzkzgTransportCardEditor extends HTMLElement {
             <div class="switch-row"><label for="hide_terminus">Ukryj kończące bieg/trasę</label><input id="hide_terminus" type="checkbox" ${c.hide_terminus !== false ? "checked" : ""}/></div>
             <div class="switch-row"><label for="realtime_only">Tylko realtime</label><input id="realtime_only" type="checkbox" ${c.realtime_only ? "checked" : ""}/></div>
           </div>
+          <div class="field" style="margin-top:10px">
+            <label for="entity_filter_target">Filtry per sensor (nadpisanie)</label>
+            <select id="entity_filter_target">
+              ${selectedEntityList.map(e => `<option value="${escapeHtml(e)}" ${e === activeOverrideTarget ? "selected" : ""}>${escapeHtml(e.replace("sensor.",""))}</option>`).join("")}
+            </select>
+            <div class="muted">Puste wartości użyją filtrów globalnych.</div>
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label for="entity_filter_routes">Linie (sensor)</label>
+              <input id="entity_filter_routes" type="text" value="${escapeHtml((activeEntry?.filter_routes || []).join(", "))}" placeholder="np. 2, 8, N1" />
+            </div>
+            <div class="field">
+              <label for="entity_destination_filter">Kierunki (sensor)</label>
+              <input id="entity_destination_filter" type="text" value="${escapeHtml((activeEntry?.destination_filter || []).join(", "))}" placeholder="np. Wrzeszcz" />
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label for="entity_filter_platform">Peron (sensor)</label>
+              <input id="entity_filter_platform" type="text" value="${escapeHtml(activeEntry?.filter_platform || "")}" placeholder="np. 1" />
+            </div>
+            <div class="field">
+              <label for="entity_filter_track">Tor (sensor)</label>
+              <input id="entity_filter_track" type="text" value="${escapeHtml(activeEntry?.filter_track || "")}" placeholder="np. 502" />
+            </div>
+          </div>
+          <div class="switch-list">
+            <div class="switch-row"><label for="entity_highlight_mode">Podświetlaj (sensor)</label><input id="entity_highlight_mode" type="checkbox" ${activeEntry?.highlight_mode ? "checked" : ""}/></div>
+            <div class="switch-row"><label for="entity_hide_terminus">Ukryj kończące (sensor)</label><input id="entity_hide_terminus" type="checkbox" ${activeEntry?.hide_terminus ? "checked" : ""}/></div>
+            <div class="switch-row"><label for="entity_realtime_only">Tylko realtime (sensor)</label><input id="entity_realtime_only" type="checkbox" ${activeEntry?.realtime_only ? "checked" : ""}/></div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Interakcje</div>
+          <div class="field-row">
+            <div class="field">
+              <label for="tap_action_type">Klik</label>
+              <select id="tap_action_type">
+                <option value="more-info" ${tapAction.action === "more-info" ? "selected" : ""}>Więcej informacji</option>
+                <option value="none" ${tapAction.action === "none" ? "selected" : ""}>Brak</option>
+                <option value="navigate" ${tapAction.action === "navigate" ? "selected" : ""}>Nawigacja</option>
+                <option value="url" ${tapAction.action === "url" ? "selected" : ""}>url</option>
+                <option value="perform-action" ${tapAction.action === "perform-action" ? "selected" : ""}>Wywołaj akcję</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="tap_action_value">Wartość</label>
+              <input id="tap_action_value" type="text" value="${escapeHtml(tapAction.navigation_path || tapAction.url_path || tapAction.perform_action || tapAction.service || "")}" placeholder="/lovelace/1 lub https://... lub domain.service" />
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label for="hold_action_type">Przytrzymanie</label>
+              <select id="hold_action_type">
+                <option value="none" ${holdAction.action === "none" ? "selected" : ""}>Brak</option>
+                <option value="more-info" ${holdAction.action === "more-info" ? "selected" : ""}>Więcej informacji</option>
+                <option value="navigate" ${holdAction.action === "navigate" ? "selected" : ""}>Nawigacja</option>
+                <option value="url" ${holdAction.action === "url" ? "selected" : ""}>url</option>
+                <option value="perform-action" ${holdAction.action === "perform-action" ? "selected" : ""}>Wywołaj akcję</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="hold_action_value">Wartość</label>
+              <input id="hold_action_value" type="text" value="${escapeHtml(holdAction.navigation_path || holdAction.url_path || holdAction.perform_action || holdAction.service || "")}" placeholder="/lovelace/1 lub https://... lub domain.service" />
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label for="double_tap_action_type">Dwuklik</label>
+              <select id="double_tap_action_type">
+                <option value="none" ${doubleTapAction.action === "none" ? "selected" : ""}>Brak</option>
+                <option value="more-info" ${doubleTapAction.action === "more-info" ? "selected" : ""}>Więcej informacji</option>
+                <option value="navigate" ${doubleTapAction.action === "navigate" ? "selected" : ""}>Nawigacja</option>
+                <option value="url" ${doubleTapAction.action === "url" ? "selected" : ""}>url</option>
+                <option value="perform-action" ${doubleTapAction.action === "perform-action" ? "selected" : ""}>Wywołaj akcję</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="double_tap_action_value">Wartość</label>
+              <input id="double_tap_action_value" type="text" value="${escapeHtml(doubleTapAction.navigation_path || doubleTapAction.url_path || doubleTapAction.perform_action || doubleTapAction.service || "")}" placeholder="/lovelace/1 lub https://... lub domain.service" />
+            </div>
+          </div>
         </div>
 
         ${!isEink ? `
         <div class="section">
-          <div class="section-title">Wyświetlanie</div>
+          <div class="section-title">Zaawansowane</div>
           <div class="switch-list">
             <div class="switch-row"><label for="show_delays">Opóźnienia</label><input id="show_delays" type="checkbox" ${c.show_delays !== false ? "checked" : ""}/></div>
             <div class="switch-row"><label for="show_footer">Czas aktualizacji</label><input id="show_footer" type="checkbox" ${c.show_footer !== false ? "checked" : ""}/></div>
@@ -520,10 +787,20 @@ class MzkzgTransportCardEditor extends HTMLElement {
     this.shadowRoot.querySelectorAll("input[type='text']").forEach(el => {
       el.addEventListener("input", () => this._fire());
     });
-    // Checkboxes, radios, select: immediate fire
-    this.shadowRoot.querySelectorAll("input[type='checkbox'], input[type='radio'], select").forEach(el => {
+    // Checkboxes + radios: immediate fire
+    this.shadowRoot.querySelectorAll("input[type='checkbox'], input[type='radio']").forEach(el => {
       el.addEventListener("change", () => this._fireNow());
     });
+    // All selects except per-sensor target: immediate fire
+    this.shadowRoot.querySelectorAll("select").forEach(el => {
+      if (el.id === "entity_filter_target") return;
+      el.addEventListener("change", () => this._fireNow());
+    });
+    // Per-sensor target just switches editor fields
+    const perSensorTarget = this.shadowRoot.getElementById("entity_filter_target");
+    if (perSensorTarget) {
+      perSensorTarget.addEventListener("change", () => this._setEntityOverrideFieldsFor(perSensorTarget.value));
+    }
     // Auto color toggle
     // Auto color toggle — visual only, fire already handled above
     const autoCheck = this.shadowRoot.getElementById("header_color_auto");
@@ -540,6 +817,7 @@ class MzkzgTransportCardEditor extends HTMLElement {
       picker.addEventListener("input", () => { colorInput.value = picker.value; this._fire(); });
       colorInput.addEventListener("input", () => { if (/^#[0-9a-f]{6}$/i.test(colorInput.value)) picker.value = colorInput.value; this._fire(); });
     }
+    this._refreshEntityFilterTargetOptions();
   }
 }
 
@@ -570,6 +848,7 @@ class MzkzgTransportCard extends HTMLElement {
     if (config.entities && !Array.isArray(config.entities)) throw new Error("entities must be an array");
     this._config = {
       ...config,
+      entities: Array.isArray(config.entities) ? config.entities : [],
       max_departures: Math.max(3, Math.min(20, parseInt(config.max_departures) || 10)),
       refresh_interval: Math.max(5, Math.min(600, parseInt(config.refresh_interval) || 60)),
       display_preset: config.display_preset || "standard",
@@ -583,11 +862,15 @@ class MzkzgTransportCard extends HTMLElement {
       show_ac: config.show_ac !== false,
       show_ticket_machine: config.show_ticket_machine !== false,
       show_stop_name: config.show_stop_name === true,
+      filter_routes: normalizeList(config.filter_routes),
       destination_filter: Array.isArray(config.destination_filter) ? config.destination_filter : (config.destination_filter ? String(config.destination_filter).split(",").map(s=>s.trim()).filter(Boolean) : []),
       filter_platform: config.filter_platform || "",
       filter_track: config.filter_track || "",
       icon: config.icon || "",
       show_footer: config.show_footer !== false,
+      tap_action: normalizeActionConfig(config.tap_action, "more-info"),
+      hold_action: normalizeActionConfig(config.hold_action, "none"),
+      double_tap_action: normalizeActionConfig(config.double_tap_action, "none"),
     };
     if (this._rendered) this._fullRender();
   }
@@ -597,9 +880,18 @@ class MzkzgTransportCard extends HTMLElement {
     if (!this._rendered) { this._fullRender(); this._startTick(); }
     else {
       // Only update if our entities' states changed
-      const key = (this._config.entities || []).map(e => hass.states[e]?.last_updated).join(",");
+      const key = this._getEntityIds().map(e => hass.states[e]?.last_updated).join(",");
       if (key !== this._lastStateKey) { this._lastStateKey = key; this._updateContent(); }
     }
+  }
+
+  _getEntityEntries() {
+    const raw = Array.isArray(this._config.entities) ? this._config.entities : [];
+    return raw.map(normalizeEntityEntry).filter(e => e?.entity);
+  }
+
+  _getEntityIds() {
+    return this._getEntityEntries().map(e => e.entity);
   }
 
   getCardSize() { return Math.ceil((this._config.max_departures || 10) / 2) + 2; }
@@ -621,20 +913,21 @@ class MzkzgTransportCard extends HTMLElement {
     if (!this._hass || !this._config.entities?.length) return [];
     const c = this._config;
     let deps = [];
+    const entityEntries = this._getEntityEntries();
 
     // In tabs mode, only show departures from active tab entity
-    const entities = (c.view_mode === "tabs" && c.entities.length > 1)
-      ? [c.entities[this._activeTab] || c.entities[0]]
-      : c.entities;
+    const entities = (c.view_mode === "tabs" && entityEntries.length > 1)
+      ? [entityEntries[this._activeTab] || entityEntries[0]]
+      : entityEntries;
 
-    for (const entityId of entities) {
-      const state = this._hass.states[entityId];
+    for (const entityCfg of entities) {
+      const state = this._hass.states[entityCfg.entity];
       if (!state || !state.attributes?.departures) continue;
       const provider = state.attributes.provider || "";
       const stopName = state.attributes.stop_name || "";
 
       for (const d of (Array.isArray(state.attributes.departures) ? state.attributes.departures : [])) {
-        deps.push({ ...d, _provider: d.provider || provider, _stopName: stopName });
+        deps.push({ ...d, _provider: d.provider || provider, _stopName: stopName, _entityConfig: entityCfg, _entityId: entityCfg.entity });
       }
     }
 
@@ -645,42 +938,58 @@ class MzkzgTransportCard extends HTMLElement {
     });
 
     // Realtime only
-    if (c.realtime_only) deps = deps.filter(d => d.realtime);
+    deps = deps.filter(d => {
+      const ec = d._entityConfig || {};
+      const realtimeOnly = ("realtime_only" in ec) ? ec.realtime_only : c.realtime_only;
+      return !realtimeOnly || d.realtime;
+    });
 
     // Hide terminus
-    if (c.hide_terminus) {
-      deps = deps.filter(d => {
-        if (!d._stopName) return true;
-        return normalizeText(d.headsign) !== normalizeText(d._stopName);
-      });
-    }
+    deps = deps.filter(d => {
+      const ec = d._entityConfig || {};
+      const hideTerminus = ("hide_terminus" in ec) ? ec.hide_terminus : c.hide_terminus;
+      if (!hideTerminus || !d._stopName) return true;
+      return normalizeText(d.headsign) !== normalizeText(d._stopName);
+    });
 
     // Filter routes
-    if (c.filter_routes?.length) {
-      const fs = new Set(c.filter_routes.map(r => r.toUpperCase()));
-      if (c.highlight_mode) {
-        deps.forEach(d => { d._dimmed = !fs.has(String(d.route).toUpperCase()); });
-      } else {
-        deps = deps.filter(d => fs.has(String(d.route).toUpperCase()));
+    deps = deps.filter(d => {
+      const ec = d._entityConfig || {};
+      const routeFilters = ("filter_routes" in ec) ? ec.filter_routes : c.filter_routes;
+      if (!routeFilters?.length) return true;
+      const fs = new Set(routeFilters.map(r => String(r).toUpperCase()));
+      const match = fs.has(String(d.route).toUpperCase());
+      const highlightMode = ("highlight_mode" in ec) ? ec.highlight_mode : c.highlight_mode;
+      if (highlightMode) {
+        d._dimmed = !match;
+        return true;
       }
-    }
+      return match;
+    });
 
     // Destination filter
-    if (c.destination_filter?.length) {
-      const df = c.destination_filter.map(f => f.toLowerCase());
-      deps = deps.filter(d => {
-        const h = (d.headsign || "").toLowerCase();
-        return df.some(f => h.includes(f));
-      });
-    }
+    deps = deps.filter(d => {
+      const ec = d._entityConfig || {};
+      const destinationFilters = ("destination_filter" in ec) ? ec.destination_filter : c.destination_filter;
+      if (!destinationFilters?.length) return true;
+      const h = (d.headsign || "").toLowerCase();
+      const df = destinationFilters.map(f => String(f).toLowerCase());
+      return df.some(f => h.includes(f));
+    });
 
     // Platform/track filter
-    if (c.filter_platform) {
-      deps = deps.filter(d => String(d.platform || "") === c.filter_platform);
-    }
-    if (c.filter_track) {
-      deps = deps.filter(d => String(d.track || "") === c.filter_track);
-    }
+    deps = deps.filter(d => {
+      const ec = d._entityConfig || {};
+      const platformFilter = ("filter_platform" in ec) ? ec.filter_platform : c.filter_platform;
+      if (!platformFilter) return true;
+      return String(d.platform || "") === platformFilter;
+    });
+    deps = deps.filter(d => {
+      const ec = d._entityConfig || {};
+      const trackFilter = ("filter_track" in ec) ? ec.filter_track : c.filter_track;
+      if (!trackFilter) return true;
+      return String(d.track || "") === trackFilter;
+    });
 
     // Sort by departure time
     deps.sort((a, b) => {
@@ -695,7 +1004,7 @@ class MzkzgTransportCard extends HTMLElement {
   _getAutoIcon() {
     if (!this._hass || !this._config.entities?.length) return BUS_ICON;
     const providers = new Set();
-    for (const eid of this._config.entities) {
+    for (const eid of this._getEntityIds()) {
       const s = this._hass.states[eid];
       if (s?.attributes?.provider) providers.add(s.attributes.provider);
     }
@@ -717,7 +1026,7 @@ class MzkzgTransportCard extends HTMLElement {
     };
     const providers = new Set();
     if (this._hass && this._config.entities?.length) {
-      for (const eid of this._config.entities) {
+      for (const eid of this._getEntityIds()) {
         const s = this._hass.states[eid];
         if (s?.attributes?.provider) providers.add(s.attributes.provider);
       }
@@ -736,14 +1045,15 @@ class MzkzgTransportCard extends HTMLElement {
   _getTitle() {
     if (this._config.title) return this._config.title;
     if (!this._hass || !this._config.entities?.length) return "MZKZG Transport";
-    const first = this._hass.states[this._config.entities[0]];
+    const firstId = this._getEntityIds()[0];
+    const first = firstId ? this._hass.states[firstId] : null;
     return first?.attributes?.stop_name || first?.attributes?.friendly_name || "MZKZG Transport";
   }
 
   _getSubtitle() {
     if (!this._hass || !this._config.entities?.length) return "Wybierz encje";
     const providers = new Set();
-    for (const eid of this._config.entities) {
+    for (const eid of this._getEntityIds()) {
       const s = this._hass.states[eid];
       if (s?.attributes?.provider) {
         const map = {
@@ -760,9 +1070,9 @@ class MzkzgTransportCard extends HTMLElement {
           kiedyprzyjedzie_pks_slupsk: "PKS Słupsk",
           kiedyprzyjedzie_mzk_starogard: "MZK Starogard",
           kiedyprzyjedzie_pks_starogard: "PKS Starogard",
-          kiedyprzyjedzie_bytow: "Bytów",
+          kiedyprzyjedzie_bytow: "Komunikacja Miejska Bytów",
           kiedyprzyjedzie_czluchow: "Powiat Człuchowski",
-          time4bus_tczew: "Tczew",
+          time4bus_tczew: "Komunikacja Miejska Tczew",
         };
         providers.add(map[s.attributes.provider] || s.attributes.provider);
       }
@@ -795,7 +1105,7 @@ class MzkzgTransportCard extends HTMLElement {
   _getLastUpdate() {
     if (!this._hass || !this._config.entities?.length) return "";
     let latest = null;
-    for (const eid of this._config.entities) {
+    for (const eid of this._getEntityIds()) {
       const s = this._hass.states[eid];
       const lu = s?.attributes?.last_update;
       if (lu && (!latest || lu > latest)) latest = lu;
@@ -808,8 +1118,9 @@ class MzkzgTransportCard extends HTMLElement {
 
   _renderTabs() {
     const c = this._config;
-    if (c.view_mode !== "tabs" || !c.entities || c.entities.length <= 1) return "";
-    const tabs = c.entities.map((eid, i) => {
+    const entities = this._getEntityIds();
+    if (c.view_mode !== "tabs" || entities.length <= 1) return "";
+    const tabs = entities.map((eid, i) => {
       const s = this._hass?.states[eid];
       const name = s?.attributes?.stop_name || eid.replace("sensor.", "");
       return `<span class="tab${i === this._activeTab ? " active" : ""}" data-tab="${i}">${escapeHtml(name)}</span>`;
@@ -828,8 +1139,97 @@ class MzkzgTransportCard extends HTMLElement {
     });
   }
 
+  _resolveActionConfig(kind) {
+    const c = this._config || {};
+    if (kind === "tap") return normalizeActionConfig(c.tap_action, "more-info");
+    if (kind === "hold") return normalizeActionConfig(c.hold_action, "none");
+    return normalizeActionConfig(c.double_tap_action, "none");
+  }
+
+  async _handleRowAction(kind, entityId) {
+    const actionCfg = this._resolveActionConfig(kind);
+    const action = actionCfg.action || "none";
+    if (action === "none") return;
+
+    if (action === "more-info") {
+      fireHassEvent(this, "hass-more-info", { entityId });
+      return;
+    }
+    if (action === "navigate") {
+      const path = actionCfg.navigation_path || "";
+      if (!path) return;
+      history.pushState(null, "", path);
+      fireHassEvent(window, "location-changed", { replace: false });
+      return;
+    }
+    if (action === "url") {
+      const url = actionCfg.url_path || "";
+      if (!url) return;
+      window.open(url, "_blank", "noopener");
+      return;
+    }
+    if (action === "toggle") {
+      if (!this._hass || !entityId) return;
+      await this._hass.callService("homeassistant", "toggle", { entity_id: entityId });
+      return;
+    }
+    if (action === "perform-action" || action === "call-service") {
+      if (!this._hass) return;
+      const ref = actionCfg.perform_action || actionCfg.service || "";
+      const [domain, service] = ref.split(".");
+      if (!domain || !service) return;
+      const data = { ...(actionCfg.data || {}) };
+      if (actionCfg.target?.entity_id) data.entity_id = actionCfg.target.entity_id;
+      await this._hass.callService(domain, service, data);
+    }
+  }
+
+  _bindDepartureActions() {
+    const rows = this.shadowRoot?.querySelectorAll(".dep-row[data-entity-id]") || [];
+    rows.forEach(row => {
+      const entityId = row.getAttribute("data-entity-id") || "";
+      if (!entityId) return;
+      let holdTimer = null;
+      let held = false;
+      let tapTimer = null;
+
+      row.addEventListener("pointerdown", () => {
+        held = false;
+        holdTimer = setTimeout(() => {
+          held = true;
+          this._handleRowAction("hold", entityId);
+        }, 500);
+      });
+      const clearHold = () => { if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; } };
+      row.addEventListener("pointerup", clearHold);
+      row.addEventListener("pointerleave", clearHold);
+      row.addEventListener("pointercancel", clearHold);
+
+      row.addEventListener("click", () => {
+        if (held) return;
+        if (tapTimer) clearTimeout(tapTimer);
+        tapTimer = setTimeout(() => this._handleRowAction("tap", entityId), 220);
+      });
+      row.addEventListener("dblclick", () => {
+        if (tapTimer) clearTimeout(tapTimer);
+        this._handleRowAction("double", entityId);
+      });
+      row.addEventListener("keydown", e => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          this._handleRowAction("tap", entityId);
+        }
+      });
+      row.addEventListener("contextmenu", e => {
+        e.preventDefault();
+        this._handleRowAction("hold", entityId);
+      });
+    });
+  }
+
   _bindTapActions() {
     this._bindTabs();
+    this._bindDepartureActions();
   }
 
   _updateContent() {
@@ -870,8 +1270,13 @@ class MzkzgTransportCard extends HTMLElement {
 
     const deps = this._getDepartures();
     if (!deps.length) {
+      const missing = this._getEntityIds().filter(eid => !this._hass.states[eid]);
+      if (missing.length) {
+        const names = missing.map(e => e.replace("sensor.", "")).join(", ");
+        return `<div class="state-msg"><span class="icon">⚠️</span>${t("missing_entities")}<br><small>${escapeHtml(names)}</small></div>`;
+      }
       // Check if any entity is unavailable (e.g. rate limit)
-      const unavailable = c.entities.filter(eid => {
+      const unavailable = this._getEntityIds().filter(eid => {
         const s = this._hass.states[eid];
         return s && (s.state === "unavailable" || s.state === "unknown");
       });
@@ -882,6 +1287,10 @@ class MzkzgTransportCard extends HTMLElement {
       }
       return `<div class="state-msg"><span class="icon">⏳</span>${t("no_departures")}</div>`;
     }
+
+    const hasRowActions = ["none"].indexOf((this._config.tap_action?.action || "more-info")) === -1
+      || ["none"].indexOf((this._config.hold_action?.action || "none")) === -1
+      || ["none"].indexOf((this._config.double_tap_action?.action || "none")) === -1;
 
     return deps.map(d => {
       const mins = minutesUntil(d.estimated_time);
@@ -903,7 +1312,8 @@ class MzkzgTransportCard extends HTMLElement {
         const mainTime = showDelay
           ? `<span class="time-struck">${formatTime(d.theoretical_time || d.estimated_time)}</span> ${formatTime(d.estimated_time)}`
           : formatTime(d.estimated_time);
-        timeHTML = `<div class="time-main">${mainTime}</div><div class="time-sub"><span class="dot">●</span> ${formatMins(mins)}${delayPart}</div>`;
+        const countdown = mins !== null && mins <= 0 ? t("departing") : formatMins(mins);
+        timeHTML = `<div class="time-main">${mainTime}</div><div class="time-sub"><span class="dot">●</span> ${countdown}${delayPart}</div>`;
       } else {
         timeHTML = `<div class="time-main">${formatTime(d.theoretical_time || d.estimated_time)}</div>`;
       }
@@ -929,6 +1339,9 @@ class MzkzgTransportCard extends HTMLElement {
       const vehicleChip = (d._provider !== "plk_rail" && d.vehicle_code && d.realtime)
         ? `<span class="platform">${escapeHtml(d.vehicle_code)}</span>`
         : "";
+      const metaRow = (iconsHTML || platformHTML)
+        ? `<span class="meta-row">${iconsHTML}${platformHTML}</span>`
+        : "";
 
       // Auto show_stop_name when multiple entities
       const showStop = c.show_stop_name && c.entities.length > 1 && c.view_mode !== "tabs" && d._stopName;
@@ -940,9 +1353,10 @@ class MzkzgTransportCard extends HTMLElement {
         trainInfo = `<span class="stop-name">nr ${escapeHtml(d.train_number)} - ${escapeHtml(shortCarrier)}</span>`;
       }
 
-      return `<div class="dep-row${imminent ? " imminent" : ""}${d._dimmed ? " dimmed" : ""}${cancelled ? " cancelled" : ""}">
+      const rowLabel = `${d.route} ${d.headsign} ${formatTime(d.estimated_time || d.theoretical_time)}`;
+      return `<div class="dep-row${hasRowActions ? " interactive" : ""}${imminent ? " imminent" : ""}${d._dimmed ? " dimmed" : ""}${cancelled ? " cancelled" : ""}" ${hasRowActions ? `tabindex="0" role="button" aria-label="${escapeHtml(rowLabel)}" data-entity-id="${escapeHtml(d._entityId || "")}"` : ""}>
         <span class="badge" style="background:${routeColor(d.route, d._provider || d.provider)}">${escapeHtml(d.route)}</span>
-        <span class="headsign"><span class="headsign-text">${escapeHtml(d.headsign)}</span>${vehicleChip}${iconsHTML}${platformHTML}${trainInfo || (showStop ? `<span class="stop-name">${escapeHtml(cleanStopName)}</span>` : "")}</span>
+        <span class="headsign"><span class="head-main"><span class="headsign-text">${escapeHtml(d.headsign)}</span>${vehicleChip}</span>${metaRow}${trainInfo || (showStop ? `<span class="stop-name">${escapeHtml(cleanStopName)}</span>` : "")}</span>
         <div class="time-col">${timeHTML}</div>
       </div>`;
     }).join("");

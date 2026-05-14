@@ -1,0 +1,398 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MZKZG Card Preview (bez PLK)</title>
+  <style>
+    :root {
+      --bg: #f5f5f5;
+      --panel: #ffffff;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --accent: #16a34a;
+      --border: rgba(31, 41, 55, 0.08);
+      --primary-color: #005eb8;
+      --primary-text-color: #1f2937;
+      --secondary-text-color: #6b7280;
+      --divider-color: rgba(31, 41, 55, 0.12);
+      --card-background-color: #ffffff;
+      --ha-card-header-font-family: Roboto, "Noto Sans", Helvetica, Arial, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Roboto, "Noto Sans", Helvetica, Arial, sans-serif;
+      transition: background-color 0.2s ease, color 0.2s ease;
+    }
+    body[data-theme="dark"] {
+      --bg: #111827;
+      --panel: #1f2937;
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+      --border: rgba(255,255,255,0.08);
+      --primary-color: #60a5fa;
+      --primary-text-color: #e5e7eb;
+      --secondary-text-color: #9ca3af;
+      --divider-color: rgba(255,255,255,0.1);
+      --card-background-color: #1f2937;
+    }
+    body[data-theme="dark"] .topbar {
+      background: rgba(17, 24, 39, 0.94);
+    }
+    body[data-theme="dark"] .pill {
+      background: rgba(255,255,255,0.03);
+      border-color: rgba(255,255,255,0.08);
+    }
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 14px;
+      background: rgba(255, 255, 255, 0.92);
+      backdrop-filter: blur(6px);
+      border-bottom: 1px solid var(--border);
+    }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      font-size: 12px;
+      color: var(--muted);
+      background: rgba(59, 130, 246, 0.08);
+    }
+    .btn {
+      cursor: pointer;
+      border: 1px solid #bfd0e8;
+      background: #fff;
+      color: var(--text);
+      border-radius: 8px;
+      padding: 7px 10px;
+      font-size: 12px;
+    }
+    .btn:hover { background: #f8fafc; }
+    body[data-theme="dark"] .btn {
+      border-color: #2d3f67;
+      background: #14213d;
+      color: #e5e7eb;
+    }
+    body[data-theme="dark"] .btn:hover { background: #1b2d52; }
+    .grid {
+      padding: 16px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+      gap: 16px;
+    }
+    .card-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      background: transparent;
+    }
+    .card-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 0 2px;
+      border-bottom: none;
+      font-size: 11px;
+      color: var(--muted);
+      background: transparent;
+    }
+    .card-head strong { font-weight: 600; color: var(--text); }
+    .ok { color: var(--accent); }
+    .err { color: #ef4444; }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <span class="pill">Preview: wszystkie providery <strong>bez PLK</strong></span>
+    <span class="pill">Plik źródłowy: <code>custom_components/mzkzg_transport/www/mzkzg-transport-card.js</code></span>
+    <button class="btn" id="themeToggle">Theme: light</button>
+    <label class="pill">
+      <input id="autoReload" type="checkbox" checked />
+      Auto reload page
+    </label>
+    <button class="btn" id="reloadNow">Reload now</button>
+    <span id="status" class="pill"></span>
+  </div>
+
+  <div id="grid" class="grid"></div>
+
+  <script>
+    // Minimal stubs for HA tags (for browser preview outside HA)
+    if (!customElements.get("ha-card")) customElements.define("ha-card", class extends HTMLElement {});
+    if (!customElements.get("ha-icon")) {
+      class HaIconPreview extends HTMLElement {
+        static get observedAttributes() { return ["icon"]; }
+        connectedCallback() { this._render(); }
+        attributeChangedCallback() { this._render(); }
+        _render() {
+          const icon = this.getAttribute("icon") || "mdi:bus";
+          const svg = {
+            "mdi:tram": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M19,16.94V8.5C19,5.71 16.39,5.1 13,5L13.75,3.5H17V2H7V3.5H11.75L11,5C7.86,5.11 5,5.73 5,8.5V16.94C5,18.39 6.19,19.6 7.59,19.91L6,21.5V22H8.23L10.23,20H14L16,22H18V21.5L16.5,20H16.42C18.11,20 19,18.63 19,16.94M12,18.5A1.5,1.5 0 0,1 10.5,17A1.5,1.5 0 0,1 12,15.5A1.5,1.5 0 0,1 13.5,17A1.5,1.5 0 0,1 12,18.5M17,14H7V9H17V14Z" /></svg>`,
+            "mdi:bus": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M18,11H6V6H18M16.5,17A1.5,1.5 0 0,1 15,15.5A1.5,1.5 0 0,1 16.5,14A1.5,1.5 0 0,1 18,15.5A1.5,1.5 0 0,1 16.5,17M7.5,17A1.5,1.5 0 0,1 6,15.5A1.5,1.5 0 0,1 7.5,14A1.5,1.5 0 0,1 9,15.5A1.5,1.5 0 0,1 7.5,17M4,16C4,16.88 4.39,17.67 5,18.22V20A1,1 0 0,0 6,21H7A1,1 0 0,0 8,20V19H16V20A1,1 0 0,0 17,21H18A1,1 0 0,0 19,20V18.22C19.61,17.67 20,16.88 20,16V6C20,2.5 16.42,2 12,2C7.58,2 4,2.5 4,6V16Z" /></svg>`,
+            "mdi:bus-clock": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M16.5,4V8.25L19.36,9.94L18.61,11.16L15,9V4H16.5M16,13C17.36,13 18.54,12.5 19.5,11.53C20.5,10.56 21,9.39 21,8C21,6.64 20.5,5.46 19.5,4.5C18.54,3.5 17.36,3 16,3C14.61,3 13.44,3.5 12.47,4.5C11.5,5.46 11,6.64 11,8C11,9.39 11.5,10.56 12.47,11.53C13.44,12.5 14.61,13 16,13M13.5,19C13.94,19 14.3,18.84 14.58,18.54C14.86,18.24 15,17.89 15,17.5C15,17.08 14.86,16.73 14.58,16.43C14.3,16.13 13.94,16 13.5,16C13.06,16 12.7,16.13 12.42,16.43C12.14,16.73 12,17.08 12,17.5C12,17.89 12.14,18.24 12.42,18.54C12.7,18.84 13.06,19 13.5,19M3,13H11.11C9.7,11.64 9,10 9,8H3V13M4.5,19C4.94,19 5.3,18.84 5.58,18.54C5.86,18.24 6,17.89 6,17.5C6,17.08 5.86,16.73 5.58,16.43C5.3,16.13 4.94,16 4.5,16C4.06,16 3.7,16.13 3.42,16.43C3.14,16.73 3,17.08 3,17.5C3,17.89 3.14,18.24 3.42,18.54C3.7,18.84 4.06,19 4.5,19M16,1C17.92,1 19.58,1.67 20.95,3.05C22.33,4.42 23,6.08 23,8C23,9.77 22.44,11.29 21.28,12.59C20.13,13.88 18.7,14.66 17,14.91V18C17,18.84 16.67,19.58 16,20.2V22C16,22.27 15.89,22.5 15.7,22.71C15.5,22.91 15.28,23 15,23H14C13.73,23 13.5,22.91 13.29,22.71C13.09,22.5 13,22.27 13,22V21H5V22C5,22.27 4.91,22.5 4.71,22.71C4.5,22.91 4.27,23 4,23H3C2.72,23 2.5,22.91 2.3,22.71C2.11,22.5 2,22.27 2,22V20.2C1.33,19.58 1,18.84 1,18V8C1,6.42 1.67,5.35 3.05,4.8C4.42,4.26 6.41,4 9,4C9.13,4 9.33,4 9.61,4C9.89,4 10.09,4.03 10.22,4.03C11.63,2 13.55,1 16,1Z" /></svg>`,
+            "mdi:train": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12,2C8,2 4,2.5 4,6V15.5A3.5,3.5 0 0,0 7.5,19L6,20.5V21H8.23L10.23,19H14L16,21H18V20.5L16.5,19A3.5,3.5 0 0,0 20,15.5V6C20,2.5 16.42,2 12,2M7.5,17A1.5,1.5 0 0,1 6,15.5A1.5,1.5 0 0,1 7.5,14A1.5,1.5 0 0,1 9,15.5A1.5,1.5 0 0,1 7.5,17M11,10H6V6H11V10M13,10V6H18V10H13M16.5,17A1.5,1.5 0 0,1 15,15.5A1.5,1.5 0 0,1 16.5,14A1.5,1.5 0 0,1 18,15.5A1.5,1.5 0 0,1 16.5,17Z" /></svg>`,
+            "mdi:bus-stop": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M22 7V16C22 16.71 21.62 17.36 21 17.72V19.25C21 19.66 20.66 20 20.25 20H19.75C19.34 20 19 19.66 19 19.25V18H12V19.25C12 19.66 11.66 20 11.25 20H10.75C10.34 20 10 19.66 10 19.25V17.72C9.39 17.36 9 16.71 9 16V7C9 4 12 4 15.5 4S22 4 22 7M13 15C13 14.45 12.55 14 12 14S11 14.45 11 15 11.45 16 12 16 13 15.55 13 15M20 15C20 14.45 19.55 14 19 14S18 14.45 18 15 18.45 16 19 16 20 15.55 20 15M20 7H11V11H20V7M7 9.5C6.97 8.12 5.83 7 4.45 7.05C3.07 7.08 1.97 8.22 2 9.6C2.03 10.77 2.86 11.77 4 12V20H5V12C6.18 11.76 7 10.71 7 9.5Z" /></svg>`,
+          }[icon] || `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M18,11H6V6H18M16.5,17A1.5,1.5 0 0,1 15,15.5A1.5,1.5 0 0,1 16.5,14A1.5,1.5 0 0,1 18,15.5A1.5,1.5 0 0,1 16.5,17M7.5,17A1.5,1.5 0 0,1 6,15.5A1.5,1.5 0 0,1 7.5,14A1.5,1.5 0 0,1 9,15.5A1.5,1.5 0 0,1 7.5,17M4,16C4,16.88 4.39,17.67 5,18.22V20A1,1 0 0,0 6,21H7A1,1 0 0,0 8,20V19H16V20A1,1 0 0,0 17,21H18A1,1 0 0,0 19,20V18.22C19.61,17.67 20,16.88 20,16V6C20,2.5 16.42,2 12,2C7.58,2 4,2.5 4,6V16Z" /></svg>`;
+          this.innerHTML = svg;
+        }
+      }
+      customElements.define("ha-icon", HaIconPreview);
+    }
+
+    const PROVIDERS = [
+      { key: "ztm_gdansk", label: "ZTM Gdańsk", stop: "Dworzec Główny 18", icon: "mdi:tram" },
+      { key: "zkm_gdynia", label: "ZKM Gdynia", stop: "Gdynia, Dworzec Główny", icon: "mdi:bus" },
+      { key: "mzk_wejherowo", label: "MZK Wejherowo", stop: "Wejherowo, Dworzec PKP", icon: "mdi:bus" },
+      { key: "time4bus_tczew", label: "Komunikacja Miejska Tczew", stop: "Tczew, Dworzec PKP", icon: "mdi:bus-clock" },
+      { key: "kiedyprzyjedzie_pks_gdansk", label: "PKS Gdańsk Sp. z o.o.", stop: "Gdańsk, Dworzec Autobusowy", icon: "mdi:bus" },
+      { key: "kiedyprzyjedzie_albatros", label: "Albatros", stop: "Gdańsk, Dworzec Autobusowy", icon: "mdi:bus" },
+      { key: "kiedyprzyjedzie_gryf", label: "Przewozy Autobusowe GRYF", stop: "Wejherowo, Dworzec PKP", icon: "mdi:bus" },
+      { key: "kiedyprzyjedzie_nord_express", label: "Nord Express", stop: "Słupsk, Dworzec", icon: "mdi:bus" },
+      { key: "kiedyprzyjedzie_pks_gdynia", label: "PKS Gdynia S.A.", stop: "Gdynia, Dworzec Główny", icon: "mdi:bus" },
+      { key: "kiedyprzyjedzie_mzk_malbork", label: "Miejski Zakład Komunikacji w Malborku", stop: "Malbork, Dworzec", icon: "mdi:bus" },
+      { key: "kiedyprzyjedzie_pks_slupsk", label: "PKS Słupsk S.A.", stop: "Słupsk, Dworzec", icon: "mdi:bus" },
+      { key: "kiedyprzyjedzie_mzk_starogard", label: "MZK Starogard Gdański", stop: "Starogard, Rynek", icon: "mdi:bus" },
+      { key: "kiedyprzyjedzie_pks_starogard", label: "PKS Starogard Gdański S.A.", stop: "Starogard, Dworzec", icon: "mdi:bus" },
+      { key: "kiedyprzyjedzie_bytow", label: "Komunikacja Miejska Bytów", stop: "Bytów, Dworcowa", icon: "mdi:bus" },
+      { key: "kiedyprzyjedzie_czluchow", label: "Powiat Człuchowski", stop: "Człuchów, Plac", icon: "mdi:bus" },
+    ];
+
+    function addMinutesIso(mins, delaySec = 0) {
+      const t = new Date(Date.now() + mins * 60000 + delaySec * 1000);
+      return t.toISOString();
+    }
+
+    function providerIconSvg(icon) {
+      const icons = {
+        "mdi:tram": `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7 6h10"/><path d="M5 10h14"/><path d="M8 18l-2 2"/><path d="M16 18l2 2"/><path d="M6 2h12v14H6z"/><path d="M9 6h.01"/><path d="M15 6h.01"/><path d="M8 14h8"/></svg>`,
+        "mdi:bus": `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20v2h2v-2"/><path d="M18 20v2h2v-2"/><path d="M6 3h12a2 2 0 0 1 2 2v13H4V5a2 2 0 0 1 2-2Z"/><path d="M7 8h10"/><path d="M7 12h10"/><path d="M8 3v3"/><path d="M16 3v3"/><path d="M9 20h6"/><path d="M7 16h.01"/><path d="M17 16h.01"/></svg>`,
+        "mdi:bus-clock": `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20v2h2v-2"/><path d="M18 20v2h2v-2"/><path d="M6 3h10a2 2 0 0 1 2 2v9.5"/><path d="M5 6h13v10H5z"/><path d="M7 10h9"/><path d="M7 13h9"/><path d="M9 20h5"/><circle cx="18.5" cy="17.5" r="3.5"/><path d="M18.5 16v2l1.5 1"/></svg>`,
+      };
+      return icons[icon] || icons["mdi:bus"];
+    }
+
+    function departuresFor(provider) {
+      if (provider === "mzk_wejherowo") {
+        return [
+          { route: "7", headsign: "Nanice", estimated_time: addMinutesIso(4), theoretical_time: addMinutesIso(4), realtime: false, delay_seconds: 0, vehicle_type: "bus", provider },
+          { route: "16", headsign: "Śmiechowo", estimated_time: addMinutesIso(14), theoretical_time: addMinutesIso(14), realtime: false, delay_seconds: 0, vehicle_type: "bus", provider },
+          { route: "1", headsign: "Os. Fenikowskiego", estimated_time: addMinutesIso(23), theoretical_time: addMinutesIso(23), realtime: false, delay_seconds: 0, vehicle_type: "bus", provider },
+        ];
+      }
+      if (provider === "time4bus_tczew") {
+        return [
+          { route: "3", headsign: "Czyżykowo", estimated_time: addMinutesIso(2, 60), theoretical_time: addMinutesIso(1), realtime: true, delay_seconds: 60, vehicle_code: "9405", wheelchair_accessible: true, air_conditioning: true, ticket_machine: true, provider },
+          { route: "17", headsign: "Dworzec PKP", estimated_time: addMinutesIso(10), theoretical_time: addMinutesIso(10), realtime: false, delay_seconds: 0, provider },
+          { route: "5", headsign: "Działki", estimated_time: addMinutesIso(19), theoretical_time: addMinutesIso(19), realtime: false, delay_seconds: 0, provider },
+        ];
+      }
+      if (provider === "kiedyprzyjedzie_pks_gdansk") {
+        return [
+          { route: "854", headsign: "Krynica Morska, Dworzec", estimated_time: addMinutesIso(3, 120), theoretical_time: addMinutesIso(1), realtime: true, delay_seconds: 120, bike_allowed: true, wheelchair_accessible: true, air_conditioning: true, ticket_machine: true, provider },
+          { route: "870", headsign: "Gdańsk, Dworzec Autobusowy", estimated_time: addMinutesIso(11), theoretical_time: addMinutesIso(11), realtime: false, delay_seconds: 0, provider },
+          { route: "820", headsign: "Nowy Dwór Gdański", estimated_time: addMinutesIso(24), theoretical_time: addMinutesIso(24), realtime: false, delay_seconds: 0, provider },
+        ];
+      }
+      if (provider === "kiedyprzyjedzie_albatros") {
+        return [
+          { route: "660", headsign: "Gdańsk, Hala Olivia", estimated_time: addMinutesIso(3, 120), theoretical_time: addMinutesIso(1), realtime: true, delay_seconds: 120, bike_allowed: true, wheelchair_accessible: true, air_conditioning: true, ticket_machine: true, provider },
+          { route: "667", headsign: "Gdańsk, Starogardzka", estimated_time: addMinutesIso(11), theoretical_time: addMinutesIso(11), realtime: false, delay_seconds: 0, provider },
+          { route: "654", headsign: "Gdańsk, Łostowice Świętokrzyska", estimated_time: addMinutesIso(20), theoretical_time: addMinutesIso(20), realtime: false, delay_seconds: 0, provider },
+        ];
+      }
+      if (provider === "kiedyprzyjedzie_gryf") {
+        return [
+          { route: "123", headsign: "Wejherowo, Dworzec PKP", estimated_time: addMinutesIso(3, 120), theoretical_time: addMinutesIso(1), realtime: true, delay_seconds: 120, bike_allowed: true, wheelchair_accessible: true, air_conditioning: true, ticket_machine: true, provider },
+          { route: "124", headsign: "Kartuzy, Dworzec", estimated_time: addMinutesIso(11), theoretical_time: addMinutesIso(11), realtime: false, delay_seconds: 0, provider },
+          { route: "126", headsign: "Żukowo, Dworzec", estimated_time: addMinutesIso(21), theoretical_time: addMinutesIso(21), realtime: false, delay_seconds: 0, provider },
+        ];
+      }
+      if (provider === "kiedyprzyjedzie_nord_express") {
+        return [
+          { route: "701", headsign: "Słupsk, Dworzec", estimated_time: addMinutesIso(3, 120), theoretical_time: addMinutesIso(1), realtime: true, delay_seconds: 120, bike_allowed: true, wheelchair_accessible: true, air_conditioning: true, ticket_machine: true, provider },
+          { route: "703", headsign: "Lębork, Dworzec", estimated_time: addMinutesIso(11), theoretical_time: addMinutesIso(11), realtime: false, delay_seconds: 0, provider },
+          { route: "707", headsign: "Ustka, Dworzec", estimated_time: addMinutesIso(29), theoretical_time: addMinutesIso(29), realtime: false, delay_seconds: 0, provider },
+        ];
+      }
+      if (provider === "kiedyprzyjedzie_pks_gdynia") {
+        return [
+          { route: "660", headsign: "Banino, Pszenna", estimated_time: addMinutesIso(3, 120), theoretical_time: addMinutesIso(1), realtime: true, delay_seconds: 120, bike_allowed: true, wheelchair_accessible: true, air_conditioning: true, ticket_machine: true, provider },
+          { route: "664", headsign: "Gdynia, Dworzec Gł.", estimated_time: addMinutesIso(11), theoretical_time: addMinutesIso(11), realtime: false, delay_seconds: 0, provider },
+          { route: "666", headsign: "Gdynia, Wielki Kack", estimated_time: addMinutesIso(24), theoretical_time: addMinutesIso(24), realtime: false, delay_seconds: 0, provider },
+        ];
+      }
+      if (provider === "kiedyprzyjedzie_mzk_malbork") {
+        return [
+          { route: "2", headsign: "Dworzec", estimated_time: addMinutesIso(3, 120), theoretical_time: addMinutesIso(1), realtime: true, delay_seconds: 120, bike_allowed: true, wheelchair_accessible: true, air_conditioning: true, ticket_machine: true, provider },
+          { route: "3", headsign: "Sztum", estimated_time: addMinutesIso(11), theoretical_time: addMinutesIso(11), realtime: false, delay_seconds: 0, provider },
+          { route: "5", headsign: "Kałdowo", estimated_time: addMinutesIso(22), theoretical_time: addMinutesIso(22), realtime: false, delay_seconds: 0, provider },
+        ];
+      }
+      if (provider === "kiedyprzyjedzie_pks_slupsk") {
+        return [
+          { route: "5", headsign: "Hubala", estimated_time: addMinutesIso(3, 120), theoretical_time: addMinutesIso(1), realtime: true, delay_seconds: 120, bike_allowed: true, wheelchair_accessible: true, air_conditioning: true, ticket_machine: true, provider },
+          { route: "18", headsign: "Dworzec", estimated_time: addMinutesIso(11), theoretical_time: addMinutesIso(11), realtime: false, delay_seconds: 0, provider },
+          { route: "22", headsign: "Kobylnica", estimated_time: addMinutesIso(26), theoretical_time: addMinutesIso(26), realtime: false, delay_seconds: 0, provider },
+        ];
+      }
+      if (provider === "kiedyprzyjedzie_mzk_starogard") {
+        return [
+          { route: "1", headsign: "Rynek", estimated_time: addMinutesIso(3, 120), theoretical_time: addMinutesIso(1), realtime: true, delay_seconds: 120, bike_allowed: true, wheelchair_accessible: true, air_conditioning: true, ticket_machine: true, provider },
+          { route: "4", headsign: "Dworzec", estimated_time: addMinutesIso(11), theoretical_time: addMinutesIso(11), realtime: false, delay_seconds: 0, provider },
+          { route: "7", headsign: "Jabłowo", estimated_time: addMinutesIso(23), theoretical_time: addMinutesIso(23), realtime: false, delay_seconds: 0, provider },
+        ];
+      }
+      if (provider === "kiedyprzyjedzie_pks_starogard") {
+        return [
+          { route: "501", headsign: "Dworzec", estimated_time: addMinutesIso(3, 120), theoretical_time: addMinutesIso(1), realtime: true, delay_seconds: 120, bike_allowed: true, wheelchair_accessible: true, air_conditioning: true, ticket_machine: true, provider },
+          { route: "503", headsign: "Skórcz", estimated_time: addMinutesIso(11), theoretical_time: addMinutesIso(11), realtime: false, delay_seconds: 0, provider },
+          { route: "506", headsign: "Czarna Woda", estimated_time: addMinutesIso(28), theoretical_time: addMinutesIso(28), realtime: false, delay_seconds: 0, provider },
+        ];
+      }
+      if (provider === "kiedyprzyjedzie_bytow") {
+        return [
+          { route: "1", headsign: "Dworcowa", estimated_time: addMinutesIso(3, 120), theoretical_time: addMinutesIso(1), realtime: true, delay_seconds: 120, bike_allowed: true, wheelchair_accessible: true, air_conditioning: true, ticket_machine: true, provider },
+          { route: "2", headsign: "Miastko", estimated_time: addMinutesIso(11), theoretical_time: addMinutesIso(11), realtime: false, delay_seconds: 0, provider },
+          { route: "3", headsign: "Północna", estimated_time: addMinutesIso(25), theoretical_time: addMinutesIso(25), realtime: false, delay_seconds: 0, provider },
+        ];
+      }
+      if (provider === "kiedyprzyjedzie_czluchow") {
+        return [
+          { route: "10", headsign: "Plac", estimated_time: addMinutesIso(3, 120), theoretical_time: addMinutesIso(1), realtime: true, delay_seconds: 120, bike_allowed: true, wheelchair_accessible: true, air_conditioning: true, ticket_machine: true, provider },
+          { route: "11", headsign: "Człuchów, Zamek", estimated_time: addMinutesIso(11), theoretical_time: addMinutesIso(11), realtime: false, delay_seconds: 0, provider },
+          { route: "12", headsign: "Rzewnica", estimated_time: addMinutesIso(27), theoretical_time: addMinutesIso(27), realtime: false, delay_seconds: 0, provider },
+        ];
+      }
+      if (provider === "zkm_gdynia") {
+        return [
+          { route: "21", headsign: "Dworzec Główny", estimated_time: addMinutesIso(1, 60), theoretical_time: addMinutesIso(0), realtime: true, delay_seconds: 60, vehicle_code: "2758", bike_allowed: true, wheelchair_accessible: true, air_conditioning: true, provider },
+          { route: "147", headsign: "Pustki Cisowskie", estimated_time: addMinutesIso(9), theoretical_time: addMinutesIso(9), realtime: false, delay_seconds: 0, provider },
+        ];
+      }
+      return [
+        { route: "154", headsign: "Orunia Górna", estimated_time: addMinutesIso(2, 120), theoretical_time: addMinutesIso(0), realtime: true, delay_seconds: 120, vehicle_code: "2538", bike_allowed: true, wheelchair_accessible: true, air_conditioning: true, usb: true, ticket_machine: true, provider },
+        { route: "132", headsign: "Pruszcz Zastawna/Rondo", estimated_time: addMinutesIso(7), theoretical_time: addMinutesIso(7), realtime: false, delay_seconds: 0, provider },
+      ];
+    }
+
+    function buildHass() {
+      const states = {};
+      for (const p of PROVIDERS) {
+        const entity = `sensor.preview_${p.key}`;
+        const deps = departuresFor(p.key);
+        states[entity] = {
+          state: deps[0]?.estimated_time ?? "unknown",
+          last_updated: new Date().toISOString(),
+          attributes: {
+            provider: p.key,
+            stop_name: p.stop,
+            last_update: new Date().toISOString(),
+            departures: deps,
+          }
+        };
+      }
+      return {
+        states,
+        callService: async (...args) => console.debug("callService", args),
+      };
+    }
+
+    async function loadCardScript() {
+      return new Promise((resolve, reject) => {
+        const s = document.createElement("script");
+        s.src = `../custom_components/mzkzg_transport/www/mzkzg-transport-card.js?v=${Date.now()}`;
+        s.onload = resolve;
+        s.onerror = reject;
+        document.head.appendChild(s);
+      });
+    }
+
+    function renderCards() {
+      const grid = document.getElementById("grid");
+      const hass = buildHass();
+      grid.innerHTML = "";
+      for (const p of PROVIDERS) {
+        const wrap = document.createElement("section");
+        wrap.className = "card-wrap";
+        wrap.innerHTML = `<div class="card-head"><span style="display:inline-flex;align-items:center;gap:6px;"><ha-icon icon="${p.icon}" style="color:var(--accent)"></ha-icon><strong>${p.label}</strong></span><span class="ok">${p.key}</span></div>`;
+
+        const card = document.createElement("mzkzg-transport-card");
+        card.setConfig({
+          type: "custom:mzkzg-transport-card",
+          entities: [`sensor.preview_${p.key}`],
+          max_departures: 6,
+          show_footer: true,
+          show_delays: true,
+          show_bike: true,
+          show_wheelchair: true,
+          show_ac: true,
+          show_ticket_machine: true,
+          display_preset: "standard",
+          tap_action: { action: "none" },
+          hold_action: { action: "none" },
+          double_tap_action: { action: "none" },
+        });
+        card.hass = hass;
+        wrap.appendChild(card);
+        grid.appendChild(wrap);
+      }
+    }
+
+    function setupAutoReload() {
+      const auto = document.getElementById("autoReload");
+      const status = document.getElementById("status");
+      const reloadNow = document.getElementById("reloadNow");
+      const themeToggle = document.getElementById("themeToggle");
+      reloadNow.addEventListener("click", () => location.reload());
+      const savedTheme = localStorage.getItem("preview-theme") || "light";
+      document.body.dataset.theme = savedTheme;
+      themeToggle.textContent = `Theme: ${savedTheme}`;
+      themeToggle.addEventListener("click", () => {
+        const next = document.body.dataset.theme === "dark" ? "light" : "dark";
+        document.body.dataset.theme = next;
+        localStorage.setItem("preview-theme", next);
+        themeToggle.textContent = `Theme: ${next}`;
+      });
+      setInterval(() => {
+        const s = 60;
+        status.textContent = auto.checked ? `Auto reload: ${s}s` : "Auto reload: off";
+        if (!auto.checked) return;
+        const t = Number(sessionStorage.getItem("preview_next_reload") || "0");
+        const now = Date.now();
+        if (!t || now >= t) {
+          sessionStorage.setItem("preview_next_reload", String(now + s * 1000));
+          location.reload();
+        }
+      }, 500);
+    }
+
+    (async () => {
+      const status = document.getElementById("status");
+      try {
+        await loadCardScript();
+        renderCards();
+        setupAutoReload();
+        status.className = "pill ok";
+        status.textContent = "Załadowano kartę";
+      } catch (e) {
+        console.error(e);
+        status.className = "pill err";
+        status.textContent = "Błąd ładowania JS";
+      }
+    })();
+  </script>
+</body>
+</html>

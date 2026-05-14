@@ -6,6 +6,7 @@ from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import CONF_NAME, CONF_PROVIDER, CONF_STOP_ID, DOMAIN, PROVIDER_LABELS
@@ -74,7 +75,7 @@ class MzkzgTransportSensor(CoordinatorEntity, SensorEntity):
         }
 
 
-class MzkzgPlkApiUsageSensor(SensorEntity):
+class MzkzgPlkApiUsageSensor(SensorEntity, RestoreEntity):
     """Sensor tracking PLK API usage."""
 
     _attr_has_entity_name = True
@@ -90,6 +91,32 @@ class MzkzgPlkApiUsageSensor(SensorEntity):
         self._attr_device_info = {
             "identifiers": {(DOMAIN, f"{entry.data[CONF_PROVIDER]}_{entry.data[CONF_STOP_ID]}")},
         }
+
+    async def async_added_to_hass(self) -> None:
+        """Restore persisted usage counters after HA restart."""
+        await super().async_added_to_hass()
+        last_state = await self.async_get_last_state()
+        if not last_state:
+            return
+
+        domain_data = self._hass.data.setdefault(DOMAIN, {})
+        cache = domain_data.setdefault("_plk_cache", {})
+
+        if "_req_count" not in cache:
+            try:
+                cache["_req_count"] = int(last_state.state)
+            except (TypeError, ValueError):
+                cache["_req_count"] = 0
+
+        attrs = last_state.attributes or {}
+        if "_429_count" not in cache:
+            try:
+                cache["_429_count"] = int(attrs.get("rate_limit_hits", 0))
+            except (TypeError, ValueError):
+                cache["_429_count"] = 0
+
+        if "_ts" not in cache and attrs.get("last_success") is not None:
+            cache["_ts"] = attrs.get("last_success")
 
     @property
     def native_value(self) -> int:

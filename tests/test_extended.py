@@ -3,6 +3,7 @@
 import asyncio
 from datetime import datetime, timedelta
 from unittest.mock import patch, MagicMock
+from unittest.mock import AsyncMock
 
 import pytest
 from aioresponses import aioresponses
@@ -17,6 +18,7 @@ from mzkzg_transport.const import (
 from mzkzg_transport.coordinator import MzkzgTransportCoordinator
 from mzkzg_transport.gtfs_provider import GtfsData, get_gtfs_data
 from mzkzg_transport.binary_sensor import MzkzgDelayBinarySensor, DELAY_THRESHOLD_SECONDS
+from mzkzg_transport.sensor import MzkzgPlkApiUsageSensor
 
 
 @pytest.fixture(autouse=True)
@@ -28,10 +30,19 @@ def patch_ha():
 @pytest.fixture(autouse=True)
 def patch_session():
     import aiohttp
+    sessions = []
+
     async def _patched_get(self):
-        return aiohttp.ClientSession()
+        session = aiohttp.ClientSession()
+        sessions.append(session)
+        return session
+
     with patch.object(MzkzgTransportCoordinator, "_get_session", _patched_get):
         yield
+
+    for session in sessions:
+        if not session.closed:
+            asyncio.run(session.close())
 
 
 @pytest.fixture
@@ -115,6 +126,57 @@ def test_gtfs_skips_past_departures():
     if now.hour > 0 or now.minute > 1:
         deps = gtfs.get_departures("1")
         assert deps == []
+
+
+@pytest.mark.asyncio
+async def test_plk_api_usage_sensor_restores_counters(mock_hass):
+    """PLK API usage sensor should restore counters from previous HA state."""
+    entry = MagicMock()
+    entry.data = {"provider": "plk_rail", "stop_id": "7534"}
+    sensor = MzkzgPlkApiUsageSensor(mock_hass, entry)
+
+    restored = MagicMock()
+    restored.state = "321"
+    restored.attributes = {
+        "rate_limit_hits": 9,
+        "last_success": "2026-05-14T09:20:00+02:00",
+    }
+    sensor.async_get_last_state = AsyncMock(return_value=restored)
+
+    await sensor.async_added_to_hass()
+
+    cache = mock_hass.data[DOMAIN]["_plk_cache"]
+    assert cache["_req_count"] == 321
+    assert cache["_429_count"] == 9
+    assert cache["_ts"] == "2026-05-14T09:20:00+02:00"
+
+
+@pytest.mark.asyncio
+async def test_plk_api_usage_sensor_does_not_overwrite_existing_cache(mock_hass):
+    """Existing counters in memory should not be replaced by restored values."""
+    entry = MagicMock()
+    entry.data = {"provider": "plk_rail", "stop_id": "7534"}
+    mock_hass.data[DOMAIN]["_plk_cache"] = {
+        "_req_count": 1000,
+        "_429_count": 3,
+        "_ts": "2026-05-14T09:40:00+02:00",
+    }
+    sensor = MzkzgPlkApiUsageSensor(mock_hass, entry)
+
+    restored = MagicMock()
+    restored.state = "10"
+    restored.attributes = {
+        "rate_limit_hits": 1,
+        "last_success": "2026-05-14T08:00:00+02:00",
+    }
+    sensor.async_get_last_state = AsyncMock(return_value=restored)
+
+    await sensor.async_added_to_hass()
+
+    cache = mock_hass.data[DOMAIN]["_plk_cache"]
+    assert cache["_req_count"] == 1000
+    assert cache["_429_count"] == 3
+    assert cache["_ts"] == "2026-05-14T09:40:00+02:00"
 
 
 # ── Binary Sensor tests ──────────────────────────────────────────────────────

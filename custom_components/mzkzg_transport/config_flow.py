@@ -264,6 +264,30 @@ PROVIDER_OPTIONS = {
 
 }
 
+# Override provider labels with clean UTF-8 values.
+PROVIDER_OPTIONS = {
+    PROVIDER_ZTM: "ZTM Gda\u0144sk",
+    PROVIDER_ZKM: "ZKM Gdynia",
+    PROVIDER_MZK: "MZK Wejherowo",
+    PROVIDER_PLK: "PKP / SKM / PR (PLK API)",
+    PROVIDER_PKS_GDANSK: "PKS Gda\u0144sk Sp. z o.o.",
+    PROVIDER_ALBATROS: "Albatros",
+    PROVIDER_GRYF: "Przewozy Autobusowe GRYF",
+    PROVIDER_NORD_EXPRESS: "Nord Express",
+    PROVIDER_PKS_GDYNIA: "PKS Gdynia S.A.",
+    PROVIDER_MZK_MALBORK: "Miejski Zak\u0142ad Komunikacji w Malborku",
+    PROVIDER_PKS_SLUPSK: "PKS S\u0142upsk S.A.",
+    PROVIDER_MZK_STAROGARD: "MZK Starogard Gda\u0144ski",
+    PROVIDER_PKS_STAROGARD: "PKS Starogard Gda\u0144ski S.A.",
+    PROVIDER_BYTOW: "Byt\u00f3w",
+    PROVIDER_CZLUCHOW: "Powiat Cz\u0142uchowski",
+    PROVIDER_TCZEW: "Tczew (Time4BUS)",
+}
+
+PROVIDER_OPTIONS_SORTED = dict(
+    sorted(PROVIDER_OPTIONS.items(), key=lambda item: item[1].casefold())
+)
+
 
 
 
@@ -414,7 +438,7 @@ class MzkzgTransportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
 
 
-                {vol.Required(CONF_PROVIDER, default=PROVIDER_ZTM): vol.In(PROVIDER_OPTIONS)}
+                {vol.Required(CONF_PROVIDER, default=PROVIDER_ZTM): vol.In(PROVIDER_OPTIONS_SORTED)}
 
 
 
