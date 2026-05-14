@@ -65,6 +65,13 @@ async def fetch(coord) -> dict:
         })
 
     departures.sort(key=lambda x: x.get("estimated_time") or "")
+
+    # Fallback: if fewer than 10 realtime departures, fill from schedule
+    if len(departures) < 10:
+        schedule_deps = await _get_schedule_fallback(coord, session, now, departures)
+        departures.extend(schedule_deps)
+        departures.sort(key=lambda x: x.get("estimated_time") or "")
+
     return {
         "stop_id": coord.stop_id,
         "stop_name": coord.stop_name,
@@ -103,3 +110,80 @@ def _vehicle_type(route_id) -> str:
     if n is not None and n < 100:
         return "tram"
     return "bus"
+
+
+ZTM_STOP_TIMES_URL = "https://ckan2.multimediagdansk.pl/stopTimes"
+
+
+async def _get_schedule_fallback(coord, session, now, existing_deps) -> list[dict]:
+    """Fetch scheduled departures to fill gaps when realtime data is sparse."""
+    cache = coord.hass.data[DOMAIN].setdefault("_ztm_schedule", {})
+    today = now.strftime("%Y-%m-%d")
+    cache_key = f"{coord.stop_id}_{today}"
+
+    # Use cached schedule data for today
+    if cache.get(cache_key):
+        all_times = cache[cache_key]
+    else:
+        # Get routes from existing realtime data
+        routes = {d["route"] for d in existing_deps}
+        if not routes:
+            return []
+
+        all_times = []
+        for route_id in routes:
+            try:
+                url = f"{ZTM_STOP_TIMES_URL}?date={today}&routeId={route_id}"
+                async with session.get(url, timeout=aiohttp.ClientTimeout(total=15)) as resp:
+                    if resp.status != 200:
+                        continue
+                    data = await resp.json()
+
+                for st in data.get("stopTimes", []):
+                    if str(st.get("stopId")) != str(coord.stop_id):
+                        continue
+                    dep_str = st.get("departureTime")
+                    if not dep_str:
+                        continue
+                    # Parse "1899-12-30THH:MM:SS" -> extract time
+                    try:
+                        parts = dep_str.split("T")[1].split(":")
+                        h, m = int(parts[0]), int(parts[1])
+                        s = int(parts[2]) if len(parts) > 2 else 0
+                    except (IndexError, ValueError):
+                        continue
+                    dep_dt = now.replace(hour=h, minute=m, second=s, microsecond=0)
+                    if dep_dt < now:
+                        continue
+                    all_times.append({
+                        "route": str(route_id),
+                        "headsign": st.get("stopHeadsign") or "—",
+                        "estimated_time": dep_dt.isoformat(),
+                        "theoretical_time": dep_dt.isoformat(),
+                        "delay_seconds": 0,
+                        "realtime": False,
+                        "vehicle_type": _vehicle_type(route_id),
+                        "provider": PROVIDER_ZTM,
+                    })
+            except Exception:
+                _LOGGER.debug("ZTM schedule fallback failed for route %s", route_id)
+
+        all_times.sort(key=lambda x: x.get("estimated_time") or "")
+        cache[cache_key] = all_times
+
+    # Filter out times already covered by realtime data (same route+time within 2min)
+    existing_keys = set()
+    for d in existing_deps:
+        existing_keys.add(f"{d['route']}_{d.get('estimated_time', '')[:16]}")
+
+    result = []
+    for s in all_times:
+        if s["estimated_time"] <= now.isoformat():
+            continue
+        key = f"{s['route']}_{s['estimated_time'][:16]}"
+        if key not in existing_keys:
+            result.append(s)
+        if len(existing_deps) + len(result) >= 10:
+            break
+
+    return result

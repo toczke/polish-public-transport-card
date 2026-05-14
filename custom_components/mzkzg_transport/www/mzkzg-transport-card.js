@@ -518,6 +518,18 @@ class MzkzgTransportCardEditor extends HTMLElement {
     const filterRoutes = val("filter_routes").split(",").map(r => r.trim()).filter(Boolean);
     const destFilter = val("destination_filter").split(",").map(s => s.trim()).filter(Boolean);
 
+    // Only include fields that differ from card defaults — keeps YAML minimal
+    const DEFAULTS = { max_departures:10, display_preset:"standard", view_mode:"mixed", highlight_mode:false, show_delays:true, hide_terminus:true, realtime_only:false, show_footer:true, show_bike:true, show_wheelchair:true, show_ac:true, show_ticket_machine:true, refresh_interval:60 };
+    const omit = (k, v) => v === DEFAULTS[k] ? undefined : v;
+
+    const maxDep = parseInt(val("max_departures")) || 10;
+    const preset = this.shadowRoot.querySelector('input[name="display_preset"]:checked')?.value || "standard";
+    const viewMode = this.shadowRoot.querySelector('input[name="view_mode"]:checked')?.value || "mixed";
+    const refreshInt = parseInt(val("refresh_interval")) || this._config.refresh_interval || 60;
+    const tapCfg = this._buildActionConfig("tap", "more-info");
+    const holdCfg = this._buildActionConfig("hold", "none");
+    const dblCfg = this._buildActionConfig("double_tap", "none");
+
     const config = {
       ...this._config,
       type: "custom:mzkzg-transport-card",
@@ -527,27 +539,30 @@ class MzkzgTransportCardEditor extends HTMLElement {
       header_color: this.shadowRoot.getElementById("header_color_auto")
         ? (checked("header_color_auto") ? undefined : (val("header_color") || undefined))
         : this._config.header_color,
-      max_departures: parseInt(val("max_departures")) || 10,
-      display_preset: this.shadowRoot.querySelector('input[name="display_preset"]:checked')?.value || "standard",
-      view_mode: this.shadowRoot.querySelector('input[name="view_mode"]:checked')?.value || "mixed",
+      max_departures: omit("max_departures", maxDep),
+      display_preset: omit("display_preset", preset),
+      view_mode: omit("view_mode", viewMode),
       filter_routes: filterRoutes.length ? filterRoutes : undefined,
       destination_filter: destFilter.length ? destFilter : undefined,
       filter_platform: val("filter_platform") || undefined,
       filter_track: val("filter_track") || undefined,
-      highlight_mode: checked("highlight_mode"),
-      show_delays: checked("show_delays"),
-      hide_terminus: checked("hide_terminus"),
-      realtime_only: checked("realtime_only"),
-      show_footer: checked("show_footer"),
-      show_bike: checked("show_bike"),
-      show_wheelchair: checked("show_wheelchair"),
-      show_ac: checked("show_ac"),
-      show_ticket_machine: checked("show_ticket_machine"),
-      refresh_interval: parseInt(val("refresh_interval")) || this._config.refresh_interval || 60,
-      tap_action: this._buildActionConfig("tap", "more-info"),
-      hold_action: this._buildActionConfig("hold", "none"),
-      double_tap_action: this._buildActionConfig("double_tap", "none"),
+      highlight_mode: omit("highlight_mode", checked("highlight_mode")),
+      show_delays: omit("show_delays", checked("show_delays")),
+      hide_terminus: omit("hide_terminus", checked("hide_terminus")),
+      realtime_only: omit("realtime_only", checked("realtime_only")),
+      show_footer: omit("show_footer", checked("show_footer")),
+      show_bike: omit("show_bike", checked("show_bike")),
+      show_wheelchair: omit("show_wheelchair", checked("show_wheelchair")),
+      show_ac: omit("show_ac", checked("show_ac")),
+      show_ticket_machine: omit("show_ticket_machine", checked("show_ticket_machine")),
+      refresh_interval: omit("refresh_interval", refreshInt),
+      tap_action: tapCfg.action === "more-info" && Object.keys(tapCfg).length === 1 ? undefined : tapCfg,
+      hold_action: holdCfg.action === "none" && Object.keys(holdCfg).length === 1 ? undefined : holdCfg,
+      double_tap_action: dblCfg.action === "none" && Object.keys(dblCfg).length === 1 ? undefined : dblCfg,
     };
+
+    // Remove undefined keys to keep YAML clean
+    Object.keys(config).forEach(k => { if (config[k] === undefined) delete config[k]; });
 
     this._config = config;
     this._firing = true;
