@@ -13,6 +13,7 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from .const import (
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
+    GTFSRT_PROVIDERS,
     KIEDYPRZYJEDZIE_PROVIDERS,
     PROVIDER_LODZ,
     PROVIDER_MZK,
@@ -126,6 +127,9 @@ class MzkzgTransportCoordinator(DataUpdateCoordinator):
             if self.provider == PROVIDER_LODZ:
                 from . import provider_lodz
                 return await provider_lodz.fetch(self)
+            if self.provider in GTFSRT_PROVIDERS:
+                from . import provider_gtfsrt
+                return await provider_gtfsrt.fetch(self)
             if self.provider == PROVIDER_PLK:
                 from . import provider_plk
                 return await provider_plk.fetch(self)
