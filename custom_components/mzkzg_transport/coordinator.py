@@ -14,6 +14,7 @@ from .const import (
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
     KIEDYPRZYJEDZIE_PROVIDERS,
+    PROVIDER_LODZ,
     PROVIDER_MZK,
     PROVIDER_PLK,
     PROVIDER_ZTM,
@@ -122,6 +123,9 @@ class MzkzgTransportCoordinator(DataUpdateCoordinator):
             if self.provider == PROVIDER_MZK:
                 from . import provider_mzk
                 return await provider_mzk.fetch(self)
+            if self.provider == PROVIDER_LODZ:
+                from . import provider_lodz
+                return await provider_lodz.fetch(self)
             if self.provider == PROVIDER_PLK:
                 from . import provider_plk
                 return await provider_plk.fetch(self)

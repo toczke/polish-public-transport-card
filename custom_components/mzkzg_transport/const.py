@@ -47,6 +47,7 @@ PROVIDER_PKS_STAROGARD = "kiedyprzyjedzie_pks_starogard"
 PROVIDER_BYTOW = "kiedyprzyjedzie_bytow"
 PROVIDER_CZLUCHOW = "kiedyprzyjedzie_czluchow"
 PROVIDER_TCZEW = "time4bus_tczew"
+PROVIDER_LODZ = "mpk_lodz"
 
 KIEDYPRZYJEDZIE_BASE_URLS = {
     PROVIDER_PKS_GDANSK: KIEDYPRZYJEDZIE_PKS_GDANSK_URL,
@@ -106,6 +107,7 @@ PROVIDER_LABELS = {
     PROVIDER_BYTOW: "Byt\u00f3w",
     PROVIDER_CZLUCHOW: "Powiat Cz\u0142uchowski",
     PROVIDER_TCZEW: "Tczew",
+    PROVIDER_LODZ: "MPK \u0141\u00f3d\u017a",
 }
 
 PROVIDER_COLORS = {
@@ -125,6 +127,7 @@ PROVIDER_COLORS = {
     PROVIDER_BYTOW: "#155e75",
     PROVIDER_CZLUCHOW: "#991b1b",
     PROVIDER_TCZEW: "#1d4ed8",
+    PROVIDER_LODZ: "#e11d48",
 }
 
 CONF_STOPS = "stops"

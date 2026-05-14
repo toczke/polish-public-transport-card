@@ -154,6 +154,10 @@ from .const import (
 
 
 
+    PROVIDER_LODZ,
+
+
+
     PROVIDER_ZKM,
 
 
@@ -260,6 +264,8 @@ PROVIDER_OPTIONS = {
 
     PROVIDER_TCZEW: "Tczew (Time4BUS)",
 
+    PROVIDER_LODZ: "MPK \u0141\u00f3d\u017a",
+
 
 
 }
@@ -282,6 +288,7 @@ PROVIDER_OPTIONS = {
     PROVIDER_BYTOW: "Byt\u00f3w",
     PROVIDER_CZLUCHOW: "Powiat Cz\u0142uchowski",
     PROVIDER_TCZEW: "Tczew (Time4BUS)",
+    PROVIDER_LODZ: "MPK \u0141\u00f3d\u017a",
 }
 
 PROVIDER_OPTIONS_SORTED = dict(
