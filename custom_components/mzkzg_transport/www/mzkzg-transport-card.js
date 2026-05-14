@@ -183,7 +183,9 @@ ha-card.compact .footer { display: none; }
 .time-main { font-size: 15px; font-weight: 600; color: var(--primary-text-color, #111); white-space: nowrap; }
 .time-struck { text-decoration: line-through; opacity: 0.5; font-size: 13px; font-weight: 400; }
 .time-sub { font-size: 11px; color: var(--secondary-text-color, #888); white-space: nowrap; display: flex; align-items: center; gap: 4px; }
-.time-sub .dot { color: #10b981; font-weight: 700; }
+.time-sub .dot { color: #10b981; font-weight: 700; display: inline-block; animation: live-dot-pulse 1.2s ease-in-out infinite; transform-origin: center; }
+@keyframes live-dot-pulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: .35; transform: scale(.72); } }
+@media (prefers-reduced-motion: reduce) { .time-sub .dot { animation: none; } }
 .delay-badge { font-size: 11px; font-weight: 600; }
 .delay-badge.late { color: #dc2626; }
 .delay-badge.early { color: #0369a1; }
@@ -908,12 +910,7 @@ class MzkzgTransportCard extends HTMLElement {
 
       // Platform
       const platformHTML = (() => {
-        if (d._provider === "plk_rail") {
-          let chips = "";
-          if (d.platform) chips += `<span class="platform">peron ${escapeHtml(d.platform)}</span>`;
-          if (d.track) chips += `<span class="platform">${t("track")} ${escapeHtml(d.track)}</span>`;
-          return chips;
-        }
+        if (d._provider !== "plk_rail") return "";
         let chips = "";
         if (d.platform) chips += `<span class="platform">peron ${escapeHtml(d.platform)}</span>`;
         if (d.track) chips += `<span class="platform">${t("track")} ${escapeHtml(d.track)}</span>`;
@@ -929,7 +926,9 @@ class MzkzgTransportCard extends HTMLElement {
       if (d.usb === true) icons.push(`<span title="USB"><svg viewBox="0 0 24 24" width="14" height="14"><path fill="currentColor" d="M15,7V11H16V13H13V5H15L12,1L9,5H11V13H8V10.93C8.7,10.56 9.2,9.85 9.2,9C9.2,7.9 8.3,7 7.2,7C6.1,7 5.2,7.9 5.2,9C5.2,9.85 5.7,10.56 6.4,10.93V13C6.4,14.1 7.3,15 8.4,15H11V18.05C10.3,18.42 9.8,19.15 9.8,20C9.8,21.1 10.7,22 11.8,22C12.9,22 13.8,21.1 13.8,20C13.8,19.15 13.3,18.42 12.6,18.05V15H15.6C16.7,15 17.6,14.1 17.6,13V11H18.6V7H15Z"/></svg></span>`);
       if (d.ticket_machine === true && c.show_ticket_machine) icons.push(`<span title="Biletomat"><svg viewBox="0 0 24 24" width="14" height="14"><path fill="currentColor" d="M15.58,16.8L12,14.5L8.42,16.8L9.5,12.68L6.21,10L10.46,9.74L12,5.84L13.54,9.74L17.79,10L14.5,12.68M20,2H4A2,2 0 0,0 2,4V22L7,20L12,22L17,20L22,22V4A2,2 0 0,0 20,2Z"/></svg></span>`);
       if (icons.length) iconsHTML = `<span class="icons">${icons.join("")}</span>`;
-      const vehicleChip = (d.vehicle_code && d.realtime) ? `<span class="platform">${escapeHtml(d.vehicle_code)}</span>` : "";
+      const vehicleChip = (d._provider !== "plk_rail" && d.vehicle_code && d.realtime)
+        ? `<span class="platform">${escapeHtml(d.vehicle_code)}</span>`
+        : "";
 
       // Auto show_stop_name when multiple entities
       const showStop = c.show_stop_name && c.entities.length > 1 && c.view_mode !== "tabs" && d._stopName;
@@ -943,7 +942,7 @@ class MzkzgTransportCard extends HTMLElement {
 
       return `<div class="dep-row${imminent ? " imminent" : ""}${d._dimmed ? " dimmed" : ""}${cancelled ? " cancelled" : ""}">
         <span class="badge" style="background:${routeColor(d.route, d._provider || d.provider)}">${escapeHtml(d.route)}</span>
-        <span class="headsign"><span class="headsign-text">${escapeHtml(d.headsign)}</span>${iconsHTML}${platformHTML}${vehicleChip}${trainInfo || (showStop ? `<span class="stop-name">${escapeHtml(cleanStopName)}</span>` : "")}</span>
+        <span class="headsign"><span class="headsign-text">${escapeHtml(d.headsign)}</span>${vehicleChip}${iconsHTML}${platformHTML}${trainInfo || (showStop ? `<span class="stop-name">${escapeHtml(cleanStopName)}</span>` : "")}</span>
         <div class="time-col">${timeHTML}</div>
       </div>`;
     }).join("");

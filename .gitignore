@@ -1,6 +1,10 @@
 __pycache__/
 *.pyc
 .env
+.venv/
+.venv*/
+venv/
+env/
 node_modules/
 .pytest_cache/
 ha-test-config/

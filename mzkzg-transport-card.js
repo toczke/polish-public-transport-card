@@ -368,7 +368,11 @@ ha-card.compact .footer { display: none; }
 
 .time-sub { font-size: 11px; color: var(--secondary-text-color, #888); white-space: nowrap; display: flex; align-items: center; gap: 4px; }
 
-.time-sub .dot { color: #10b981; font-weight: 700; }
+.time-sub .dot { color: #10b981; font-weight: 700; display: inline-block; animation: live-dot-pulse 1.2s ease-in-out infinite; transform-origin: center; }
+
+@keyframes live-dot-pulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: .35; transform: scale(.72); } }
+
+@media (prefers-reduced-motion: reduce) { .time-sub .dot { animation: none; } }
 
 .delay-badge { font-size: 11px; font-weight: 600; }
 
@@ -1783,12 +1787,7 @@ class MzkzgTransportCard extends HTMLElement {
       // Platform
 
       const platformHTML = (() => {
-        if (d._provider === "plk_rail") {
-          let chips = "";
-          if (d.platform) chips += `<span class="platform">peron ${escapeHtml(d.platform)}</span>`;
-          if (d.track) chips += `<span class="platform">${t("track")} ${escapeHtml(d.track)}</span>`;
-          return chips;
-        }
+        if (d._provider !== "plk_rail") return "";
         let chips = "";
         if (d.platform) chips += `<span class="platform">peron ${escapeHtml(d.platform)}</span>`;
         if (d.track) chips += `<span class="platform">${t("track")} ${escapeHtml(d.track)}</span>`;
@@ -1814,7 +1813,9 @@ class MzkzgTransportCard extends HTMLElement {
 
       if (icons.length) iconsHTML = `<span class="icons">${icons.join("")}</span>`;
 
-      const vehicleChip = (d.vehicle_code && d.realtime) ? `<span class="platform">${escapeHtml(d.vehicle_code)}</span>` : "";
+      const vehicleChip = (d._provider !== "plk_rail" && d.vehicle_code && d.realtime)
+        ? `<span class="platform">${escapeHtml(d.vehicle_code)}</span>`
+        : "";
 
 
 
@@ -1842,7 +1843,7 @@ class MzkzgTransportCard extends HTMLElement {
 
         <span class="badge" style="background:${routeColor(d.route, d._provider || d.provider)}">${escapeHtml(d.route)}</span>
 
-        <span class="headsign"><span class="headsign-text">${escapeHtml(d.headsign)}</span>${iconsHTML}${platformHTML}${vehicleChip}${trainInfo || (showStop ? `<span class="stop-name">${escapeHtml(cleanStopName)}</span>` : "")}</span>
+        <span class="headsign"><span class="headsign-text">${escapeHtml(d.headsign)}</span>${vehicleChip}${iconsHTML}${platformHTML}${trainInfo || (showStop ? `<span class="stop-name">${escapeHtml(cleanStopName)}</span>` : "")}</span>
 
         <div class="time-col">${timeHTML}</div>
 
@@ -1891,4 +1892,3 @@ console.info(
   "background:#1f2937;color:#fff;padding:2px 6px;border-radius:0 4px 4px 0"
 
 );
-

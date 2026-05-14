@@ -442,6 +442,8 @@ class MzkzgTransportCoordinator(DataUpdateCoordinator):
 
                 "air_conditioning": d.get("airConditioning", None),
 
+                "vehicle_code": str(d.get("vehicleCode") or d.get("vehicleId") or "") or None,
+
                 "provider": PROVIDER_ZKM,
 
             })
@@ -611,6 +613,8 @@ class MzkzgTransportCoordinator(DataUpdateCoordinator):
                 "wheelchair_accessible": "low_floor" in vehicle_attributes or "wheelchair" in vehicle_attributes,
 
                 "air_conditioning": "ac" in vehicle_attributes,
+
+                "ticket_machine": "ticket_machine" in vehicle_attributes,
 
                 "vehicle_attributes": vehicle_attributes,
 
@@ -959,6 +963,8 @@ class MzkzgTransportCoordinator(DataUpdateCoordinator):
                 "wheelchair_accessible": bool(vehicle_info.get("lowFloor")) if vehicle_info else None,
 
                 "air_conditioning": vehicle_info.get("airConditioning") if vehicle_info else None,
+
+                "ticket_machine": bool(vehicle_info.get("ticketMachine")) if vehicle_info else None,
 
                 "vehicle_code": vehicle_info.get("name") if vehicle_info else None,
 
@@ -1677,8 +1683,6 @@ class MzkzgTransportCoordinator(DataUpdateCoordinator):
             return "trolleybus"
 
         return "bus"
-
-
 
 
 

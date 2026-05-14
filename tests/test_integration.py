@@ -300,7 +300,8 @@ async def test_kiedyprzyjedzie_fetch_departures(mock_hass, kiedyprzyjedzie_respo
 
     assert result["provider"] == provider
     assert result["stop_id"] == stop_id
-    assert result["stop_name"] == station_name
+    # Configured stop name should take precedence over API station_name
+    assert result["stop_name"] == "Test Stop"
     assert len(result["departures"]) == 2
     assert result["departures"][0]["route"] == "854"
     assert result["departures"][0]["headsign"] == "Buszkowy"

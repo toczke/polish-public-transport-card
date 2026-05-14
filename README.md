@@ -1,9 +1,9 @@
 # MZKZG Transport Card
 
 [![HACS](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
-[![Version](https://img.shields.io/badge/version-1.2.1-blue.svg)](https://github.com/toczke/mzkzg-transport-card/releases)
+[![Version](https://img.shields.io/badge/version-1.2.4-blue.svg)](https://github.com/toczke/mzkzg-transport-card/releases)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-25%20passing-brightgreen.svg)](#testing)
+[![Tests](https://img.shields.io/badge/tests-34%20passing-brightgreen.svg)](#testing)
 
 A custom Home Assistant integration and Lovelace card providing real-time departure boards for Tricity (Gdańsk, Gdynia, Sopot) and surrounding area public transport. Includes a visual editor for easy configuration.
 
@@ -50,7 +50,7 @@ A custom Home Assistant integration and Lovelace card providing real-time depart
 | **ZTM Gdańsk** | Buses and trams in Gdańsk and surrounding municipalities | ✅ |
 | **ZKM Gdynia** | Buses and trolleybuses in Gdynia | ✅ |
 | **MZK Wejherowo** | Buses in Wejherowo area | ❌ (schedule only) |
-| **Tczew (Time4BUS)** | Bus departures with live fallback to schedule | ? |
+| **Tczew (Time4BUS)** | Bus departures with live fallback to schedule | âœ… |
 | **PKS Gdańsk Sp. z o.o.** | Intercity and regional bus departures on kiedyprzyjedzie.pl | ✅ |
 | **Albatros** | Bus departures on kiedyprzyjedzie.pl | ✅ |
 | **Przewozy Autobusowe GRYF** | Bus departures on kiedyprzyjedzie.pl | ✅ |
@@ -63,6 +63,10 @@ A custom Home Assistant integration and Lovelace card providing real-time depart
 | **Bytów** | Bus departures on kiedyprzyjedzie.pl | ✅ |
 | **Powiat Człuchowski** | Bus departures on kiedyprzyjedzie.pl | ✅ |
 | **PKP / SKM / Polregio / IC** | Railway stations across Poland (via PLK) | ✅ |
+
+| **Supported capabilities** | ZTM: bike/wheelchair/AC/USB/ticket machine + side number; ZKM: side number (+ bike/wheelchair/AC if API provides); Time4BUS: side number + wheelchair/AC/ticket machine if available; kiedyPrzyjedzie carriers: bike/wheelchair/AC/ticket machine from vehicle attributes; PLK: platform/track/train metadata | - |
+
+Note: Time4BUS supports realtime departures with schedule fallback.
 
 ---
 
@@ -379,7 +383,13 @@ tests/
 python -m pytest tests/ -v
 ```
 
-**25 tests passing** — covering ZTM fetch, ZKM fetch, PLK schedules, PLK rate limiting, GTFS parsing, binary sensor logic, and vehicle fleet handling.
+On Windows, run tests with selector loop policy:
+
+```bash
+python -c "import asyncio,sys,pytest; asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy()); sys.exit(pytest.main(['-q']))"
+```
+
+**34 tests passing, 1 skipped** — covering ZTM fetch, ZKM fetch, Time4BUS, kiedyPrzyjedzie carriers, PLK schedules/rate limiting, GTFS parsing, and binary sensor logic.
 
 Tests use `aioresponses` for HTTP mocking and `MagicMock` for Home Assistant core.
 
@@ -394,6 +404,16 @@ Tests use `aioresponses` for HTTP mocking and `MagicMock` for Home Assistant cor
 ---
 
 ## Changelog
+
+### 1.2.4
+
+- Bus providers no longer display platform/track chips in the card (PLK rail only).
+- Vehicle side number (*numer boczny*) displayed inline right after headsign for non-PLK providers.
+- Added side-number mapping for ZKM Gdynia (`vehicleCode` / `vehicleId`).
+- Added ticket machine capability mapping for Time4BUS (`vehicleInfo.ticketMachine`).
+- Added ticket machine capability mapping for kiedyPrzyjedzie carriers (from `vehicle_attributes`).
+- Added subtle live-dot pulse animation with reduced-motion fallback.
+- Updated tests and README (Windows test command, capabilities summary, current test count).
 
 ### 1.2.1
 
