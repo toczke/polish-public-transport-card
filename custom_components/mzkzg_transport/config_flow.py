@@ -882,6 +882,9 @@ class MzkzgTransportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             if provider in GTFSRT_PROVIDERS:
                 return await self._load_gtfsrt_stops(provider)
 
+            if provider == PROVIDER_KRAKOW:
+                return await self._load_krakow_stops()
+
             if provider == PROVIDER_LODZ:
                 return await self._load_gtfs_stops("https://cdn.zbiorkom.live/gtfs/lodz.zip")
 
