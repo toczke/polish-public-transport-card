@@ -1466,6 +1466,11 @@ class MzkzgTransportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         city_cfg = GTFSRT_CITIES.get(provider)
         if not city_cfg:
             return []
+
+        # Kraków: use lightweight ttss.pl API instead of 25MB GTFS download
+        if provider == "gtfsrt_krakow":
+            return await self._load_krakow_stops()
+
         stops = await self._load_gtfs_stops(city_cfg["gtfs_url"])
         # Merge tram stops if separate zip exists
         if city_cfg.get("gtfs_url_tram"):
@@ -1477,6 +1482,36 @@ class MzkzgTransportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             stops.sort(key=lambda x: x["name"])
         return stops
 
+    async def _load_krakow_stops(self) -> list[dict]:
+        """Load Kraków stops from ttss.pl lightweight search API."""
+        try:
+            session = async_get_clientsession(self.hass)
+            stops = []
+            for q in "abcdefghijklmnoprstuwz":
+                async with session.get(
+                    f"https://ttss.pl/stops/?query={q}",
+                    timeout=aiohttp.ClientTimeout(total=10),
+                    ssl=False,
+                ) as resp:
+                    if resp.status != 200:
+                        continue
+                    data = await resp.json()
+                    for item in data:
+                        stops.append({"id": item["id"], "name": item["name"]})
+            # Deduplicate
+            seen = set()
+            unique = []
+            for s in stops:
+                if s["id"] not in seen:
+                    seen.add(s["id"])
+                    unique.append(s)
+            unique.sort(key=lambda x: x["name"])
+            _LOGGER.debug("Loaded %d Kraków stops from ttss.pl", len(unique))
+            return unique
+        except Exception as e:
+            _LOGGER.warning("Failed to load Kraków stops: %s", e)
+            return []
+
     async def _load_gtfs_stops(self, gtfs_url: str) -> list[dict]:
         """Download a GTFS zip and parse stops.txt."""
         import csv
@@ -1484,34 +1519,41 @@ class MzkzgTransportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         from io import BytesIO, StringIO
 
         try:
+            _LOGGER.debug("GTFS stops: downloading %s", gtfs_url)
             session = async_get_clientsession(self.hass)
             async with session.get(
                 gtfs_url, timeout=aiohttp.ClientTimeout(total=120), ssl=False
             ) as resp:
                 resp.raise_for_status()
                 data = await resp.read()
+            _LOGGER.debug("GTFS stops: downloaded %d bytes from %s", len(data), gtfs_url)
         except Exception as e:
             _LOGGER.warning("Failed to download GTFS from %s: %s", gtfs_url, e)
             return []
 
-        stops = []
-        with zipfile.ZipFile(BytesIO(data)) as zf:
-            if "stops.txt" not in zf.namelist():
-                return []
-            text = zf.read("stops.txt").decode("utf-8-sig")
-            reader = csv.reader(StringIO(text))
-            header = next(reader)
-            id_idx = header.index("stop_id")
-            name_idx = header.index("stop_name")
-            for parts in reader:
-                if len(parts) > max(id_idx, name_idx):
-                    sid = parts[id_idx]
-                    name = parts[name_idx]
-                    if sid and name:
-                        stops.append({"id": sid, "name": name})
+        try:
+            stops = []
+            with zipfile.ZipFile(BytesIO(data)) as zf:
+                if "stops.txt" not in zf.namelist():
+                    return []
+                text = zf.read("stops.txt").decode("utf-8-sig")
+                reader = csv.reader(StringIO(text))
+                header = next(reader)
+                id_idx = header.index("stop_id")
+                name_idx = header.index("stop_name")
+                for parts in reader:
+                    if len(parts) > max(id_idx, name_idx):
+                        sid = parts[id_idx]
+                        name = parts[name_idx]
+                        if sid and name:
+                            stops.append({"id": sid, "name": name})
 
-        stops.sort(key=lambda x: x["name"])
-        return stops
+            stops.sort(key=lambda x: x["name"])
+            _LOGGER.debug("GTFS stops: parsed %d stops from %s", len(stops), gtfs_url)
+            return stops
+        except Exception as e:
+            _LOGGER.warning("Failed to parse GTFS zip from %s: %s", gtfs_url, e)
+            return []
 
 
 
