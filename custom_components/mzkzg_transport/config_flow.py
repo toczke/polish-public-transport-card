@@ -1483,36 +1483,21 @@ class MzkzgTransportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return stops
 
     async def _load_krakow_stops(self) -> list[dict]:
-        """Load Kraków stops from GTFS stops.txt (lightweight, ~200KB per zip)."""
+        """Load Kraków stops from ttss.pl search API (fast, no GTFS download)."""
         try:
             session = async_get_clientsession(self.hass)
             stops = []
-            for url in [
-                "https://gtfs.ztp.krakow.pl/GTFS_KRK_A.zip",
-                "https://gtfs.ztp.krakow.pl/GTFS_KRK_T.zip",
-            ]:
-                _LOGGER.debug("Loading Kraków stops from %s", url)
-                async with session.get(url, timeout=aiohttp.ClientTimeout(total=120), ssl=False) as resp:
+            for q in "abcdefghijklmnoprstuwz":
+                async with session.get(
+                    f"https://ttss.pl/stops/?query={q}",
+                    timeout=aiohttp.ClientTimeout(total=10),
+                    ssl=False,
+                ) as resp:
                     if resp.status != 200:
                         continue
-                    data = await resp.read()
-                import csv
-                import zipfile
-                from io import BytesIO, StringIO
-                with zipfile.ZipFile(BytesIO(data)) as zf:
-                    if "stops.txt" not in zf.namelist():
-                        continue
-                    text = zf.read("stops.txt").decode("utf-8-sig")
-                    reader = csv.reader(StringIO(text))
-                    header = next(reader)
-                    id_idx = header.index("stop_id")
-                    name_idx = header.index("stop_name")
-                    for parts in reader:
-                        if len(parts) > max(id_idx, name_idx):
-                            sid = parts[id_idx]
-                            name = parts[name_idx]
-                            if sid and name:
-                                stops.append({"id": sid, "name": name})
+                    data = await resp.json()
+                    for item in data:
+                        stops.append({"id": item["id"], "name": item["name"]})
             # Deduplicate
             seen = set()
             unique = []
@@ -1521,7 +1506,7 @@ class MzkzgTransportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     seen.add(s["id"])
                     unique.append(s)
             unique.sort(key=lambda x: x["name"])
-            _LOGGER.debug("Loaded %d Kraków stops from GTFS", len(unique))
+            _LOGGER.debug("Loaded %d Kraków stops from ttss.pl", len(unique))
             return unique
         except Exception as e:
             _LOGGER.warning("Failed to load Kraków stops: %s", e)

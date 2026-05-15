@@ -33,15 +33,26 @@ async def fetch(coord) -> dict:
     if not meta:
         return _empty(coord, now)
 
+    # Resolve ttss.pl stop_id (e.g. "b2608") to GTFS stop_ids via name matching
+    gtfs_stop_ids = _resolve_stop_ids(stop_id, meta, coord.stop_name or "")
+
     # Resolve stop name
     if not coord.stop_name:
-        coord.stop_name = meta["stops"].get(stop_id, {}).get("name", f"Przystanek {stop_id}")
+        if gtfs_stop_ids:
+            coord.stop_name = meta["stops"].get(gtfs_stop_ids[0], {}).get("name", f"Przystanek {stop_id}")
+        else:
+            coord.stop_name = f"Przystanek {stop_id}"
+
+    if not gtfs_stop_ids:
+        _LOGGER.warning("Kraków: could not resolve stop_id %s to GTFS IDs", stop_id)
+        return _empty(coord, now)
 
     # Fetch TripUpdates from both bus and tram feeds
     departures = []
     for rt_url in (RT_BUS_URL, RT_TRAM_URL):
-        deps = await _get_departures_from_rt(session, rt_url, stop_id, meta, now)
-        departures.extend(deps)
+        for gsid in gtfs_stop_ids:
+            deps = await _get_departures_from_rt(session, rt_url, gsid, meta, now)
+            departures.extend(deps)
 
     # Enrich with vehicle capabilities
     veh_dict = await _get_vehicles(coord, session)
@@ -283,3 +294,37 @@ def _empty(coord, now):
         "departures": [],
         "last_update": now.isoformat(),
     }
+
+
+def _resolve_stop_ids(stop_id: str, meta: dict, stop_name: str = "") -> list:
+    """Resolve a stop_id to GTFS stop_ids.
+
+    If stop_id is already a GTFS numeric ID, return it directly.
+    If it's a ttss.pl ID (e.g. "b2608"), resolve via name matching.
+    """
+    # If it's already a numeric GTFS stop_id
+    if stop_id.isdigit() and stop_id in meta["stops"]:
+        return [stop_id]
+
+    # Build name->ids mapping from GTFS
+    if "_name_to_ids" not in meta:
+        name_map = {}
+        for sid, info in meta["stops"].items():
+            name = info.get("name", "").strip()
+            if name:
+                name_map.setdefault(name, []).append(sid)
+        meta["_name_to_ids"] = name_map
+
+    # Match by stop name (set during config flow)
+    if stop_name and stop_name in meta["_name_to_ids"]:
+        return meta["_name_to_ids"][stop_name]
+
+    # Fallback: strip prefix and search
+    numeric_part = stop_id.lstrip("bt")
+    if numeric_part.isdigit():
+        # Try common patterns
+        candidates = [sid for sid in meta["stops"] if sid.endswith(numeric_part) or numeric_part in sid]
+        if candidates:
+            return candidates[:10]
+
+    return []
