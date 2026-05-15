@@ -73,10 +73,12 @@ async def fetch(coord) -> dict:
                 d["vehicle_model"] = v["model"]
 
     departures.sort(key=lambda x: x.get("estimated_time") or "")
-    # Deduplicate
+    # Deduplicate and filter out entries with no route info
     seen = set()
     unique = []
     for d in departures:
+        if not d.get("route") or d["route"] == "":
+            continue
         key = (d.get("route"), d.get("headsign"), (d.get("estimated_time") or "")[:16])
         if key not in seen:
             seen.add(key)
@@ -158,6 +160,9 @@ async def _get_departures_from_rt(session, rt_url, stop_id, meta, now) -> list:
                         if rid in meta["routes"]:
                             route_name = meta["routes"][rid].get("short_name", rid)
                             vehicle_type = meta["routes"][rid].get("type", "bus")
+                elif not route_id:
+                    # Trip not in metadata and no route - skip
+                    continue
 
                 departures.append({
                     "route": route_name,

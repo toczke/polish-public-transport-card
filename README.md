@@ -177,7 +177,8 @@ Counters are restored after Home Assistant restart.
 | MZK Wejherowo | Static GTFS zip download (`mkuran.pl`), parsed locally | 30s (local lookup) |
 | Time4BUS Tczew | `GET /live/schedules/tczew/stops/X/departures` → fallback to `GET /operators/tczew/stops/X/departures?date=Y` | 30s |
 | kiedyPrzyjedzie | `GET /api/departures/{stop_id}` per carrier subdomain | 30s |
-| GTFS-RT (Kraków, Poznań, GZM, +10) | Static GTFS zip (daily cache) + GTFS-RT TripUpdates protobuf (per poll) + vehicle dict (cached) | 30s |
+| GTFS-RT (Poznań, GZM, +10) | Static GTFS zip (daily cache) + GTFS-RT TripUpdates protobuf (per poll) + vehicle dict (cached) | 30s |
+| ZTP Kraków | GTFS-RT TripUpdates (per poll) + GTFS metadata daily (stops/routes/trips only, no stop_times) + `api.ttss.pl` vehicles | 30s |
 | PLK Rail | `GET /operations` (shared, all stations) + `GET /schedules` (per station, daily cache) | Dynamic (see below) |
 
 ### PLK Dynamic Rate Limiting
@@ -242,7 +243,8 @@ custom_components/mzkzg_transport/
 ├── provider_time4bus.py     # Time4BUS Tczew
 ├── provider_kiedyprzyjedzie.py  # kiedyPrzyjedzie carriers (11 operators)
 ├── provider_plk.py          # PLK rail (OpenData API)
-├── provider_gtfsrt.py       # GTFS-RT cities (Kraków, Poznań, GZM, Lublin, +10 more)
+├── provider_gtfsrt.py       # GTFS-RT cities (Poznań, GZM, Lublin, +10 more)
+├── provider_krakow.py       # Kraków ZTP (GTFS-RT + api.ttss.pl)
 ├── www/
 │   └── mzkzg-transport-card.js  # Lovelace card (vanilla JS)
 ├── translations/            # UI strings

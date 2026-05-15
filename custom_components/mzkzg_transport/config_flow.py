@@ -1483,21 +1483,30 @@ class MzkzgTransportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return stops
 
     async def _load_krakow_stops(self) -> list[dict]:
-        """Load Kraków stops from ttss.pl search API (fast, no GTFS download)."""
+        """Load Kraków stops from ttss.pl search API (parallel, fast)."""
+        import asyncio
         try:
             session = async_get_clientsession(self.hass)
+            queries = list("abcdefghijklmnoprstuwz")
+
+            async def fetch_query(q):
+                try:
+                    async with session.get(
+                        f"https://ttss.pl/stops/?query={q}",
+                        timeout=aiohttp.ClientTimeout(total=8),
+                    ) as resp:
+                        if resp.status == 200:
+                            return await resp.json()
+                except Exception:
+                    pass
+                return []
+
+            results = await asyncio.gather(*[fetch_query(q) for q in queries])
             stops = []
-            for q in "abcdefghijklmnoprstuwz":
-                async with session.get(
-                    f"https://ttss.pl/stops/?query={q}",
-                    timeout=aiohttp.ClientTimeout(total=10),
-                    ssl=False,
-                ) as resp:
-                    if resp.status != 200:
-                        continue
-                    data = await resp.json()
-                    for item in data:
-                        stops.append({"id": item["id"], "name": item["name"]})
+            for data in results:
+                for item in data:
+                    stops.append({"id": item["id"], "name": item["name"]})
+
             # Deduplicate
             seen = set()
             unique = []
