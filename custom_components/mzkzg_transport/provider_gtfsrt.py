@@ -108,6 +108,31 @@ GTFSRT_CITIES = {
         "rt_url": "https://mkuran.pl/gtfs/wkd.pb",
         "label": "WKD",
     },
+    "gtfs_bialystok": {
+        "gtfs_url": "https://cdn.zbiorkom.live/gtfs/bialystok.zip",
+        "rt_url": None,
+        "label": "BKM Białystok",
+    },
+    "gtfs_olsztyn": {
+        "gtfs_url": "https://cdn.zbiorkom.live/gtfs/olsztyn.zip",
+        "rt_url": None,
+        "label": "ZDZiT Olsztyn",
+    },
+    "gtfs_opole": {
+        "gtfs_url": "https://cdn.zbiorkom.live/gtfs/opole.zip",
+        "rt_url": None,
+        "label": "MZK Opole",
+    },
+    "gtfs_rzeszow": {
+        "gtfs_url": "https://cdn.zbiorkom.live/gtfs/rzeszow.zip",
+        "rt_url": None,
+        "label": "ZTM Rzeszów",
+    },
+    "gtfs_leszno": {
+        "gtfs_url": "https://cdn.zbiorkom.live/gtfs/leszno.zip",
+        "rt_url": None,
+        "label": "MZK Leszno",
+    },
     "gtfsrt_gzm": {
         "gtfs_url": None,  # Dynamic - fetched from CKAN API
         "gtfs_package_id": "317435cc-0075-4d10-b8ef-6e9b0010e90a",
@@ -138,10 +163,12 @@ async def fetch(coord) -> dict:
     stop_times = gtfs["stop_times"].get(coord.stop_id, [])
 
     # Load RT delays
-    delays = await _get_rt_delays(session, city_cfg["rt_url"])
+    delays = {}
+    if city_cfg.get("rt_url"):
+        delays = await _get_rt_delays(session, city_cfg["rt_url"])
     if city_cfg.get("rt_url_tram"):
-        tram_delays = await _get_rt_delays(session, city_cfg["rt_url_tram"])
-        delays.update(tram_delays)
+            tram_delays = await _get_rt_delays(session, city_cfg["rt_url_tram"])
+            delays.update(tram_delays)
 
     departures = []
     for st in stop_times:
@@ -170,6 +197,7 @@ async def fetch(coord) -> dict:
 
         estimated_dt = dep_dt + timedelta(seconds=delay_sec)
 
+        trip_data = gtfs["trips"].get(trip_id, {})
         departures.append({
             "route": route_name,
             "headsign": headsign,
@@ -179,6 +207,8 @@ async def fetch(coord) -> dict:
             "realtime": is_realtime,
             "vehicle_type": gtfs["routes"].get(route_id, {}).get("type", "bus"),
             "vehicle_code": vehicle_code if is_realtime else None,
+            "wheelchair_accessible": trip_data.get("wheelchair"),
+            "bike_allowed": trip_data.get("bike"),
             "provider": coord.provider,
         })
 
@@ -496,8 +526,8 @@ def _parse_gtfs_zip(data: bytes) -> dict:
             rid_idx = header.index("route_id")
             hs_idx = header.index("trip_headsign") if "trip_headsign" in header else -1
             svc_idx = header.index("service_id") if "service_id" in header else -1
-            # If calendar was parsed, filter trips by active services
-            # (if no services active today, no trips should pass)
+            wc_idx = header.index("wheelchair_accessible") if "wheelchair_accessible" in header else -1
+            bike_idx = header.index("bikes_allowed") if "bikes_allowed" in header else -1
             filter_by_service = has_calendar
             for parts in rows:
                 if len(parts) > max(tid_idx, rid_idx):
@@ -507,7 +537,12 @@ def _parse_gtfs_zip(data: bytes) -> dict:
                             continue
                     rid = parts[rid_idx]
                     hs = parts[hs_idx] if hs_idx >= 0 and len(parts) > hs_idx else ""
-                    trips[tid] = {"route_id": rid, "headsign": hs}
+                    trip = {"route_id": rid, "headsign": hs}
+                    if wc_idx >= 0 and len(parts) > wc_idx and parts[wc_idx] == "1":
+                        trip["wheelchair"] = True
+                    if bike_idx >= 0 and len(parts) > bike_idx and parts[bike_idx] == "1":
+                        trip["bike"] = True
+                    trips[tid] = trip
 
         # Store raw zip for on-demand stop_times parsing
         raw_zip = data

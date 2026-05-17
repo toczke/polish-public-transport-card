@@ -231,6 +231,11 @@ const PROVIDER_HEADER_COLORS = {
   gtfsrt_warszawa: "#c4161c",
   gtfsrt_elk: "#1a5276",
   gtfsrt_wkd: "#4a235a",
+  gtfs_bialystok: "#1e40af",
+  gtfs_olsztyn: "#065f46",
+  gtfs_opole: "#7c2d12",
+  gtfs_rzeszow: "#4338ca",
+  gtfs_leszno: "#0f766e",
   mpk_lodz: "#e11d48",
 };
 
@@ -269,6 +274,11 @@ const PROVIDER_DISPLAY_NAMES = {
   gtfsrt_warszawa: "ZTM Warszawa",
   gtfsrt_elk: "MZK Ełk",
   gtfsrt_wkd: "WKD",
+  gtfs_bialystok: "BKM Białystok",
+  gtfs_olsztyn: "ZDZiT Olsztyn",
+  gtfs_opole: "MZK Opole",
+  gtfs_rzeszow: "ZTM Rzeszów",
+  gtfs_leszno: "MZK Leszno",
   mpk_lodz: "MPK Łódź",
 };
 
@@ -303,6 +313,11 @@ const PROVIDER_BADGE_COLORS = {
   gtfsrt_warszawa: "#b91c1c",
   gtfsrt_elk: "#0369a1",
   gtfsrt_wkd: "#7c3aed",
+  gtfs_bialystok: "#3b82f6",
+  gtfs_olsztyn: "#10b981",
+  gtfs_opole: "#f97316",
+  gtfs_rzeszow: "#8b5cf6",
+  gtfs_leszno: "#14b8a6",
   mpk_lodz: "#fb7185",
 };
 

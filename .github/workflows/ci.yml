@@ -20,8 +20,28 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements_test.txt
 
-      - name: Run tests
+      - name: Run unit tests
         run: python -m pytest tests/ -q --tb=short
+
+  e2e:
+    runs-on: self-hosted
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Playwright
+        run: |
+          npm ci
+          npx playwright install chromium
+
+      - name: Run E2E tests
+        run: npx playwright test
+        env:
+          HA_URL: http://localhost:8123
 
   lint:
     runs-on: self-hosted

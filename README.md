@@ -5,7 +5,7 @@
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Tests](https://img.shields.io/badge/tests-58%20passing-brightgreen.svg)](#testing)
 
-Home Assistant integration + Lovelace card for real-time departures across Poland — Warszawa, Tricity, Kraków, Poznań, Szczecin, Katowice/GZM, Łódź, Lublin, and 25+ more cities.
+Home Assistant integration + Lovelace card for real-time departures across Poland — Warszawa, Tricity, Kraków, Poznań, Szczecin, Katowice/GZM, Łódź, Lublin, and 30+ more cities.
 
 ## Table of Contents
 
@@ -100,6 +100,11 @@ Home Assistant integration + Lovelace card for real-time departures across Polan
 | [ZTM Warszawa](https://ztm.waw.pl) | Warszawa (bus, tram, metro) | GTFS + GTFS-RT (`mkuran.pl`) | ✅ | side number |
 | [MZK Ełk](https://mzk.elk.pl) | Ełk (bus) | GTFS + GTFS-RT (`mkuran.pl`) | ✅ | side number |
 | [WKD](https://wkd.com.pl) | Warszawa–Grodzisk Maz. (rail) | GTFS + GTFS-RT (`mkuran.pl`) | ✅ | — |
+| [BKM Białystok](https://bkm.bialystok.pl) | Białystok (bus) | Static GTFS (`cdn.zbiorkom.live`) | ❌ | — |
+| [ZDZiT Olsztyn](https://zdzit.olsztyn.eu) | Olsztyn (bus, tram) | Static GTFS (`cdn.zbiorkom.live`) | ❌ | — |
+| [MZK Opole](https://mzkopole.pl) | Opole (bus) | Static GTFS (`cdn.zbiorkom.live`) | ❌ | — |
+| [ZTM Rzeszów](https://ztm.rzeszow.pl) | Rzeszów (bus) | Static GTFS (`cdn.zbiorkom.live`) | ❌ | — |
+| [MZK Leszno](https://mzk.leszno.pl) | Leszno (bus) | Static GTFS (`cdn.zbiorkom.live`) | ❌ | — |
 
 ## Features
 
