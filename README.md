@@ -1,11 +1,28 @@
-# Polish public transport Card
+# Polish Public Transport Card
 
 [![HACS](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
 [![Version](https://img.shields.io/badge/version-1.4.0-blue.svg)](https://github.com/toczke/mzkzg-transport-card/releases)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Tests](https://img.shields.io/badge/tests-58%20passing-brightgreen.svg)](#testing)
 
-Home Assistant integration + Lovelace card for real-time departures across Poland — Warszawa, Tricity, Kraków, Poznań, Szczecin, Katowice/GZM, Łódź, Lublin, Wrocław, and 20+ more cities.
+Home Assistant integration + Lovelace card for real-time departures across Poland — Warszawa, Tricity, Kraków, Poznań, Szczecin, Katowice/GZM, Łódź, Lublin, and 25+ more cities.
+
+## Table of Contents
+
+- [Screenshots](#screenshots)
+- [Display Presets](#display-presets)
+- [Supported Operators](#supported-operators)
+- [Features](#features)
+- [Installation](#installation)
+- [Setup](#setup)
+- [Card Configuration](#card-configuration)
+- [PLK API Usage Sensor](#plk-api-usage-sensor)
+- [API Architecture](#api-architecture)
+- [Testing](#testing)
+- [Local Preview](#local-preview)
+- [Contributing](#contributing)
+- [Project Structure](#project-structure)
+- [License](#license)
 
 ## Screenshots
 
@@ -80,6 +97,10 @@ Home Assistant integration + Lovelace card for real-time departures across Polan
 | [MZK Kutno](https://mzkkutno.pl) | Kutno (bus) | GTFS + GTFS-RT (`cdn.zbiorkom.live`) | ✅ | side number |
 | [MPK Legnica](https://mpk.legnica.pl) | Legnica (bus) | GTFS + GTFS-RT (`cdn.zbiorkom.live`) | ✅ | side number |
 
+| [ZDiTM Szczecin](https://zditm.szczecin.pl) | Szczecin (bus, tram) | GTFS + GTFS-RT (`zditm.szczecin.pl`) | ✅ | side number |
+| [ZTM Warszawa](https://ztm.waw.pl) | Warszawa (bus, tram, metro) | GTFS + GTFS-RT (`mkuran.pl`) | ✅ | side number |
+| [MZK Ełk](https://mzk.elk.pl) | Ełk (bus) | GTFS + GTFS-RT (`mkuran.pl`) | ✅ | side number |
+| [WKD](https://wkd.com.pl) | Warszawa–Grodzisk Maz. (rail) | GTFS + GTFS-RT (`mkuran.pl`) | ✅ | — |
 ## Features
 
 - Multi-provider departures (bus, tram, trolleybus, rail)
@@ -92,6 +113,11 @@ Home Assistant integration + Lovelace card for real-time departures across Polan
 - Row actions: `tap_action`, `hold_action`, `double_tap_action`
 - Accessibility: keyboard focus, ARIA labels, reduced-motion support
 - PLK dynamic rate limiting + API usage sensor
+- **Sleep mode** — configurable per operator, pauses API polling during night hours (default 00:00–04:30)
+- **Health sensor** — per-operator connectivity binary sensor with `healthy_stops` / `total_stops` attributes
+- **Next-day fallback** — when no departures remain today, shows tomorrow's schedule (GTFS-RT providers)
+- **Retry with backoff** — all providers retry failed requests 3× with exponential backoff (1s, 3s, 7s)
+- **Multi-stop per operator** — one integration hub per carrier, stops grouped as child devices
 
 ## Installation
 
@@ -99,7 +125,7 @@ Home Assistant integration + Lovelace card for real-time departures across Polan
 
 1. HACS → Integrations → Custom repositories
 2. Add `https://github.com/toczke/mzkzg-transport-card` as **Integration**
-3. Install **MZKZG Transport**
+3. Install **Polish Public Transport**
 4. Restart Home Assistant
 
 ### Manual
