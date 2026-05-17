@@ -226,6 +226,11 @@ const PROVIDER_HEADER_COLORS = {
   gtfsrt_kutno: "#0072bc",
   gtfsrt_legnica: "#d4213d",
   gtfsrt_gzm: "#009b3a",
+  gtfsrt_krakow: "#e2001a",
+  gtfsrt_szczecin: "#005ca9",
+  gtfsrt_warszawa: "#c4161c",
+  gtfsrt_elk: "#1a5276",
+  gtfsrt_wkd: "#4a235a",
   mpk_lodz: "#e11d48",
 };
 
@@ -233,7 +238,7 @@ const PROVIDER_DISPLAY_NAMES = {
   ztm_gdansk: "ZTM Gdańsk",
   zkm_gdynia: "ZKM Gdynia",
   mzk_wejherowo: "MZK Wejherowo",
-  plk_rail: "PKP/SKM",
+  plk_rail: "Polskie Linie Kolejowe",
   kiedyprzyjedzie_pks_gdansk: "PKS Gdańsk",
   kiedyprzyjedzie_albatros: "Albatros",
   kiedyprzyjedzie_gryf: "GRYF",
@@ -259,6 +264,11 @@ const PROVIDER_DISPLAY_NAMES = {
   gtfsrt_kutno: "MZK Kutno",
   gtfsrt_legnica: "MPK Legnica",
   gtfsrt_gzm: "ZTM GZM (Katowice)",
+  gtfsrt_krakow: "ZTP Kraków",
+  gtfsrt_szczecin: "ZDiTM Szczecin",
+  gtfsrt_warszawa: "ZTM Warszawa",
+  gtfsrt_elk: "MZK Ełk",
+  gtfsrt_wkd: "WKD",
   mpk_lodz: "MPK Łódź",
 };
 
@@ -288,6 +298,11 @@ const PROVIDER_BADGE_COLORS = {
   gtfsrt_kutno: "#06b6d4",
   gtfsrt_legnica: "#f43f5e",
   gtfsrt_gzm: "#22c55e",
+  gtfsrt_krakow: "#dc2626",
+  gtfsrt_szczecin: "#2563eb",
+  gtfsrt_warszawa: "#b91c1c",
+  gtfsrt_elk: "#0369a1",
+  gtfsrt_wkd: "#7c3aed",
   mpk_lodz: "#fb7185",
 };
 
@@ -581,6 +596,10 @@ class MzkzgTransportCardEditor extends HTMLElement {
 
     const entitiesEl = this.shadowRoot.getElementById("entities");
     const selectedEntityIds = entitiesEl ? [...entitiesEl.selectedOptions].map(o => o.value) : [];
+    // Guard: if select exists but nothing selected, keep current config entities
+    if (entitiesEl && !selectedEntityIds.length && this._config.entities?.length) {
+      return; // Don't fire empty config
+    }
     const entityEntryById = this._getEntityEntryById();
     const targetEntityId = this._getActiveOverrideTarget();
     const targetOverride = this._readEntityOverrideFields();
@@ -1061,6 +1080,20 @@ class MzkzgTransportCard extends HTMLElement {
     this._tickTimer = setInterval(() => this._updateContent(), (this._config.refresh_interval || 60) * 1000);
   }
 
+  _getAllDepartures() {
+    // Get all departures without route/destination/platform filters (for "next departure" hint)
+    if (!this._hass || !this._config.entities?.length) return [];
+    let deps = [];
+    for (const entityCfg of this._getEntityEntries()) {
+      const eid = typeof entityCfg === "string" ? entityCfg : entityCfg.entity;
+      const s = this._hass.states[eid];
+      if (!s || !s.attributes?.departures) continue;
+      for (const d of s.attributes.departures) deps.push(d);
+    }
+    deps.sort((a, b) => (minutesUntil(a.estimated_time) ?? 9999) - (minutesUntil(b.estimated_time) ?? 9999));
+    return deps.slice(0, 5);
+  }
+
   _getDepartures() {
     if (!this._hass || !this._config.entities?.length) return [];
     const c = this._config;
@@ -1436,6 +1469,13 @@ class MzkzgTransportCard extends HTMLElement {
         const msg = hasPlk ? t("plk_rate_limit") : t("unavailable");
         return `<div class="state-msg"><span class="icon">⚠️</span>${msg}</div>`;
       }
+      // Try to get unfiltered departures (ignore route/destination filters)
+      const allDeps = this._getAllDepartures();
+      if (allDeps.length) {
+        const next = allDeps[0];
+        const nextTime = next.estimated_time ? formatTime(next.estimated_time) : "";
+        return `<div class="state-msg"><span class="icon">🕐</span>${t("no_departures")}<br><small>${nextTime ? (t("min") === "min" ? "Next" : "Następny") + ": " + next.route + " → " + next.headsign + " " + nextTime : ""}</small></div>`;
+      }
       return `<div class="state-msg"><span class="icon">⏳</span>${t("no_departures")}</div>`;
     }
 
@@ -1443,7 +1483,7 @@ class MzkzgTransportCard extends HTMLElement {
       || ["none"].indexOf((this._config.hold_action?.action || "none")) === -1
       || ["none"].indexOf((this._config.double_tap_action?.action || "none")) === -1;
 
-    return deps.map(d => {
+    const result = deps.map(d => {
       try {
       const mins = minutesUntil(d.estimated_time);
       const imminent = d.realtime && mins !== null && mins <= 2;
@@ -1513,6 +1553,16 @@ class MzkzgTransportCard extends HTMLElement {
       </div>`;
       } catch (_) { return ""; }
     }).join("");
+
+    // Pad with empty rows to maintain consistent card height
+    const maxDep = this._config.max_departures || 10;
+    const rendered = deps.length;
+    if (rendered > 0 && rendered < maxDep) {
+      const padCount = maxDep - rendered;
+      const emptyRow = `<div class="dep-row" style="visibility:hidden">&nbsp;</div>`;
+      return result + emptyRow.repeat(padCount);
+    }
+    return result;
   }
 }
 

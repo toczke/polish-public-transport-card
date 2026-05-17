@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches: [main, code-cleanup]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements_test.txt
+
+      - name: Run tests
+        run: python -m pytest tests/ -q --tb=short
+
+  lint:
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Check syntax
+        run: python -m py_compile custom_components/mzkzg_transport/*.py
+
+      - name: Check JS syntax
+        run: node -c custom_components/mzkzg_transport/www/mzkzg-transport-card.js
+
+  validate:
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate manifest
+        run: python -c "import json; m=json.load(open('custom_components/mzkzg_transport/manifest.json')); assert 'version' in m; assert 'domain' in m; print(f'OK: {m[\"domain\"]} v{m[\"version\"]}')"
+
+      - name: Validate translations
+        run: |
+          python -c "
+          import json
+          en = set(json.load(open('custom_components/mzkzg_transport/translations/en.json')).keys())
+          pl = set(json.load(open('custom_components/mzkzg_transport/translations/pl.json')).keys())
+          assert en == pl, f'Mismatch: {en ^ pl}'
+          print('Translations OK')
+          "
+
+      - name: Validate HACS
+        run: python -c "import json; h=json.load(open('hacs.json')); assert 'name' in h; print(f'HACS OK: {h[\"name\"]}')"

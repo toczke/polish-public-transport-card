@@ -156,7 +156,7 @@ PROVIDER_OPTIONS = {
     PROVIDER_ZTM: "ZTM Gda\u0144sk",
     PROVIDER_ZKM: "ZKM Gdynia",
     PROVIDER_MZK: "MZK Wejherowo",
-    PROVIDER_PLK: "PKP / SKM / PR (PLK API)",
+    PROVIDER_PLK: "Polskie Linie Kolejowe (PKP, SKM, PR, IC)",
     PROVIDER_PKS_GDANSK: "PKS Gda\u0144sk Sp. z o.o.",
     PROVIDER_ALBATROS: "Albatros",
     PROVIDER_GRYF: "Przewozy Autobusowe GRYF",

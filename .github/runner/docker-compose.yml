@@ -1,0 +1,12 @@
+services:
+  runner:
+    image: myoung34/github-runner:latest
+    restart: unless-stopped
+    environment:
+      REPO_URL: https://github.com/toczke/mzkzg-transport-card
+      RUNNER_TOKEN: ${RUNNER_TOKEN}
+      RUNNER_NAME: docker-runner
+      RUNNER_WORKDIR: /tmp/runner/work
+      LABELS: self-hosted,linux
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock

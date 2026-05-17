@@ -215,6 +215,20 @@ async def fetch(coord) -> dict:
         if key not in seen:
             seen.add(key)
             unique.append(d)
+
+    # If fewer than 5 departures, load tomorrow's schedule
+    if len(unique) < 5 and gtfs.get("_raw"):
+        tomorrow = now + timedelta(days=1)
+        tomorrow_deps = _get_tomorrow_departures(gtfs, coord.stop_id, tomorrow, now)
+        for d in tomorrow_deps:
+            est = (d.get("estimated_time") or "")[:16]
+            key = (d.get("route"), d.get("headsign"), est)
+            if key not in seen:
+                seen.add(key)
+                unique.append(d)
+                if len(unique) >= 20:
+                    break
+
     return {
         "stop_id": coord.stop_id,
         "stop_name": coord.stop_name,
@@ -222,6 +236,94 @@ async def fetch(coord) -> dict:
         "departures": unique[:20],
         "last_update": now.isoformat(),
     }
+
+
+def _get_tomorrow_departures(gtfs, stop_id, tomorrow, now):
+    """Get scheduled departures for tomorrow from raw GTFS zip."""
+    from datetime import date as dt_date
+    
+    raw = gtfs.get("_raw")
+    if not raw:
+        return []
+    
+    tomorrow_str = tomorrow.strftime("%Y%m%d")
+    day_name = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"][tomorrow.weekday()]
+    
+    # Parse calendar for tomorrow's active services
+    active_services = set()
+    with zipfile.ZipFile(BytesIO(raw)) as zf:
+        header, rows = _read_csv(zf, "calendar.txt")
+        if header:
+            sid_idx = header.index("service_id")
+            day_idx = header.index(day_name) if day_name in header else -1
+            start_idx = header.index("start_date") if "start_date" in header else -1
+            end_idx = header.index("end_date") if "end_date" in header else -1
+            for parts in rows:
+                if len(parts) <= sid_idx:
+                    continue
+                active = day_idx >= 0 and len(parts) > day_idx and parts[day_idx] == "1"
+                if active and start_idx >= 0 and end_idx >= 0 and len(parts) > max(start_idx, end_idx):
+                    if parts[start_idx] > tomorrow_str or parts[end_idx] < tomorrow_str:
+                        active = False
+                if active:
+                    active_services.add(parts[sid_idx])
+
+        header, rows = _read_csv(zf, "calendar_dates.txt")
+        if header:
+            sid_idx = header.index("service_id")
+            date_idx = header.index("date")
+            etype_idx = header.index("exception_type")
+            for parts in rows:
+                if len(parts) <= max(sid_idx, date_idx, etype_idx):
+                    continue
+                if parts[date_idx] != tomorrow_str:
+                    continue
+                if parts[etype_idx] == "1":
+                    active_services.add(parts[sid_idx])
+                elif parts[etype_idx] == "2":
+                    active_services.discard(parts[sid_idx])
+
+    if not active_services:
+        return []
+
+    # Filter trips for tomorrow's services
+    tomorrow_trips = {tid: t for tid, t in gtfs["trips"].items() if t.get("service_id", tid) in active_services}
+    
+    # Get stop_times for this stop, filtered by tomorrow's trips
+    stop_times = gtfs["stop_times"].get(stop_id, [])
+    departures = []
+    
+    for st in stop_times:
+        trip_id = st["trip_id"]
+        if trip_id not in tomorrow_trips and trip_id not in gtfs["trips"]:
+            continue
+        # Check if trip runs tomorrow
+        trip = gtfs["trips"].get(trip_id, {})
+        # For trips without service_id tracking, include all
+        
+        route_id = st["route_id"]
+        route_name = gtfs["routes"].get(route_id, {}).get("short_name", route_id)
+        headsign = st.get("headsign") or trip.get("headsign", "")
+        
+        h, m, s = st["departure_time"]
+        dep_dt = tomorrow.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(hours=h, minutes=m, seconds=s)
+        
+        if dep_dt < now:
+            continue
+
+        departures.append({
+            "route": route_name,
+            "headsign": headsign,
+            "estimated_time": dep_dt.isoformat(),
+            "theoretical_time": dep_dt.isoformat(),
+            "delay_seconds": 0,
+            "realtime": False,
+            "vehicle_type": gtfs["routes"].get(route_id, {}).get("type", "bus"),
+            "provider": "schedule",
+        })
+
+    departures.sort(key=lambda x: x.get("estimated_time") or "")
+    return departures[:15]
 
 
 async def _get_gzm_gtfs_url(session, package_id: str) -> str | None:

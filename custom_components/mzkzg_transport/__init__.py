@@ -5,16 +5,11 @@ from pathlib import Path
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
-try:
-    from homeassistant.components.frontend import add_extra_js_url
-except ImportError:
-    add_extra_js_url = None
-
 from .const import CONF_API_KEY, CONF_NAME, CONF_PLK_TIER, CONF_PROVIDER, CONF_STOP_ID, CONF_STOPS, DOMAIN
 from .coordinator import MzkzgTransportCoordinator
 
 PLATFORMS = ["sensor", "binary_sensor"]
-CARD_URL = "/mzkzg_transport/mzkzg-transport-card.js?v=1.4.0"
+CARD_URL = "/mzkzg_transport/mzkzg-transport-card.js"
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -92,12 +87,12 @@ async def _register_card(hass: HomeAssistant) -> None:
         from homeassistant.components.http import StaticPathConfig
         if hasattr(hass.http, "async_register_static_paths"):
             await hass.http.async_register_static_paths([
-                StaticPathConfig("/mzkzg_transport", www_path, True)
+                StaticPathConfig("/mzkzg_transport", www_path, False)
             ])
         else:
-            hass.http.register_static_path("/mzkzg_transport", www_path, True)
+            hass.http.register_static_path("/mzkzg_transport", www_path, False)
     except (ImportError, AttributeError):
-        hass.http.register_static_path("/mzkzg_transport", www_path, True)
+        hass.http.register_static_path("/mzkzg_transport", www_path, False)
 
     # Register as module resource so card appears in picker automatically
     try:
@@ -109,16 +104,19 @@ async def _register_card(hass: HomeAssistant) -> None:
         lovelace = hass.data.get(LOVELACE_DOMAIN)
         if lovelace and hasattr(lovelace, "resources"):
             resources = lovelace.resources
-            # Check if already registered
-            existing = [
-                r for r in (resources.async_items() if hasattr(resources, "async_items") else [])
-                if r.get("url") == CARD_URL
-            ]
-            if not existing and isinstance(resources, ResourceStorageCollection):
-                await resources.async_create_item({"res_type": "module", "url": CARD_URL})
-    except (ImportError, AttributeError, TypeError):
+            if hasattr(resources, "async_items") and isinstance(resources, ResourceStorageCollection):
+                # Remove old versions and check for current
+                existing = [
+                    r for r in resources.async_items()
+                    if "/mzkzg_transport/" in (r.get("url") or "")
+                ]
+                has_current = any(r.get("url") == CARD_URL for r in existing)
+                # Remove stale versions
+                for r in existing:
+                    if r.get("url") != CARD_URL:
+                        await resources.async_delete_item(r["id"])
+                # Add current if missing
+                if not has_current:
+                    await resources.async_create_item({"res_type": "module", "url": CARD_URL})
+    except (ImportError, AttributeError, TypeError, KeyError):
         pass
-
-    # Fallback: add_extra_js_url for older HA versions
-    if add_extra_js_url:
-        add_extra_js_url(hass, CARD_URL)

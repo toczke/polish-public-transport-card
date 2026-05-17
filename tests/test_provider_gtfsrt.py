@@ -322,9 +322,10 @@ class TestFetchDeduplication:
                 mock_dt.now.return_value = fake_now
                 result = await fetch(coord)
 
-        # Should be deduped to 1
-        assert len(result["departures"]) == 1
+        # Should be deduped to 1 (today) + possible tomorrow schedule
         assert result["departures"][0]["route"] == "10"
+        today_deps = [d for d in result["departures"] if d.get("provider") != "schedule"]
+        assert len(today_deps) == 1
 
     @pytest.mark.asyncio
     async def test_vehicle_capabilities_enrichment(self):

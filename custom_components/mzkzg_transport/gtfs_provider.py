@@ -94,10 +94,20 @@ class GtfsData:
             return []
 
         now = now or datetime.now()
-        today_str = now.strftime("%Y%m%d")
-        current_time = now.strftime("%H:%M:%S")
+        departures = self._get_departures_for_date(stop_id, now, now)
+        
+        # If no departures today, try tomorrow
+        if not departures:
+            tomorrow = now + timedelta(days=1)
+            departures = self._get_departures_for_date(stop_id, tomorrow, now)
 
-        # Active service IDs for today
+        departures.sort(key=lambda x: x["estimated_time"])
+        return departures
+
+    def _get_departures_for_date(self, stop_id: str, target_date: datetime, now: datetime) -> list[dict]:
+        """Get departures for a specific date."""
+        today_str = target_date.strftime("%Y%m%d")
+
         active_services = {
             sid for sid, dates in self.calendar_dates.items() if today_str in dates
         }
@@ -113,7 +123,6 @@ class GtfsData:
                 continue
 
             dep_time = st["departure_time"]
-            # Handle times > 24:00:00 (next day service)
             h, m, s = map(int, dep_time.split(":"))
             day_add = 0
             if h >= 24:
@@ -121,7 +130,7 @@ class GtfsData:
                 day_add = 1
 
             route = self.routes.get(trip["route_id"], {})
-            dep_dt = now.replace(hour=h, minute=m, second=s, microsecond=0) + timedelta(days=day_add)
+            dep_dt = target_date.replace(hour=h, minute=m, second=s, microsecond=0) + timedelta(days=day_add)
 
             if dep_dt < now - timedelta(minutes=1):
                 continue
