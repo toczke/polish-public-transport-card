@@ -91,4 +91,4 @@ jobs:
           assert 'name' in h
           print(f'HACS OK: {h["name"]}')
           EOF
-# CI trigger
+# CI v2
