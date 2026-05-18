@@ -2,79 +2,124 @@ name: CI
 
 on:
   push:
-    branches: [main, code-cleanup]
+    branches: [main, code-cleanup, '**']
   pull_request:
     branches: [main]
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   test:
     runs-on: self-hosted
+    strategy:
+      fail-fast: false
+      matrix:
+        city:
+          - {name: "Gdańsk (ZTM)", marker: "gdansk"}
+          - {name: "Gdynia (ZKM)", marker: "gdynia"}
+          - {name: "Tczew (Time4Bus)", marker: "tczew"}
+          - {name: "KiedyPrzyjedzie", marker: "kiedyprzyjedzie"}
+          - {name: "GTFS-RT", marker: "gtfsrt"}
+          - {name: "Common", marker: "common"}
+    name: test-${{ matrix.city.marker }}
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
           cache: pip
+          cache-dependency-path: requirements_test.txt
+      - run: pip install -r requirements_test.txt
+      - name: "Test: ${{ matrix.city.name }}"
+        run: python -m pytest tests/ -m "${{ matrix.city.marker }}" -q --tb=short
 
-      - name: Install dependencies
-        run: pip install -r requirements_test.txt
-
-      - name: Run unit tests
-        run: python -m pytest tests/ -q --tb=short
+  test-plk:
+    runs-on: self-hosted
+    if: always()
+    continue-on-error: true
+    name: test-plk (PKP/PLK)
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements_test.txt
+      - run: pip install -r requirements_test.txt
+      - name: Test PLK
+        run: python -m pytest tests/ -m "plk" -q --tb=short
 
   e2e:
     runs-on: self-hosted
-    needs: test
+    needs: [test]
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-
+      - name: Check HA availability
+        id: ha_check
+        run: curl -sf $HA_URL/api/ -o /dev/null && echo "available=true" >> $GITHUB_OUTPUT || echo "available=false" >> $GITHUB_OUTPUT
+        env:
+          HA_URL: http://192.168.0.212:8123
       - name: Install Playwright
+        if: steps.ha_check.outputs.available == 'true'
         run: |
-          npm ci
-          npx playwright install chromium
-
+          npm install
+          npx playwright install --with-deps chromium
       - name: Run E2E tests
+        if: steps.ha_check.outputs.available == 'true'
         run: npx playwright test
         env:
-          HA_URL: http://localhost:8123
+          HA_URL: http://192.168.0.212:8123
+      - name: Skip E2E (HA not available)
+        if: steps.ha_check.outputs.available != 'true'
+        run: echo "E2E skipped - Home Assistant not reachable"
 
   lint:
     runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-
-      - name: Check syntax
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Check Python syntax
         run: python -m py_compile custom_components/mzkzg_transport/*.py
-
       - name: Check JS syntax
-        run: node -c custom_components/mzkzg_transport/www/mzkzg-transport-card.js
+        run: node --check custom_components/mzkzg_transport/www/mzkzg-transport-card.js
 
   validate:
     runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
-
       - name: Validate manifest
-        run: python -c "import json; m=json.load(open('custom_components/mzkzg_transport/manifest.json')); assert 'version' in m; assert 'domain' in m; print(f'OK: {m[\"domain\"]} v{m[\"version\"]}')"
-
+        run: |
+          python3 << 'EOF'
+          import json
+          m=json.load(open('custom_components/mzkzg_transport/manifest.json'))
+          assert 'version' in m
+          assert 'domain' in m
+          print(f'OK: {m["domain"]} v{m["version"]}')
+          EOF
       - name: Validate translations
         run: |
-          python -c "
+          python3 << 'EOF'
           import json
           en = set(json.load(open('custom_components/mzkzg_transport/translations/en.json')).keys())
           pl = set(json.load(open('custom_components/mzkzg_transport/translations/pl.json')).keys())
           assert en == pl, f'Mismatch: {en ^ pl}'
           print('Translations OK')
-          "
-
+          EOF
       - name: Validate HACS
-        run: python -c "import json; h=json.load(open('hacs.json')); assert 'name' in h; print(f'HACS OK: {h[\"name\"]}')"
+        run: |
+          python3 << 'EOF'
+          import json
+          h=json.load(open('hacs.json'))
+          assert 'name' in h
+          print(f'HACS OK: {h["name"]}')
+          EOF

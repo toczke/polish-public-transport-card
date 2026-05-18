@@ -1016,7 +1016,7 @@ class MzkzgTransportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             return []
 
         # Kraków: use lightweight ttss.pl API instead of 25MB GTFS download
-        if provider == "gtfsrt_krakow":
+        if provider == "zbiorkom_krakow":
             return await self._load_krakow_stops()
 
         gtfs_url = city_cfg.get("gtfs_url")

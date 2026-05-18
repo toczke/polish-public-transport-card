@@ -63,6 +63,7 @@ def _calendar_line(service_id, active_today=True):
 CALENDAR_HEADER = "service_id,monday,tuesday,wednesday,thursday,friday,saturday,sunday,start_date,end_date"
 
 
+@pytest.mark.gtfsrt
 class TestParseGtfsZip:
     """Tests for _parse_gtfs_zip."""
 
@@ -135,6 +136,7 @@ class TestParseGtfsZip:
         assert result["routes"]["R2"]["type"] == "bus"
 
 
+@pytest.mark.gtfsrt
 class TestParseStopTimesFor:
     """Tests for _parse_stop_times_for."""
 
@@ -202,6 +204,7 @@ class TestParseStopTimesFor:
         assert gtfs["stop_times"]["S1"][0]["trip_id"] == "T1"
 
 
+@pytest.mark.gtfsrt
 class TestGetRtDelays:
     """Tests for _get_rt_delays with mocked network."""
 
@@ -282,6 +285,7 @@ class TestGetRtDelays:
         assert result["TRIP2_S2"] == (60, "BUS99")
 
 
+@pytest.mark.gtfsrt
 class TestFetchDeduplication:
     """Tests for deduplication and vehicle enrichment in fetch()."""
 

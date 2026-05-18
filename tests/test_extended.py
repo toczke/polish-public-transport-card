@@ -54,6 +54,7 @@ def mock_hass():
 
 # ── GTFS Provider tests ─────────────────────────────────────────────────────
 
+@pytest.mark.gtfsrt
 def test_gtfs_parse_zip():
     """Test GTFS zip parsing with real data."""
     from pathlib import Path
@@ -72,6 +73,7 @@ def test_gtfs_parse_zip():
     assert len(gtfs.calendar_dates) > 0
 
 
+@pytest.mark.gtfsrt
 def test_gtfs_departures_empty_stop():
     """Test GTFS returns empty for nonexistent stop."""
     gtfs = GtfsData()
@@ -80,6 +82,7 @@ def test_gtfs_departures_empty_stop():
     assert deps == []
 
 
+@pytest.mark.gtfsrt
 def test_gtfs_departures_no_service_today():
     """Test GTFS returns empty when no service runs today."""
     gtfs = GtfsData()
@@ -93,6 +96,7 @@ def test_gtfs_departures_no_service_today():
     assert deps == []
 
 
+@pytest.mark.gtfsrt
 def test_gtfs_departures_with_service():
     """Test GTFS returns departures when service is active."""
     gtfs = GtfsData()
@@ -111,6 +115,7 @@ def test_gtfs_departures_with_service():
     assert deps[0]["provider"] == "mzk_wejherowo"
 
 
+@pytest.mark.gtfsrt
 def test_gtfs_skips_past_departures():
     """Test GTFS skips departures that already passed."""
     gtfs = GtfsData()
@@ -128,6 +133,7 @@ def test_gtfs_skips_past_departures():
         assert deps == []
 
 
+@pytest.mark.plk
 @pytest.mark.asyncio
 async def test_plk_api_usage_sensor_restores_counters(mock_hass):
     """PLK API usage sensor should restore counters from previous HA state."""
@@ -151,6 +157,7 @@ async def test_plk_api_usage_sensor_restores_counters(mock_hass):
     assert cache["_ts"] == "2026-05-14T09:20:00+02:00"
 
 
+@pytest.mark.plk
 @pytest.mark.asyncio
 async def test_plk_api_usage_sensor_does_not_overwrite_existing_cache(mock_hass):
     """Existing counters in memory should not be replaced by restored values."""
@@ -181,6 +188,7 @@ async def test_plk_api_usage_sensor_does_not_overwrite_existing_cache(mock_hass)
 
 # ── Binary Sensor tests ──────────────────────────────────────────────────────
 
+@pytest.mark.common
 def test_binary_sensor_is_on_with_delay():
     """Test binary sensor turns on with significant delay."""
     coordinator = MagicMock()
@@ -197,6 +205,7 @@ def test_binary_sensor_is_on_with_delay():
     assert sensor.is_on is True
 
 
+@pytest.mark.common
 def test_binary_sensor_is_off_no_delay():
     """Test binary sensor stays off without significant delay."""
     coordinator = MagicMock()
@@ -213,6 +222,7 @@ def test_binary_sensor_is_off_no_delay():
     assert sensor.is_on is False
 
 
+@pytest.mark.common
 def test_binary_sensor_is_off_empty():
     """Test binary sensor off when no data."""
     coordinator = MagicMock()
@@ -224,6 +234,7 @@ def test_binary_sensor_is_off_empty():
     assert sensor.is_on is False
 
 
+@pytest.mark.common
 def test_binary_sensor_attributes():
     """Test binary sensor extra attributes."""
     coordinator = MagicMock()
@@ -245,6 +256,7 @@ def test_binary_sensor_attributes():
 
 # ── PLK Coordinator tests ────────────────────────────────────────────────────
 
+@pytest.mark.plk
 @pytest.mark.asyncio
 async def test_plk_rate_limit(mock_hass):
     """Test PLK handles 429 rate limit gracefully."""
@@ -265,6 +277,7 @@ async def test_plk_rate_limit(mock_hass):
             pass  # UpdateFailed is acceptable
 
 
+@pytest.mark.plk
 @pytest.mark.asyncio
 async def test_plk_empty_schedules(mock_hass):
     """Test PLK with empty schedule response."""
@@ -281,6 +294,7 @@ async def test_plk_empty_schedules(mock_hass):
     assert result["departures"] == []
 
 
+@pytest.mark.plk
 @pytest.mark.asyncio
 async def test_plk_with_schedule_data(mock_hass):
     """Test PLK parses schedule data correctly."""
@@ -324,6 +338,7 @@ async def test_plk_with_schedule_data(mock_hass):
 
 # ── ZKM edge cases ──────────────────────────────────────────────────────────
 
+@pytest.mark.gdynia
 @pytest.mark.asyncio
 async def test_zkm_time_over_24(mock_hass):
     """Test ZKM handles times >= 24:00 (after midnight)."""
@@ -349,6 +364,7 @@ async def test_zkm_time_over_24(mock_hass):
 
 # ── Coordinator _plk_time_to_datetime ────────────────────────────────────────
 
+@pytest.mark.plk
 def test_plk_time_parsing_normal():
     """Test PLK time parsing with normal HH:MM:SS."""
     result = MzkzgTransportCoordinator._plk_time_to_datetime("2026-05-12", "14:30:00")
@@ -356,6 +372,7 @@ def test_plk_time_parsing_normal():
     assert result.minute == 30
 
 
+@pytest.mark.plk
 def test_plk_time_parsing_with_day_offset():
     """Test PLK time parsing with day offset."""
     result = MzkzgTransportCoordinator._plk_time_to_datetime("2026-05-12", "02:00:00", day_offset=1)
@@ -363,6 +380,7 @@ def test_plk_time_parsing_with_day_offset():
     assert result.hour == 2
 
 
+@pytest.mark.plk
 def test_plk_time_parsing_iso_duration():
     """Test PLK time parsing with PT format (if ever used)."""
     result = MzkzgTransportCoordinator._plk_time_to_datetime("2026-05-12", "PT12H30M0S")
@@ -370,6 +388,7 @@ def test_plk_time_parsing_iso_duration():
     assert result.minute == 30
 
 
+@pytest.mark.plk
 def test_plk_update_interval_respects_daily_cap(mock_hass):
     """Test PLK coordinator stays below the daily hard cap for a single station."""
     coordinator = MzkzgTransportCoordinator(mock_hass, "7534", PROVIDER_PLK, "Test", "fake-key")

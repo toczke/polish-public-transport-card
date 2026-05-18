@@ -65,6 +65,7 @@ def mock_hass():
     return hass
 
 
+@pytest.mark.kiedyprzyjedzie
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
     "case",
@@ -205,6 +206,7 @@ async def test_kiedyprzyjedzie_cases(mock_hass, case):
         assert result["departures"][index][key] == expected
 
 
+@pytest.mark.kiedyprzyjedzie
 def test_kiedyprzyjedzie_extra_urls():
     """All extra kiedyPrzyjedzie base URLs should be registered."""
     expected_hosts = {

@@ -111,7 +111,7 @@ test.describe('Visual editor', () => {
 test.describe('Provider colors', () => {
   const providers = [
     { path: 'kiedyprzyjedzie-albatros', name: 'Albatros', color: '#166534' },
-    { path: 'gtfsrt-krakow', name: 'ZTP Kraków', color: '#e2001a' },
+    { path: 'zbiorkom-krakow', name: 'ZTP Kraków', color: '#e2001a' },
     { path: 'gtfsrt-szczecin', name: 'ZDiTM Szczecin', color: '#005ca9' },
   ];
 

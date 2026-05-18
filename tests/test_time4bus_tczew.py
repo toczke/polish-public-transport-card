@@ -49,6 +49,7 @@ def mock_hass():
     return hass
 
 
+@pytest.mark.tczew
 @pytest.mark.asyncio
 async def test_time4bus_tczew_live_departures(mock_hass):
     """Time4BUS live payload should parse into realtime departures."""
@@ -100,6 +101,7 @@ async def test_time4bus_tczew_live_departures(mock_hass):
     assert departure["track"] is None
 
 
+@pytest.mark.tczew
 @pytest.mark.asyncio
 async def test_time4bus_tczew_schedule_fallback(mock_hass):
     """If live departures are missing, the schedule fallback should be used."""

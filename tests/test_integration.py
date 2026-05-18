@@ -121,6 +121,7 @@ def ztm_response():
     }
 
 
+@pytest.mark.gdansk
 @pytest.mark.asyncio
 async def test_ztm_fetch_departures(mock_hass, ztm_response):
     """Test ZTM Gdańsk departure fetching and parsing."""
@@ -147,6 +148,7 @@ async def test_ztm_fetch_departures(mock_hass, ztm_response):
 
 
 
+@pytest.mark.gdansk
 @pytest.mark.asyncio
 async def test_ztm_vehicle_type():
     """Test vehicle type detection for ZTM."""
@@ -194,6 +196,7 @@ def zkm_delays_response():
     }
 
 
+@pytest.mark.gdynia
 @pytest.mark.asyncio
 async def test_zkm_fetch_departures(mock_hass, zkm_routes_response, zkm_delays_response):
     """Test ZKM Gdynia departure fetching and parsing."""
@@ -216,6 +219,7 @@ async def test_zkm_fetch_departures(mock_hass, zkm_routes_response, zkm_delays_r
 
 
 
+@pytest.mark.gdynia
 @pytest.mark.asyncio
 async def test_zkm_vehicle_type():
     """Test vehicle type detection for ZKM."""
@@ -285,6 +289,7 @@ def kiedyprzyjedzie_response():
     }
 
 
+@pytest.mark.kiedyprzyjedzie
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
     ("provider", "base_url", "stop_id", "station_name"),
@@ -323,6 +328,7 @@ async def test_kiedyprzyjedzie_fetch_departures(mock_hass, kiedyprzyjedzie_respo
 
 # ── Constant and import tests ────────────────────────────────────────────────
 
+@pytest.mark.common
 def test_const_values():
     """Test that constants are properly defined."""
     assert DOMAIN == "mzkzg_transport"
@@ -336,6 +342,7 @@ def test_const_values():
     assert KIEDYPRZYJEDZIE_ALBATROS_URL.endswith("albatros.kiedyprzyjedzie.pl")
 
 
+@pytest.mark.common
 def test_import_all_modules():
     """Test that all modules can be imported."""
     from mzkzg_transport import const
@@ -345,6 +352,7 @@ def test_import_all_modules():
     assert const.DOMAIN == "mzkzg_transport"
 
 
+@pytest.mark.gdansk
 @pytest.mark.asyncio
 async def test_ztm_empty_response(mock_hass):
     """Test handling of empty departures."""
@@ -357,6 +365,7 @@ async def test_ztm_empty_response(mock_hass):
     assert result["departures"] == []
 
 
+@pytest.mark.gdynia
 @pytest.mark.asyncio
 async def test_zkm_routes_caching(mock_hass, zkm_routes_response, zkm_delays_response):
     """Test that ZKM routes are cached after first load."""
@@ -374,6 +383,7 @@ async def test_zkm_routes_caching(mock_hass, zkm_routes_response, zkm_delays_res
 
 
 
+@pytest.mark.gdansk
 @pytest.mark.asyncio
 async def test_ztm_vehicle_code_and_fleet(mock_hass):
     """Test ZTM departure includes vehicle_code and fleet capabilities."""
