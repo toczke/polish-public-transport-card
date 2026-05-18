@@ -1,0 +1,10 @@
+services:
+  homeassistant:
+    image: ghcr.io/home-assistant/home-assistant:stable
+    container_name: ha-test
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - ./ha-test-config:/config
+    environment:
+      - TZ=Europe/Warsaw

@@ -63,7 +63,7 @@ jobs:
         id: ha_check
         run: curl -sf $HA_URL/api/ -o /dev/null && echo "available=true" >> $GITHUB_OUTPUT || echo "available=false" >> $GITHUB_OUTPUT
         env:
-          HA_URL: http://localhost:8123
+          HA_URL: http://192.168.0.212:8123
       - name: Install Playwright
         if: steps.ha_check.outputs.available == 'true'
         run: |
@@ -73,7 +73,7 @@ jobs:
         if: steps.ha_check.outputs.available == 'true'
         run: npx playwright test
         env:
-          HA_URL: http://localhost:8123
+          HA_URL: http://192.168.0.212:8123
       - name: Skip E2E (HA not available)
         if: steps.ha_check.outputs.available != 'true'
         run: echo "E2E skipped - Home Assistant not reachable"
