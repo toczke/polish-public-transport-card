@@ -1039,31 +1039,32 @@ class MzkzgTransportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return stops
 
     async def _load_krakow_stops(self) -> list[dict]:
-        """Load Kraków stops from ttss.pl search API (parallel, fast)."""
+        """Load Kraków stops from zbiorkom.live search API."""
         import asyncio
         try:
             session = async_get_clientsession(self.hass)
-            queries = list("abcdefghijklmnoprstuwz")
+            queries = list("abcdefghijklmnoprstuwzśżźćł")
 
             async def fetch_query(q):
                 try:
                     async with session.get(
-                        f"https://ttss.pl/stops/?query={q}",
+                        f"https://api.zbiorkom.live/4.8/krakow/search?query={q}",
                         timeout=aiohttp.ClientTimeout(total=8),
                     ) as resp:
                         if resp.status == 200:
                             return await resp.json()
                 except Exception:
                     pass
-                return []
+                return {}
 
             results = await asyncio.gather(*[fetch_query(q) for q in queries])
             stops = []
             for data in results:
-                for item in data:
-                    stops.append({"id": item["id"], "name": item["name"]})
+                for item in (data.get("results", []) if isinstance(data, dict) else []):
+                    stop = item.get("stop")
+                    if isinstance(stop, list) and len(stop) >= 3:
+                        stops.append({"id": stop[0], "name": stop[2]})
 
-            # Deduplicate
             seen = set()
             unique = []
             for s in stops:
@@ -1071,7 +1072,7 @@ class MzkzgTransportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     seen.add(s["id"])
                     unique.append(s)
             unique.sort(key=lambda x: x["name"])
-            _LOGGER.debug("Loaded %d Kraków stops from ttss.pl", len(unique))
+            _LOGGER.debug("Loaded %d Kraków stops from zbiorkom.live", len(unique))
             return unique
         except Exception as e:
             _LOGGER.warning("Failed to load Kraków stops: %s", e)

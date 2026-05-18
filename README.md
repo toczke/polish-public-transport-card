@@ -285,6 +285,23 @@ dev/
 └── preview.html             # Standalone card preview (no HA needed)
 ```
 
+
+## Data Sources & Licensing
+
+This integration aggregates publicly available transit data. No authentication is required except for PLK (user provides their own API key).
+
+| Source | License | Attribution |
+|--------|---------|-------------|
+| ZTM Gdańsk (ckan2.multimediagdansk.pl) | CC BY 4.0 | Gdańsk Open Data |
+| ZDiTM Szczecin (zditm.szczecin.pl) | CC0 1.0 | — |
+| MKuranowski GTFS (mkuran.pl) — Warszawa, Ełk, WKD | CC0 1.0 / ODbL | Miasto Stołeczne Warszawa (positions) |
+| PLK OpenData (pdp-api.plk-sa.pl) | PLK Regulamin | Requires user API key |
+| ZTP Kraków (gtfs.ztp.krakow.pl) | CC BY 4.0 | ZTP Kraków |
+| zbiorkom.live (GTFS-RT for 16 cities + Kraków departures) | No public license | Community data, no auth required |
+| kiedyPrzyjedzie, Time4BUS, ZKM Gdynia | No public license | Public APIs, no auth required |
+
+> **Disclaimer:** Some data sources (zbiorkom.live, kiedyPrzyjedzie, Time4BUS) do not publish formal API documentation or licensing terms. These endpoints are publicly accessible without authentication. This project uses them in good faith for personal/home automation use. If you are a data provider and would like your API removed, please open an issue.
+
 ## License
 
 [MIT](LICENSE) © Tomasz Toczek
