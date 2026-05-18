@@ -64,18 +64,31 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Validate manifest
-        run: python -c "import json; m=json.load(open('custom_components/mzkzg_transport/manifest.json')); assert 'version' in m; assert 'domain' in m; print(f'OK: {m[\"domain\"]} v{m[\"version\"]}')"
+        run: |
+          python3 << 'EOF'
+          import json
+          m=json.load(open('custom_components/mzkzg_transport/manifest.json'))
+          assert 'version' in m
+          assert 'domain' in m
+          print(f'OK: {m["domain"]} v{m["version"]}')
+          EOF
 
       - name: Validate translations
         run: |
-          python -c "
+          python3 << 'EOF'
           import json
           en = set(json.load(open('custom_components/mzkzg_transport/translations/en.json')).keys())
           pl = set(json.load(open('custom_components/mzkzg_transport/translations/pl.json')).keys())
           assert en == pl, f'Mismatch: {en ^ pl}'
           print('Translations OK')
-          "
+          EOF
 
       - name: Validate HACS
-        run: python -c "import json; h=json.load(open('hacs.json')); assert 'name' in h; print(f'HACS OK: {h[\"name\"]}')"
+        run: |
+          python3 << 'EOF'
+          import json
+          h=json.load(open('hacs.json'))
+          assert 'name' in h
+          print(f'HACS OK: {h["name"]}')
+          EOF
 # CI trigger
