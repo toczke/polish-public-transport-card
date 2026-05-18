@@ -5,9 +5,9 @@
     "@toczke"
   ],
   "config_flow": true,
-  "documentation": "https://github.com/toczke/polish-public-transport-card",
+  "documentation": "https://github.com/toczke/mzkzg-transport-card",
   "iot_class": "cloud_polling",
-  "issue_tracker": "https://github.com/toczke/polish-public-transport-card/issues",
+  "issue_tracker": "https://github.com/toczke/mzkzg-transport-card/issues",
   "requirements": [
     "gtfs-realtime-bindings==2.0.0"
   ],

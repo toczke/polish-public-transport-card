@@ -1,4 +1,4 @@
-"""GTFS-RT provider for cities with protobuf realtime feeds (Poznań, Lublin, Białystok, etc.)."""
+"""GTFS-RT provider for cities with protobuf realtime feeds (Kraków, Poznań, Białystok)."""
 
 import asyncio
 import csv

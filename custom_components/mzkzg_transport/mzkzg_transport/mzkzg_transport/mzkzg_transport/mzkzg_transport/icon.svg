@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <!-- Row 1 -->
+  <rect x="32" y="40" width="52" height="40" rx="10" fill="#DA2128"/>
+  <rect x="96" y="50" width="100" height="8" rx="4" fill="#8a9ac8"/>
+  <rect x="96" y="66" width="64" height="6" rx="3" fill="#5a6a9a"/>
+  <circle cx="224" cy="60" r="12" fill="#4caf50"/>
+
+  <!-- Row 2 -->
+  <rect x="32" y="104" width="52" height="40" rx="10" fill="#005eb8"/>
+  <rect x="96" y="114" width="86" height="8" rx="4" fill="#8a9ac8"/>
+  <rect x="96" y="130" width="54" height="6" rx="3" fill="#5a6a9a"/>
+  <circle cx="224" cy="124" r="12" fill="#4caf50"/>
+
+  <!-- Row 3 -->
+  <rect x="32" y="168" width="52" height="40" rx="10" fill="#ea580c"/>
+  <rect x="96" y="178" width="72" height="8" rx="4" fill="#8a9ac8"/>
+  <rect x="96" y="194" width="44" height="6" rx="3" fill="#5a6a9a"/>
+  <circle cx="224" cy="188" r="12" fill="#4caf50"/>
+
+  <!-- Bottom accent -->
+  <rect x="32" y="228" width="192" height="6" rx="3" fill="#005eb8"/>
+</svg>
