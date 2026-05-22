@@ -1070,10 +1070,14 @@ class MzkzgTransportCard extends HTMLElement {
     return this._getEntityEntries().map(e => e.entity);
   }
 
-  getCardSize() { return Math.ceil((this._config.max_departures || 10) / 2) + 2; }
+  getCardSize() { return (this._config.max_departures || 10) + 1; }
+
+  getGridOptions() {
+    return { rows: "auto", min_rows: 3, columns: 12, min_columns: 6 };
+  }
 
   getLayoutOptions() {
-    return { grid_rows: Math.ceil((this._config.max_departures || 10) / 2) + 2, grid_min_rows: 3, grid_columns: 4, grid_min_columns: 2 };
+    return { grid_rows: "auto", grid_min_rows: 3, grid_columns: 4, grid_min_columns: 2 };
   }
 
   connectedCallback() { this._startTick(); this._bindVisibility(); }

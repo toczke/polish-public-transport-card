@@ -11,6 +11,6 @@
   "requirements": [
     "gtfs-realtime-bindings==2.0.0"
   ],
-  "version": "1.4.2",
+  "version": "1.4.3",
   "integration_type": "hub"
 }

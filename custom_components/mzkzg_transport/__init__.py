@@ -1,5 +1,6 @@
 """MZKZG Transport integration for Home Assistant."""
 
+import json
 from pathlib import Path
 
 from homeassistant.config_entries import ConfigEntry
@@ -9,7 +10,9 @@ from .const import CONF_API_KEY, CONF_NAME, CONF_PLK_TIER, CONF_PROVIDER, CONF_S
 from .coordinator import MzkzgTransportCoordinator
 
 PLATFORMS = ["sensor", "binary_sensor"]
-CARD_URL = "/mzkzg_transport/mzkzg-transport-card.js"
+_MANIFEST = json.loads((Path(__file__).parent / "manifest.json").read_text())
+CARD_VERSION = _MANIFEST["version"]
+CARD_URL = f"/mzkzg_transport/mzkzg-transport-card.js?v={CARD_VERSION}"
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -105,18 +108,14 @@ async def _register_card(hass: HomeAssistant) -> None:
         if lovelace and hasattr(lovelace, "resources"):
             resources = lovelace.resources
             if hasattr(resources, "async_items") and isinstance(resources, ResourceStorageCollection):
-                # Remove old versions and check for current
                 existing = [
                     r for r in resources.async_items()
                     if "/mzkzg_transport/" in (r.get("url") or "")
                 ]
-                has_current = any(r.get("url") == CARD_URL for r in existing)
-                # Remove stale versions
+                # Remove all old entries
                 for r in existing:
-                    if r.get("url") != CARD_URL:
-                        await resources.async_delete_item(r["id"])
-                # Add current if missing
-                if not has_current:
-                    await resources.async_create_item({"res_type": "module", "url": CARD_URL})
+                    await resources.async_delete_item(r["id"])
+                # Add current version
+                await resources.async_create_item({"res_type": "module", "url": CARD_URL})
     except (ImportError, AttributeError, TypeError, KeyError):
         pass
