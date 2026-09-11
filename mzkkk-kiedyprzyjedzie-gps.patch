@@ -1,0 +1,377 @@
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index a4a12dd..023dfaa 100644
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -2,7 +2,8 @@
+ 
+ ## [1.6.0] — unreleased
+ 
+-### New Providers (+8)
++### New Providers (+9)
++- **MZK Kędzierzyn-Koźle** — live departures + GPS via kiedyPrzyjedzie (`mzkkk.kiedyprzyjedzie.pl`)
+ - **MKS Mielec** — GTFS-RT + GPS (19 TU, 19 VP) (`api.zbiorkom.live api6-open`)
+ - **MZK Oświęcim** — GTFS-RT + GPS (59 TU, 10 VP) (`api.zbiorkom.live api6-open`)
+ - **MPK Radomsko** — GTFS-RT + GPS (1 TU, 1 VP) (`api.zbiorkom.live api6-open`)
+@@ -12,6 +13,9 @@
+ - **SPGK Sanok** — static GTFS (`api.zbiorkom.live api6-open`)
+ - **MZK Ostrołęka** — static GTFS (`api.zbiorkom.live api6-open`)
+ 
++### kiedyPrzyjedzie GPS map
++- Live trips now fetch `/api/trip_execution/{base64(trip_execution_id)}/{trip_index}` and attach `vehicle_lat` / `vehicle_lng` so the Lovelace map opens (up to 8 vehicles per stop, 20 s cache).
++
+ ### Card UX Improvements
+ - **Per-entity `max_departures`** — override global cap per sensor in the card editor
+ - **Platform/peron display** — compact chip showing platform/stand number when available
+diff --git a/README.md b/README.md
+index cf840c7..2d8fb32 100644
+--- a/README.md
++++ b/README.md
+@@ -5,7 +5,7 @@
+ [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+ [![Tests](https://img.shields.io/badge/tests-90%20passed-success.svg)]()
+ 
+-Home Assistant integration + Lovelace card for real-time public transport departures across Poland — **53 operators, 35 GTFS-RT cities with live GPS vehicle map**.
++Home Assistant integration + Lovelace card for real-time public transport departures across Poland — **54 operators, 35 GTFS-RT cities with live GPS vehicle map**.
+ 
+ ![Standard light](docs/screenshots/standard-light.png)
+ 
+@@ -50,17 +50,18 @@ Home Assistant integration + Lovelace card for real-time public transport depart
+ | [ZKM Gdynia](https://zkmgdynia.pl) | Gdynia (bus, trolley) | ZDiZ API | ✅ | ❌ | side number |
+ | [MZK Wejherowo](https://mzkwejherowo.pl) | Wejherowo (bus) | Static GTFS | ❌ | ❌ | — |
+ | [Time4BUS Tczew](https://time4bus.com) | Tczew (bus) | Time4BUS | ✅ | ❌ | wheelchair, AC |
+-| [PKS Gdańsk](https://pksgdansk.pl) | Pomorskie (regional) | kiedyPrzyjedzie | ✅ | ❌ | bike, wheelchair, AC |
+-| [Albatros](https://albatros.kiedyprzyjedzie.pl) | Pomorskie (regional) | kiedyPrzyjedzie | ✅ | ❌ | bike, wheelchair, AC |
+-| [GRYF](https://gryf.kiedyprzyjedzie.pl) | Pomorskie (regional) | kiedyPrzyjedzie | ✅ | ❌ | bike, wheelchair, AC |
+-| [Nord Express](https://nordexpress.kiedyprzyjedzie.pl) | Słupsk region | kiedyPrzyjedzie | ✅ | ❌ | bike, wheelchair, AC |
+-| [PKS Gdynia](https://pksgdynia.pl) | Gdynia region | kiedyPrzyjedzie | ✅ | ❌ | bike, wheelchair, AC |
+-| [MZK Malbork](https://malbork.kiedyprzyjedzie.pl) | Malbork (city) | kiedyPrzyjedzie | ✅ | ❌ | bike, wheelchair, AC |
+-| [PKS Słupsk](https://pksslupsk.pl) | Słupsk region | kiedyPrzyjedzie | ✅ | ❌ | bike, wheelchair, AC |
+-| [MZK Starogard Gd.](https://starogard.kiedyprzyjedzie.pl) | Starogard (city) | kiedyPrzyjedzie | ✅ | ❌ | bike, wheelchair, AC |
+-| [PKS Starogard Gd.](https://pksstarogard.kiedyprzyjedzie.pl) | Starogard region | kiedyPrzyjedzie | ✅ | ❌ | bike, wheelchair, AC |
+-| [Komunikacja Bytów](https://bytow.kiedyprzyjedzie.pl) | Bytów (city) | kiedyPrzyjedzie | ✅ | ❌ | bike, wheelchair, AC |
+-| [Powiat Człuchowski](https://czluchow.kiedyprzyjedzie.pl) | Człuchów region | kiedyPrzyjedzie | ✅ | ❌ | bike, wheelchair, AC |
++| [PKS Gdańsk](https://pksgdansk.pl) | Pomorskie (regional) | kiedyPrzyjedzie | ✅ | 🗺️² | bike, wheelchair, AC |
++| [Albatros](https://albatros.kiedyprzyjedzie.pl) | Pomorskie (regional) | kiedyPrzyjedzie | ✅ | 🗺️² | bike, wheelchair, AC |
++| [GRYF](https://gryf.kiedyprzyjedzie.pl) | Pomorskie (regional) | kiedyPrzyjedzie | ✅ | 🗺️² | bike, wheelchair, AC |
++| [Nord Express](https://nordexpress.kiedyprzyjedzie.pl) | Słupsk region | kiedyPrzyjedzie | ✅ | 🗺️² | bike, wheelchair, AC |
++| [PKS Gdynia](https://pksgdynia.pl) | Gdynia region | kiedyPrzyjedzie | ✅ | 🗺️² | bike, wheelchair, AC |
++| [MZK Malbork](https://malbork.kiedyprzyjedzie.pl) | Malbork (city) | kiedyPrzyjedzie | ✅ | 🗺️² | bike, wheelchair, AC |
++| [PKS Słupsk](https://pksslupsk.pl) | Słupsk region | kiedyPrzyjedzie | ✅ | 🗺️² | bike, wheelchair, AC |
++| [MZK Starogard Gd.](https://starogard.kiedyprzyjedzie.pl) | Starogard (city) | kiedyPrzyjedzie | ✅ | 🗺️² | bike, wheelchair, AC |
++| [PKS Starogard Gd.](https://pksstarogard.kiedyprzyjedzie.pl) | Starogard region | kiedyPrzyjedzie | ✅ | 🗺️² | bike, wheelchair, AC |
++| [Komunikacja Bytów](https://bytow.kiedyprzyjedzie.pl) | Bytów (city) | kiedyPrzyjedzie | ✅ | 🗺️² | bike, wheelchair, AC |
++| [Powiat Człuchowski](https://czluchow.kiedyprzyjedzie.pl) | Człuchów region | kiedyPrzyjedzie | ✅ | 🗺️² | bike, wheelchair, AC |
++| [MZK Kędzierzyn-Koźle](https://mzkkk.kiedyprzyjedzie.pl) | Kędzierzyn-Koźle (city) | kiedyPrzyjedzie | ✅ | 🗺️² | bike, wheelchair, AC |
+ | [PKP / SKM / PolRegio / IC](https://portalpasazera.pl) | Railway stations | PLK API | ✅ | ❌ | platform, track, carrier |
+ | [MPK Łódź](https://mpk.lodz.pl) | Łódź (bus, tram) | GTFS-RT (official) | ✅ | 🗺️ | 120 bus stop groups |
+ | [ZTM Poznań](https://ztm.poznan.pl) | Poznań (bus, tram) | GTFS-RT (ZTM) | ✅ | 🗺️ | ramp, AC, bike, USB |
+@@ -101,6 +102,7 @@ Home Assistant integration + Lovelace card for real-time public transport depart
+ | [MZK Leszno](https://mzk.leszno.pl) | Leszno (bus) | Static GTFS | ❌ | ❌ | — |
+ 
+ ¹ Kraków: GPS available for **bus** stops via ZTP VehiclePositions route matching. Tram stops have realtime delays but no GPS (vehicle ID mismatch between zbiorkom.live and ZTP feeds).
++² kiedyPrzyjedzie: map only for live (estimated) trips that report a GPS fix. Timetable-only rows have no marker.
+ 
+ ### Data Sources
+ 
+@@ -110,7 +112,7 @@ Home Assistant integration + Lovelace card for real-time public transport depart
+ | **cdn.zbiorkom.live (CDN)** | Elbląg, Gorzów Wlkp., Kielce, Kutno, Legnica, Lublin, Przemyśl, Radom, Rybnik, Suwałki | GTFS-RT protobuf |
+ | **mkuran.pl** | Ełk, WKD, Warszawa | GTFS-RT protobuf / JSON |
+ | **City-specific** | Gdańsk, Gdynia, GZM, Kraków, Łódź, Poznań, Szczecin, Wrocław | mixed |
+-| **kiedyPrzyjedzie.pl** | 11 regional carriers | REST API |
++| **kiedyPrzyjedzie.pl** | 12 regional carriers | REST API |
+ | **PLK OpenData** | PKP / SKM / PolRegio / IC | REST API |
+ | **Time4BUS** | Tczew | REST API |
+ 
+@@ -121,6 +123,7 @@ Home Assistant integration + Lovelace card for real-time public transport depart
+ When a departure includes GPS coordinates, clicking the row opens a Leaflet map (powered by OpenStreetMap / CARTO tiles). The vehicle marker refreshes every 30 seconds while the map is open.
+ 
+ - **All GTFS-RT cities** support the map via multi-strategy position matching: `vehicle_code` → `trip_id` → `route_id`
++- **kiedyPrzyjedzie.pl** live trips expose GPS via `/api/trip_execution` (`vehicle.lat` / `vehicle.lon`). Scheduled-only rows stay without a marker.
+ - Markers show the route number inside a colored circle with a direction arrow
+ - The map takes precedence over `tap_action`; hold and double-tap actions remain available
+ 
+diff --git a/custom_components/mzkzg_transport/config_flow.py b/custom_components/mzkzg_transport/config_flow.py
+index 9545338..1b349ec 100644
+--- a/custom_components/mzkzg_transport/config_flow.py
++++ b/custom_components/mzkzg_transport/config_flow.py
+@@ -72,6 +72,7 @@ from .const import (
+ 
+ 
+     PROVIDER_CZLUCHOW,
++    PROVIDER_MZK_KEDZIERZYN,
+ 
+ 
+     PROVIDER_GRYF,
+@@ -196,6 +197,7 @@ PROVIDER_OPTIONS = {
+     PROVIDER_PKS_STAROGARD: "PKS Starogard Gda\u0144ski S.A.",
+     PROVIDER_BYTOW: "Byt\u00f3w",
+     PROVIDER_CZLUCHOW: "Powiat Cz\u0142uchowski",
++    PROVIDER_MZK_KEDZIERZYN: "MZK K\u0119dzierzyn-Ko\u017ale",
+     PROVIDER_TCZEW: "Tczew (Time4BUS)",
+     PROVIDER_LODZ: "MPK \u0141\u00f3d\u017a",
+     PROVIDER_POZNAN: "ZTM Pozna\u0144",
+diff --git a/custom_components/mzkzg_transport/const.py b/custom_components/mzkzg_transport/const.py
+index ba3cc51..6c9aef3 100644
+--- a/custom_components/mzkzg_transport/const.py
++++ b/custom_components/mzkzg_transport/const.py
+@@ -24,6 +24,7 @@ KIEDYPRZYJEDZIE_MZK_STAROGARD_URL = "https://starogard.kiedyprzyjedzie.pl"
+ KIEDYPRZYJEDZIE_PKS_STAROGARD_URL = "https://pksstarogard.kiedyprzyjedzie.pl"
+ KIEDYPRZYJEDZIE_BYTOW_URL = "https://bytow.kiedyprzyjedzie.pl"
+ KIEDYPRZYJEDZIE_CZLUCHOW_URL = "https://czluchow.kiedyprzyjedzie.pl"
++KIEDYPRZYJEDZIE_MZK_KEDZIERZYN_URL = "https://mzkkk.kiedyprzyjedzie.pl"
+ TIME4BUS_API_BASE = "https://time4bus.com/t4b"
+ TIME4BUS_TCZEW_OPERATOR = "tczew"
+ TIME4BUS_TCZEW_STOPS_URL = f"{TIME4BUS_API_BASE}/operators/{TIME4BUS_TCZEW_OPERATOR}/stops"
+@@ -46,6 +47,7 @@ PROVIDER_MZK_STAROGARD = "kiedyprzyjedzie_mzk_starogard"
+ PROVIDER_PKS_STAROGARD = "kiedyprzyjedzie_pks_starogard"
+ PROVIDER_BYTOW = "kiedyprzyjedzie_bytow"
+ PROVIDER_CZLUCHOW = "kiedyprzyjedzie_czluchow"
++PROVIDER_MZK_KEDZIERZYN = "kiedyprzyjedzie_mzk_kedzierzyn"
+ PROVIDER_TCZEW = "time4bus_tczew"
+ PROVIDER_LODZ = "mpk_lodz"
+ PROVIDER_POZNAN = "gtfsrt_poznan"
+@@ -115,6 +117,7 @@ KIEDYPRZYJEDZIE_BASE_URLS = {
+     PROVIDER_PKS_STAROGARD: KIEDYPRZYJEDZIE_PKS_STAROGARD_URL,
+     PROVIDER_BYTOW: KIEDYPRZYJEDZIE_BYTOW_URL,
+     PROVIDER_CZLUCHOW: KIEDYPRZYJEDZIE_CZLUCHOW_URL,
++    PROVIDER_MZK_KEDZIERZYN: KIEDYPRZYJEDZIE_MZK_KEDZIERZYN_URL,
+ }
+ 
+ TIME4BUS_BASE_URLS = {
+@@ -140,6 +143,7 @@ PROVIDER_LABELS = {
+     PROVIDER_PKS_STAROGARD: "PKS Starogard Gda\u0144ski S.A.",
+     PROVIDER_BYTOW: "Byt\u00f3w",
+     PROVIDER_CZLUCHOW: "Powiat Cz\u0142uchowski",
++    PROVIDER_MZK_KEDZIERZYN: "MZK K\u0119dzierzyn-Ko\u017ale",
+     PROVIDER_TCZEW: "Tczew",
+     PROVIDER_LODZ: "MPK \u0141\u00f3d\u017a",
+     PROVIDER_POZNAN: "ZTM Pozna\u0144",
+@@ -204,6 +208,7 @@ PROVIDER_COLORS = {
+     PROVIDER_PKS_STAROGARD: "#1e3a8a",
+     PROVIDER_BYTOW: "#155e75",
+     PROVIDER_CZLUCHOW: "#991b1b",
++    PROVIDER_MZK_KEDZIERZYN: "#1e3a8a",
+     PROVIDER_TCZEW: "#1d4ed8",
+     PROVIDER_LODZ: "#e11d48",
+     PROVIDER_POZNAN: "#15803d",
+diff --git a/custom_components/mzkzg_transport/provider_kiedyprzyjedzie.py b/custom_components/mzkzg_transport/provider_kiedyprzyjedzie.py
+index c4addd8..dd962f1 100644
+--- a/custom_components/mzkzg_transport/provider_kiedyprzyjedzie.py
++++ b/custom_components/mzkzg_transport/provider_kiedyprzyjedzie.py
+@@ -1,13 +1,25 @@
+ """kiedyPrzyjedzie provider."""
+ 
+ from datetime import datetime, timedelta
++import asyncio
++import base64
++import logging
+ import re
++from urllib.parse import quote
++
++import aiohttp
+ 
+ from homeassistant.util import dt as dt_util
+ 
+-from .const import KIEDYPRZYJEDZIE_BASE_URLS
++from .const import DOMAIN, KIEDYPRZYJEDZIE_BASE_URLS
+ from .http_utils import fetch_with_retry
+ 
++_LOGGER = logging.getLogger(__name__)
++
++# Live GPS comes from per-trip /api/trip_execution — cap requests per refresh.
++MAX_GPS_TRIPS = 8
++GPS_CACHE_TTL = 20.0
++
+ 
+ async def fetch(coord: "MzkzgTransportCoordinator") -> dict:
+     """Fetch departures from kiedyPrzyjedzie carriers."""
+@@ -84,6 +96,7 @@ async def fetch(coord: "MzkzgTransportCoordinator") -> dict:
+         })
+ 
+     departures.sort(key=lambda x: x.get("estimated_time") or "")
++    await _enrich_gps(coord, session, base_url, departures)
+     return {
+         "stop_id": coord.stop_id,
+         "stop_name": coord.stop_name,
+@@ -122,3 +135,65 @@ def _parse_time(value, reference_dt: datetime) -> tuple[datetime | None, bool]:
+         return dep_dt, False
+ 
+     return None, False
++
++
++def _execution_token(trip_execution_id: str) -> str:
++    """Encode trip_execution_id the same way the official frontend does (base64)."""
++    return base64.b64encode(str(trip_execution_id).encode("utf-8")).decode("ascii")
++
++
++async def _fetch_trip_execution(session: aiohttp.ClientSession, url: str) -> dict | None:
++    """One-shot GET — do not retry 400/401/404 as missing GPS."""
++    try:
++        async with session.get(url, timeout=aiohttp.ClientTimeout(total=10)) as resp:
++            if resp.status != 200:
++                return None
++            data = await resp.json()
++            return data if isinstance(data, dict) else None
++    except (aiohttp.ClientError, asyncio.TimeoutError, ValueError) as err:
++        _LOGGER.debug("kiedyPrzyjedzie GPS fetch failed for %s: %s", url, err)
++        return None
++
++
++async def _enrich_gps(coord, session: aiohttp.ClientSession, base_url: str, departures: list) -> None:
++    """Attach vehicle_lat/lng from trip_execution for live estimated trips."""
++    cache = coord.hass.data.setdefault(DOMAIN, {}).setdefault("_kp_gps", {})
++    now_ts = dt_util.now().timestamp()
++
++    candidates = [
++        dep
++        for dep in departures
++        if dep.get("realtime")
++        and dep.get("trip_execution_id") not in (None, "")
++        and dep.get("trip_index") is not None
++        and not dep.get("cancelled")
++    ][:MAX_GPS_TRIPS]
++
++    async def _one(dep: dict) -> None:
++        cache_key = f"{base_url}:{dep['trip_execution_id']}"
++        cached = cache.get(cache_key)
++        if cached and now_ts - cached.get("_ts", 0) < GPS_CACHE_TTL:
++            pos = cached.get("pos")
++            if pos:
++                dep["vehicle_lat"] = pos["lat"]
++                dep["vehicle_lng"] = pos["lng"]
++            return
++
++        token = quote(_execution_token(dep["trip_execution_id"]), safe="")
++        url = f"{base_url}/api/trip_execution/{token}/{dep['trip_index']}"
++        data = await _fetch_trip_execution(session, url)
++        vehicle = (data or {}).get("vehicle") or {}
++        try:
++            lat = float(vehicle["lat"])
++            lon = float(vehicle["lon"])
++        except (KeyError, TypeError, ValueError):
++            cache[cache_key] = {"pos": None, "_ts": now_ts}
++            return
++
++        pos = {"lat": lat, "lng": lon}
++        cache[cache_key] = {"pos": pos, "_ts": now_ts}
++        dep["vehicle_lat"] = lat
++        dep["vehicle_lng"] = lon
++
++    if candidates:
++        await asyncio.gather(*(_one(dep) for dep in candidates))
+diff --git a/custom_components/mzkzg_transport/www/polish-transport-card.js b/custom_components/mzkzg_transport/www/polish-transport-card.js
+index 85faae4..af999e9 100644
+--- a/custom_components/mzkzg_transport/www/polish-transport-card.js
++++ b/custom_components/mzkzg_transport/www/polish-transport-card.js
+@@ -221,6 +221,7 @@ const PROVIDER_HEADER_COLORS = {
+   kiedyprzyjedzie_pks_starogard: "#1e3a8a",
+   kiedyprzyjedzie_bytow: "#155e75",
+   kiedyprzyjedzie_czluchow: "#991b1b",
++  kiedyprzyjedzie_mzk_kedzierzyn: "#1e3a8a",
+   time4bus_tczew: "#1d4ed8",
+   gtfsrt_poznan: "#15803d",
+   gtfsrt_lublin: "#0054a0",
+@@ -264,6 +265,7 @@ const PROVIDER_DISPLAY_NAMES = {
+   kiedyprzyjedzie_pks_starogard: "PKS Starogard",
+   kiedyprzyjedzie_bytow: "Komunikacja Miejska Bytów",
+   kiedyprzyjedzie_czluchow: "Powiat Człuchowski",
++  kiedyprzyjedzie_mzk_kedzierzyn: "MZK Kędzierzyn-Koźle",
+   time4bus_tczew: "Komunikacja Miejska Tczew",
+   gtfsrt_poznan: "ZTM Poznań",
+   gtfsrt_lublin: "ZTM Lublin",
+@@ -303,6 +305,7 @@ const PROVIDER_BADGE_COLORS = {
+   kiedyprzyjedzie_pks_starogard: "#0ea5e9",
+   kiedyprzyjedzie_bytow: "#14b8a6",
+   kiedyprzyjedzie_czluchow: "#f97316",
++  kiedyprzyjedzie_mzk_kedzierzyn: "#3b82f6",
+   time4bus_tczew: "#dc2626",
+   gtfsrt_poznan: "#22c55e",
+   gtfsrt_lublin: "#3b82f6",
+diff --git a/tests/test_kiedyprzyjedzie_extra.py b/tests/test_kiedyprzyjedzie_extra.py
+index a75b9e3..0b41c74 100644
+--- a/tests/test_kiedyprzyjedzie_extra.py
++++ b/tests/test_kiedyprzyjedzie_extra.py
+@@ -1,6 +1,7 @@
+ """Extra tests for kiedyPrzyjedzie carrier coverage."""
+ 
+ import asyncio
++import base64
+ from datetime import datetime
+ from unittest.mock import MagicMock, patch
+ 
+@@ -13,6 +14,7 @@ from mzkzg_transport.const import (
+     KIEDYPRZYJEDZIE_BYTOW_URL,
+     KIEDYPRZYJEDZIE_CZLUCHOW_URL,
+     KIEDYPRZYJEDZIE_GRYF_URL,
++    KIEDYPRZYJEDZIE_MZK_KEDZIERZYN_URL,
+     KIEDYPRZYJEDZIE_MZK_MALBORK_URL,
+     KIEDYPRZYJEDZIE_MZK_STAROGARD_URL,
+     KIEDYPRZYJEDZIE_NORD_EXPRESS_URL,
+@@ -22,6 +24,7 @@ from mzkzg_transport.const import (
+     PROVIDER_BYTOW,
+     PROVIDER_CZLUCHOW,
+     PROVIDER_GRYF,
++    PROVIDER_MZK_KEDZIERZYN,
+     PROVIDER_MZK_MALBORK,
+     PROVIDER_MZK_STAROGARD,
+     PROVIDER_NORD_EXPRESS,
+@@ -219,7 +222,59 @@ def test_kiedyprzyjedzie_extra_urls():
+         KIEDYPRZYJEDZIE_PKS_STAROGARD_URL: "pksstarogard.kiedyprzyjedzie.pl",
+         KIEDYPRZYJEDZIE_BYTOW_URL: "bytow.kiedyprzyjedzie.pl",
+         KIEDYPRZYJEDZIE_CZLUCHOW_URL: "czluchow.kiedyprzyjedzie.pl",
++        KIEDYPRZYJEDZIE_MZK_KEDZIERZYN_URL: "mzkkk.kiedyprzyjedzie.pl",
+     }
+     for url, host in expected_hosts.items():
+         assert url.endswith(host)
+     assert set(expected_hosts) <= set(KIEDYPRZYJEDZIE_BASE_URLS.values())
++
++
++@pytest.mark.kiedyprzyjedzie
++@pytest.mark.asyncio
++async def test_kiedyprzyjedzie_gps_from_trip_execution(mock_hass):
++    """Live trip_execution payload should attach vehicle_lat/lng."""
++    from urllib.parse import quote
++
++    stop_id = "1765:4192"
++    trip_execution_id = "101:739870:13"
++    trip_index = 17
++    coordinator = MzkzgTransportCoordinator(
++        mock_hass, stop_id, PROVIDER_MZK_KEDZIERZYN, ""
++    )
++    departures = {
++        "timestamp": int(datetime.now().timestamp()),
++        "station_name": "1 Maja 1",
++        "directions": {"4192000": "Zakłady Azotowe"},
++        "rows": [
++            {
++                "time": "3 min",
++                "static_time": "3 min",
++                "time_diff": 0,
++                "is_estimated": True,
++                "direction_id": 4192000,
++                "line_name": "1",
++                "vehicle_attributes": [],
++                "trip_id": 51502249,
++                "trip_execution_id": trip_execution_id,
++                "trip_index": trip_index,
++            }
++        ],
++    }
++    token = quote(base64.b64encode(trip_execution_id.encode("utf-8")).decode("ascii"), safe="")
++    gps_url = (
++        f"{KIEDYPRZYJEDZIE_MZK_KEDZIERZYN_URL}/api/trip_execution/{token}/{trip_index}"
++    )
++
++    with aioresponses() as mocked:
++        mocked.get(
++            f"{KIEDYPRZYJEDZIE_MZK_KEDZIERZYN_URL}/api/departures/{stop_id}",
++            payload=departures,
++        )
++        mocked.get(
++            gps_url,
++            payload={"vehicle": {"lat": 50.34403, "lon": 18.20735}, "estimated": True},
++        )
++        result = await coordinator._fetch_kiedyprzyjedzie()
++
++    assert result["departures"][0]["vehicle_lat"] == 50.34403
++    assert result["departures"][0]["vehicle_lng"] == 18.20735
