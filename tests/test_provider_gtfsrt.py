@@ -343,6 +343,7 @@ class TestFetchDeduplication:
         coord.stop_id = "S1"
         coord.stop_name = "My Stop"
         coord.hass.data = {"mzkzg_transport": {}}
+        coord.hass.async_add_executor_job = AsyncMock(side_effect=lambda func, *args: func(*args))
         coord._get_session = AsyncMock()
 
         mock_resp = AsyncMock()
@@ -384,6 +385,7 @@ class TestFetchDeduplication:
         coord.stop_id = "S1"
         coord.stop_name = "Stop"
         coord.hass.data = {"mzkzg_transport": {}}
+        coord.hass.async_add_executor_job = AsyncMock(side_effect=lambda func, *args: func(*args))
         coord._get_session = AsyncMock()
 
         mock_resp_gtfs = AsyncMock()
@@ -441,6 +443,7 @@ class TestFetchDeduplication:
         coord.stop_id = "S1"
         coord.stop_name = "Stop"
         coord.hass.data = {"mzkzg_transport": {}}
+        coord.hass.async_add_executor_job = AsyncMock(side_effect=lambda func, *args: func(*args))
         coord._get_session = AsyncMock()
 
         mock_resp = AsyncMock()

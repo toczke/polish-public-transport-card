@@ -1230,7 +1230,7 @@ class MzkzgTransportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Download a GTFS zip and parse stops.txt."""
         import csv
         import zipfile
-        from io import BytesIO, StringIO
+        from io import BytesIO, TextIOWrapper
 
         try:
             _LOGGER.debug("GTFS stops: downloading %s", gtfs_url)
@@ -1250,20 +1250,23 @@ class MzkzgTransportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             with zipfile.ZipFile(BytesIO(data)) as zf:
                 if "stops.txt" not in zf.namelist():
                     return []
-                text = zf.read("stops.txt").decode("utf-8-sig")
-                reader = csv.reader(StringIO(text))
-                header = next(reader)
-                id_idx = header.index(id_column)
-                name_idx = header.index("stop_name")
-                stops_by_id = {}
-                for parts in reader:
-                    if len(parts) > max(id_idx, name_idx):
-                        sid = parts[id_idx]
-                        name = parts[name_idx]
-                        if sid and name:
-                            stops_by_id.setdefault(sid, {"id": sid, "name": name})
+                with TextIOWrapper(
+                    zf.open("stops.txt"), encoding="utf-8-sig", newline=""
+                ) as stream:
+                    reader = csv.reader(stream)
+                    header = next(reader)
+                    id_idx = header.index(id_column)
+                    name_idx = header.index("stop_name")
+                    stops_by_id = {}
+                    for parts in reader:
+                        if len(parts) > max(id_idx, name_idx):
+                            sid = parts[id_idx]
+                            name = parts[name_idx]
+                            if sid and name:
+                                stops_by_id.setdefault(sid, {"id": sid, "name": name})
 
                 stops = list(stops_by_id.values())
+            del data
 
             stops.sort(key=lambda x: x["name"])
             _LOGGER.debug("GTFS stops: parsed %d stops from %s", len(stops), gtfs_url)
