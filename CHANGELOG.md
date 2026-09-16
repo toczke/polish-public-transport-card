@@ -31,6 +31,13 @@
 - Removed `from __future__ import annotations` from 4 files (Python 3.12+ no-op)
 - Updated `hacs.json` minimum Home Assistant version to 2025.1.0
 
+### Fixed
+- **Out-of-memory crashes that kill Home Assistant Core on large GTFS feeds (ZTM Warszawa)** ([#20](https://github.com/toczke/polish-public-transport-card/issues/20))
+  - `stop_times.txt` is now streamed row by row from the zip instead of being decoded into one string plus a full list of rows — Warsaw's feed has millions of rows and previously allocated several GB
+  - `_get_tomorrow_departures()` no longer materialises the whole `stop_times.txt`, and its result is memoised so the nightly "no departures left today" path stops rescanning the feed on every refresh
+  - GTFS zip parsing moved off the event loop (`async_add_executor_job`)
+  - Config flow stop loading streams `stops.txt` and releases the downloaded zip afterwards
+
 ---
 
 ## [1.5.0] — 2026-07-28
