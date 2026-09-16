@@ -1159,6 +1159,7 @@ class MzkzgTransportCard extends HTMLElement {
   disconnectedCallback() {
     if (this._tickTimer) { clearInterval(this._tickTimer); this._tickTimer = null; }
     if (this._visHandler) { document.removeEventListener("visibilitychange", this._visHandler); this._visHandler = null; }
+    if (this._mapCtx) this._mapCtx.destroy();
   }
 
   _bindVisibility() {
@@ -1178,7 +1179,6 @@ class MzkzgTransportCard extends HTMLElement {
     // Get all departures without route/destination/platform filters (for "next departure" hint)
     if (!this._hass || !this._config.entities?.length) return [];
     let deps = [];
-    const showProviderHeaders = !c.group_by_provider || c.group_by_provider === true;
     for (const entityCfg of this._getEntityEntries()) {
       const eid = typeof entityCfg === "string" ? entityCfg : entityCfg.entity;
       const s = this._hass.states[eid];
@@ -1209,10 +1209,7 @@ class MzkzgTransportCard extends HTMLElement {
       for (const d of (Array.isArray(state.attributes.departures) ? state.attributes.departures : [])) {
         try {
           if (!d || typeof d !== "object") continue;
-          if (showProviderHeaders && deps.length > 0 && (deps[deps.length-1]._provider !== (d.provider || provider))) {
-            deps.push({ _header: d.provider || provider, _headerLabel: PROVIDER_LABELS[d.provider] || d.provider, _stopName: stopName, _entityConfig: entityCfg, _entityId: entityCfg.entity });
-          }
-          deps.push({ ...d, _provider: d.provider || provider, _stopName: stopName, _entityConfig: entityCfg, _entityId: entityCfg.entity, _provider_label: providerLabel });
+          deps.push({ ...d, _provider: d.provider || provider, _stopName: stopName, _entityConfig: entityCfg, _entityId: entityCfg.entity });
         } catch (_) { /* skip malformed departure */ }
       }
     }
@@ -1284,7 +1281,7 @@ class MzkzgTransportCard extends HTMLElement {
       return ma - mb;
     });
 
-    const cap = d._entityConfig?.max_departures || c.max_departures;
+    const cap = deps[0]?._entityConfig?.max_departures || c.max_departures;
     return deps.slice(0, cap);
   }
 
@@ -1337,9 +1334,31 @@ class MzkzgTransportCard extends HTMLElement {
     overlay.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:100000;display:flex;align-items:center;justify-content:center;";
     overlay.innerHTML = `<div style="position:relative;width:${w}px;height:${h}px;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.3);"><button style="position:absolute;top:8px;right:8px;z-index:1001;background:rgba(0,0,0,0.6);border:none;border-radius:50%;width:32px;height:32px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;color:#fff;">✕</button><div id="vmap" style="width:${w}px;height:${h}px;"></div><div id="vmap-status" style="position:absolute;bottom:6px;left:10px;z-index:1001;font-size:10px;color:#999;background:rgba(255,255,255,0.8);padding:2px 6px;border-radius:4px">🔄 odświeżanie co 30s</div></div>`;
     document.body.appendChild(overlay);
+    const ctx = {
+      destroyed: false,
+      map: null,
+      markers: [],
+      ro: null,
+      interval: null,
+      entityId: info.entityId || "",
+      vehicleCode: info.code || "",
+    };
+    ctx.destroy = () => {
+      if (ctx.destroyed) return;
+      ctx.destroyed = true;
+      if (ctx.interval) { clearInterval(ctx.interval); ctx.interval = null; }
+      if (ctx.ro) { ctx.ro.disconnect(); ctx.ro = null; }
+      if (ctx.map) { ctx.map.remove(); ctx.map = null; }
+      if (ctx.onKeyDown) { document.removeEventListener("keydown", ctx.onKeyDown); ctx.onKeyDown = null; }
+      overlay.remove();
+      if (this._mapCtx === ctx) this._mapCtx = null;
+    };
+    this._mapCtx = ctx;
     const closeMap = () => { if (this._mapCtx) this._mapCtx.destroy(); };
     overlay.querySelector("button").onclick = closeMap;
     overlay.onclick = (e) => { if (e.target === overlay) closeMap(); };
+    ctx.onKeyDown = (e) => { if (e.key === "Escape") closeMap(); };
+    document.addEventListener("keydown", ctx.onKeyDown);
 
     const container = overlay.querySelector("#vmap");
 

@@ -125,10 +125,22 @@ async def _register_card(hass: HomeAssistant) -> None:
                     r for r in resources.async_items()
                     if "/mzkzg_transport/" in (r.get("url") or "") or "/polish_transport/" in (r.get("url") or "")
                 ]
-                # Remove all old entries so we replace with current version
+                # Create the current entry first — deleting first would leave the
+                # dashboard with no card resource at all if creation then fails.
+                if not any(r.get("url") == CARD_URL for r in existing):
+                    await resources.async_create_item({"res_type": "module", "url": CARD_URL})
                 for r in existing:
-                    await resources.async_delete_item(r["id"])
-                # Add current version
-                await resources.async_create_item({"res_type": "module", "url": CARD_URL})
+                    if r.get("url") != CARD_URL:
+                        await resources.async_delete_item(r["id"])
+            else:
+                _LOGGER.warning(
+                    "Lovelace is in YAML mode; add %s manually as a JavaScript module resource",
+                    CARD_URL,
+                )
+        else:
+            _LOGGER.warning(
+                "Lovelace resources unavailable; add %s manually as a JavaScript module resource",
+                CARD_URL,
+            )
     except (ImportError, AttributeError, TypeError, KeyError) as err:
         _LOGGER.warning("Failed to register Lovelace card resource: %s", err)
