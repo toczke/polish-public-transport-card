@@ -31,6 +31,15 @@
 - Removed `from __future__ import annotations` from 4 files (Python 3.12+ no-op)
 - Updated `hacs.json` minimum Home Assistant version to 2025.1.0
 
+### Fixed
+- **Card never rendered and took down the whole dashboard section** — three references to undefined variables in `polish-transport-card.js`:
+  - `_getDepartures()` used `d` outside the filter callback when computing the departure cap (`ReferenceError: d is not defined`)
+  - `_getDepartures()` referenced `showProviderHeaders` and `providerLabel`, neither of which was declared in that scope; the resulting throw was swallowed by a `try/catch`, so every departure row silently rendered empty
+  - `_getAllDepartures()` read `c.group_by_provider` without declaring `c`
+  - Removed the dead provider-header rows (`_header` / `_headerLabel` / `_provider_label` were never consumed by the renderer)
+- **Vehicle map opened as an unclosable blank overlay** — `_showVehicleMap()` used a `ctx` object that was never declared. The throw happened right after the overlay was appended to the document, so the close button, backdrop click and Leaflet initialisation were never wired up. `ctx` now owns the map handle, markers, refresh interval and resize observer, and its `destroy()` tears all of them down. <kbd>Esc</kbd> also closes the map, and an open map is disposed in `disconnectedCallback()` so a removed card cannot leak a 30 s interval.
+- **Card resource could disappear from Lovelace after a restart** — `_register_card()` deleted every existing resource entry before creating the new one, so any failure in between left the dashboard with no card resource at all (`Custom element doesn't exist: polish-transport-card`). The current entry is now created first and only stale entries are removed. Lovelace YAML mode and a missing resource collection now log the URL to add manually instead of failing silently.
+
 ---
 
 ## [1.5.0] — 2026-07-28
