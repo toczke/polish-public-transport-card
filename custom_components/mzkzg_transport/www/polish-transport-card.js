@@ -1356,9 +1356,12 @@ class MzkzgTransportCard extends HTMLElement {
     const createMap = () => {
       requestAnimationFrame(() => {
         if (ctx.destroyed) return;
-        const map = window.L.map(container, { zoomControl: true, attributionControl: false }).setView([lat, lng], 16);
-        window.L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
-          maxZoom: 20, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>, &copy; CARTO', subdomains: "abcd",
+        const map = window.L.map(container, { zoomControl: true }).setView([lat, lng], 16);
+        // CARTO basemaps now require an API key; OSM standard tiles need none, but OSM's tile
+        // policy needs attribution and a Referer, which HA's page-wide no-referrer policy suppresses
+        window.L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+          referrerPolicy: "strict-origin-when-cross-origin",
         }).addTo(map);
         ctx.map = map;
 
