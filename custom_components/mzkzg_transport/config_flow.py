@@ -1180,7 +1180,7 @@ class MzkzgTransportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if not city_cfg:
             return []
 
-        # Kraków: use lightweight ttss.pl API instead of 25MB GTFS download
+        # Kraków: use the zbiorkom.live stop list instead of the GTFS download
         if provider == "zbiorkom_krakow":
             return await self._load_krakow_stops()
 
@@ -1204,54 +1204,23 @@ class MzkzgTransportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return stops
 
     async def _load_krakow_stops(self) -> list[dict]:
-        """Load Kraków stops from ZTP GTFS data."""
-        import csv
-        import re
-        import unicodedata
-        import zipfile
-        from io import BytesIO, TextIOWrapper
-
-        POLISH_MAP = str.maketrans("ąćęłńóśźżĄĆĘŁŃÓŚŹŻ", "acelnoszzACELNOSZZ")
-
-        def slugify(name):
-            s = name.lower().translate(POLISH_MAP)
-            s = unicodedata.normalize('NFD', s)
-            s = ''.join(c for c in s if unicodedata.category(c) != 'Mn')
-            s = re.sub(r'[^a-z0-9]+', '-', s)
-            return s.strip('-')
+        """Load Kraków stops from the zbiorkom.live open data API (ZTP, Mobilis and agglomeration lines)."""
+        from .provider_krakow import ZBIORKOM_API
 
         try:
             session = async_get_clientsession(self.hass)
-            seen = set()
-            stops = []
-
-            for suffix in ("A", "T"):
-                url = f"https://gtfs.ztp.krakow.pl/GTFS_KRK_{suffix}.zip"
-                try:
-                    async with session.get(url, timeout=aiohttp.ClientTimeout(total=30)) as resp:
-                        if resp.status != 200:
-                            continue
-                        data = await resp.read()
-                except Exception:
-                    continue
-
-                with zipfile.ZipFile(BytesIO(data)) as zf:
-                    with zf.open("stops.txt") as f:
-                        reader = csv.DictReader(TextIOWrapper(f, encoding="utf-8-sig"))
-                        for row in reader:
-                            if row.get("location_type", "0") != "0":
-                                continue
-                            desc = row.get("stop_desc", "")
-                            if not desc:
-                                continue
-                            zbiorkom_id = f"{slugify(row['stop_name'])}{desc}"
-                            if zbiorkom_id in seen:
-                                continue
-                            seen.add(zbiorkom_id)
-                            stops.append({"id": zbiorkom_id, "name": f"{row['stop_name']} {desc}"})
-
+            async with session.get(
+                f"{ZBIORKOM_API}/stops", timeout=aiohttp.ClientTimeout(total=60)
+            ) as resp:
+                resp.raise_for_status()
+                data = await resp.json()
+            stops = [
+                {"id": row[0], "name": f"{row[2]} {row[3]}".strip()}
+                for row in data.get("stops", [])
+                if isinstance(row, list) and len(row) >= 4 and row[0] and row[2]
+            ]
             stops.sort(key=lambda x: x["name"])
-            _LOGGER.debug("Loaded %d Kraków stops from ZTP GTFS", len(stops))
+            _LOGGER.debug("Loaded %d Kraków stops from zbiorkom.live", len(stops))
             return stops
         except Exception as e:
             _LOGGER.warning("Failed to load Kraków stops: %s", e)

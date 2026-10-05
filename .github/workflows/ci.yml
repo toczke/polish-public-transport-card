@@ -23,6 +23,7 @@ jobs:
           - {name: "KiedyPrzyjedzie", marker: "kiedyprzyjedzie"}
           - {name: "GTFS-RT", marker: "gtfsrt"}
           - {name: "Łódź", marker: "lodz"}
+          - {name: "Kraków (zbiorkom)", marker: "krakow"}
           - {name: "Common", marker: "common"}
     name: test-${{ matrix.city.marker }}
     steps:

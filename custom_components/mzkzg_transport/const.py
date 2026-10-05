@@ -268,7 +268,8 @@ DEFAULT_SLEEP_START = "00:00"
 DEFAULT_SLEEP_END = "04:30"
 DEFAULT_FALLBACK_MIN = 8
 MAX_DEPARTURES = 20
-STOP_ID_PATTERN = r"^[a-zA-Z0-9_:-]+$"
+# "+" appears in zbiorkom.live api6 ids of P+R stops (e.g. "czerwone-maki-p+r01-vrfpw")
+STOP_ID_PATTERN = r"^[a-zA-Z0-9_:+-]+$"
 
 # PLK tier → max requests per hour
 PLK_TIER_LIMITS = {

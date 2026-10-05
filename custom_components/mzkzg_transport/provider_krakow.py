@@ -1,102 +1,94 @@
-"""Kraków provider via zbiorkom.live API + GTFS-RT vehicle positions."""
+"""Kraków provider via zbiorkom.live open data API (api6-open)."""
 
-import aiohttp
-from datetime import datetime, timedelta
+import asyncio
 import logging
+import re
+import time
+from datetime import datetime, timedelta
+from urllib.parse import quote
 
 from homeassistant.util import dt as dt_util
 
+from .const import DOMAIN
 from .http_utils import fetch_with_retry
 
 _LOGGER = logging.getLogger(__name__)
 
-ZBIORKOM_API = "https://api.zbiorkom.live/4.8/krakow/stops/getDepartures"
-KRAKOW_GPS_BUS = "https://gtfs.ztp.krakow.pl/VehiclePositions_A.pb"
-KRAKOW_GPS_TRAM = "https://gtfs.ztp.krakow.pl/VehiclePositions_T.pb"
+ZBIORKOM_API = "https://api.zbiorkom.live/api6-open/krakow"
+# City-wide box (lon/lat) covering ZTP and agglomeration lines; one shared snapshot serves every stop
+KRAKOW_BBOX = "19.6,49.85,20.4,50.25"
+STOPS_TTL = 24 * 3600
+POSITIONS_TTL = 20
+# A brigade's vehicle is only shown for its next pass by the stop, and only if that pass is
+# this close; later trips of the same brigade would otherwise show where the bus is now
+BRIGADE_MATCH_HORIZON_MS = 90 * 60 * 1000
 
 
 async def fetch(coord: "MzkzgTransportCoordinator") -> dict:
-    """Fetch departures from zbiorkom.live Kraków API."""
+    """Fetch departures for a Kraków stop."""
     session = await coord._get_session()
     now = dt_util.now()
 
-    url = f"{ZBIORKOM_API}?id={coord.stop_id}&limit=20"
+    stop = await _resolve_stop(coord, session)
+    if stop is None:
+        _LOGGER.warning("Kraków stop %s not found in zbiorkom.live stop list", coord.stop_id)
+        return _empty(coord, now)
+    stop_id, stop_name, display_name = stop
+    if not coord.stop_name:
+        coord.stop_name = display_name
+
+    url = f"{ZBIORKOM_API}/stops/{quote(stop_id, safe='')}?limit=20"
     try:
         data = await fetch_with_retry(session, url)
     except Exception as err:
         _LOGGER.debug("Kraków zbiorkom fetch failed: %s", err)
         raise
 
-    if not isinstance(data, list) or len(data) < 2:
-        return _empty(coord, now)
-
-    # Parse stop info
-    stop_info = data[0]
-    if not coord.stop_name and isinstance(stop_info, list) and len(stop_info) > 2:
-        coord.stop_name = stop_info[2]
-
-    # Parse departures
-    raw_deps = data[1]
+    raw_deps = data.get("departures") if isinstance(data, dict) else None
     if not isinstance(raw_deps, list):
         return _empty(coord, now)
 
     departures = []
     for d in raw_deps:
-        if not isinstance(d, list) or len(d) < 8:
+        if not isinstance(d, dict):
             continue
-
-        headsign = d[1] or "—"
-        line_info = d[2]
-        route = str(line_info[0]) if isinstance(line_info, list) and line_info else "?"
-        vehicle_code = d[5] if d[5] else None
-        times = d[7]
-
-        if not isinstance(times, list) or len(times) < 3:
-            continue
-
-        scheduled_ms = times[0]
-        actual_ms = times[1]
-        delay_info = times[2]
-
+        trip = d.get("trip") or {}
+        route_info = trip.get("route") or {}
+        scheduled_ms = d.get("scheduledDeparture")
         if not isinstance(scheduled_ms, (int, float)):
             continue
 
+        delay_ms = d.get("delay") if isinstance(d.get("delay"), (int, float)) else 0
         scheduled_dt = datetime.fromtimestamp(scheduled_ms / 1000, tz=now.tzinfo)
-
-        if isinstance(actual_ms, (int, float)):
-            estimated_dt = datetime.fromtimestamp(actual_ms / 1000, tz=now.tzinfo)
-            is_realtime = True
-        else:
-            estimated_dt = scheduled_dt
-            is_realtime = False
-
-        # Delay in ms or "scheduled" string
-        delay_seconds = 0
-        if isinstance(delay_info, (int, float)):
-            delay_seconds = int(delay_info / 1000)
-        elif delay_info == "scheduled":
-            is_realtime = False
-
+        estimated_dt = scheduled_dt + timedelta(milliseconds=delay_ms)
         if estimated_dt < now - timedelta(minutes=1):
             continue
 
-        # Vehicle type from line_info[4]: 0=tram, 3=bus
-        vehicle_type = "tram" if isinstance(line_info, list) and len(line_info) > 4 and line_info[4] == 0 else "bus"
-
         departures.append({
-            "route": route,
-            "headsign": headsign,
+            "route": str(route_info.get("name") or route_info.get("id") or "?"),
+            "headsign": trip.get("headsign") or "—",
             "estimated_time": estimated_dt.isoformat(),
             "theoretical_time": scheduled_dt.isoformat(),
-            "delay_seconds": delay_seconds,
-            "realtime": is_realtime,
-            "vehicle_type": vehicle_type,
-            "vehicle_code": vehicle_code.split("/")[-1] if vehicle_code and "/" in vehicle_code else vehicle_code,
+            "delay_seconds": int(delay_ms / 1000),
+            "realtime": bool(d.get("isRealtime")),
+            "cancelled": bool(d.get("isCancelled")),
+            # GTFS route_type: 0 = tram, 3 = bus
+            "vehicle_type": "tram" if route_info.get("type") == 0 else "bus",
             "provider": coord.provider,
+            "_brigade": trip.get("brigade") or "",
+            "_scheduled_ms": scheduled_ms,
         })
 
-    # Enrich with GPS positions from GTFS-RT (vehicle_code or route_id fallback)
-    await _enrich_krakow_positions(session, departures)
+    try:
+        positions = await _get_positions(coord, session)
+    except Exception as err:
+        _LOGGER.debug("Kraków positions fetch failed: %s", err)
+        positions = []
+    _enrich_positions(departures, positions, stop_name, now.timestamp() * 1000)
+
+    for d in departures:
+        d.pop("_brigade", None)
+        d.pop("_scheduled_ms", None)
 
     departures.sort(key=lambda x: x.get("estimated_time") or "")
     return {
@@ -118,76 +110,118 @@ def _empty(coord, now):
     }
 
 
-async def _enrich_krakow_positions(session, departures):
-    """Fetch GTFS-RT vehicle positions for Kraków and add vehicle_lat/lng with route_id fallback."""
-    bus = await _fetch_krakow_gps(session, KRAKOW_GPS_BUS)
-    tram = await _fetch_krakow_gps(session, KRAKOW_GPS_TRAM)
-    positions = {**bus, **tram}
+def _legacy_key(stop_id: str) -> str:
+    """Map an api6 stop id or a pre-api6 slug to a common key.
+
+    api6 ids are "<slug><code>-<suffix>" (e.g. "bonarka-ska02-xruaf"); entries created
+    before api6 store "<slug><code>" with every non-alphanumeric run turned into "-"
+    (so "czerwone-maki-p+r01-vrfpw" was "czerwone-maki-p-r01").
+    """
+    return re.sub(r"[^a-z0-9]+", "-", stop_id.lower()).strip("-")
+
+
+async def _get_stops(coord, session) -> dict:
+    """Return the cached api6 stop index, refreshing it daily."""
+    cache = coord.hass.data[DOMAIN].setdefault("_krakow_meta", {})
+    lock = cache.setdefault("lock", asyncio.Lock())
+    async with lock:
+        if cache.get("by_id") and time.monotonic() - cache.get("ts", 0) < STOPS_TTL:
+            return cache
+        try:
+            data = await fetch_with_retry(session, f"{ZBIORKOM_API}/stops", timeout=60)
+        except Exception:
+            if cache.get("by_id"):
+                return cache  # keep serving the stale index
+            raise
+        by_id, by_legacy, ambiguous = {}, {}, set()
+        for row in data.get("stops", []) if isinstance(data, dict) else []:
+            if not isinstance(row, list) or len(row) < 4 or not row[0]:
+                continue
+            stop_id, name, code = row[0], row[2] or "", row[3] or ""
+            by_id[stop_id] = (name, code)
+            key = _legacy_key(stop_id.rsplit("-", 1)[0])
+            if key in by_legacy:
+                ambiguous.add(key)
+            by_legacy[key] = stop_id
+        for key in ambiguous:
+            by_legacy.pop(key, None)
+        if by_id:
+            cache.update(by_id=by_id, by_legacy=by_legacy, ts=time.monotonic())
+        return cache
+
+
+async def _resolve_stop(coord, session) -> tuple[str, str, str] | None:
+    """Resolve the configured stop id (api6 id or pre-api6 slug) to (api6 id, name, display name)."""
+    stops = await _get_stops(coord, session)
+    by_id = stops.get("by_id", {})
+    by_legacy = stops.get("by_legacy", {})
+    stop_id = coord.stop_id
+    if stop_id not in by_id:
+        # Pre-api6 slug, or an api6 id whose suffix has since changed
+        stop_id = by_legacy.get(_legacy_key(stop_id)) or by_legacy.get(
+            _legacy_key(stop_id.rsplit("-", 1)[0])
+        )
+    if not stop_id or stop_id not in by_id:
+        return None
+    name, code = by_id[stop_id]
+    return stop_id, name, f"{name} {code}".strip()
+
+
+async def _get_positions(coord, session) -> list:
+    """Return the shared city-wide vehicle snapshot (refetched at most every POSITIONS_TTL s)."""
+    cache = coord.hass.data[DOMAIN].setdefault("_krakow_vehicles", {})
+    lock = cache.setdefault("lock", asyncio.Lock())
+    async with lock:
+        if "positions" in cache and time.monotonic() - cache.get("ts", 0) < POSITIONS_TTL:
+            return cache["positions"]
+        data = await fetch_with_retry(session, f"{ZBIORKOM_API}/positions/{KRAKOW_BBOX}")
+        positions = data.get("positions") if isinstance(data, dict) else None
+        cache.update(positions=positions if isinstance(positions, list) else [], ts=time.monotonic())
+        return cache["positions"]
+
+
+def _enrich_positions(departures: list, positions: list, stop_name: str, now_ms: float) -> None:
+    """Attach vehicle position/code to departures.
+
+    A vehicle matches a departure when it runs the same route and either lists this
+    stop among its upcoming stops at the departure's scheduled time (works for trams,
+    which have no brigade, but only within ~3 stops), or has the same brigade (buses).
+    Each vehicle is attached to at most one departure: its earliest one at this stop.
+    """
     if not positions:
         return
+    base_name = (stop_name or "").strip().lower()
 
-    # Build route_id → position list for fallback matching
-    route_positions = {}
-    for vid, entry in positions.items():
-        rid = entry.get("route_id")
-        if rid:
-            route_positions.setdefault(rid, []).append(entry)
-
-    for d in departures:
-        vc = d.get("vehicle_code", "")
-        p = None
-        if vc and vc in positions:
-            p = positions[vc]
-        elif not vc:
-            rid = d.get("route", "")
-            candidates = route_positions.get(rid, [])
-            if candidates:
-                p = candidates[0]
-                candidates.append(candidates.pop(0))
-        if p is None:
+    by_stop_time, by_brigade, dup_brigade = {}, {}, set()
+    for p in positions:
+        if not isinstance(p, dict) or not isinstance(p.get("location"), list) or len(p["location"]) < 2:
             continue
-        d["vehicle_lat"] = p["lat"]
-        d["vehicle_lng"] = p["lng"]
+        route = str(p.get("routeName") or "")
+        for s in p.get("upcomingStops") or []:
+            if (s.get("name") or "").strip().lower() == base_name:
+                by_stop_time[(route, s.get("scheduledDeparture"))] = p
+        brigade = p.get("brigade")
+        if brigade:
+            key = (route, brigade)
+            if key in by_brigade:
+                dup_brigade.add(key)
+            by_brigade[key] = p
+    for key in dup_brigade:
+        by_brigade.pop(key, None)
+
+    used = set()
+    for d in sorted(departures, key=lambda x: x["_scheduled_ms"]):
+        p = by_stop_time.get((d["route"], d["_scheduled_ms"]))
+        if p is None and d["_brigade"] and d["_scheduled_ms"] - now_ms <= BRIGADE_MATCH_HORIZON_MS:
+            p = by_brigade.get((d["route"], d["_brigade"]))
+        if p is None or id(p) in used:
+            continue
+        used.add(id(p))
+        vehicle = p.get("vehicle") or {}
+        d["vehicle_lng"], d["vehicle_lat"] = p["location"][0], p["location"][1]
         if p.get("bearing") is not None:
             d["vehicle_direction"] = p["bearing"]
-        if p.get("speed") is not None:
-            d["vehicle_speed"] = round(p["speed"] * 3.6)
-
-
-async def _fetch_krakow_gps(session, url: str) -> dict:
-    """Fetch and parse a single GTFS-RT VehiclePositions endpoint."""
-    try:
-        async with session.get(url, timeout=aiohttp.ClientTimeout(total=15), ssl=False) as resp:
-            if resp.status != 200:
-                return {}
-            raw = await resp.read()
-        from google.transit import gtfs_realtime_pb2
-        feed = gtfs_realtime_pb2.FeedMessage()
-        feed.ParseFromString(raw)
-        positions = {}
-        for entity in feed.entity:
-            if not entity.HasField("vehicle"):
-                continue
-            v = entity.vehicle
-            vid = v.vehicle.id or v.vehicle.label or ""
-            vid = vid.split("/")[-1] if "/" in vid else vid
-            if not vid or not v.HasField("position"):
-                continue
-            entry = {
-                "lat": v.position.latitude,
-                "lng": v.position.longitude,
-            }
-            try:
-                entry["bearing"] = v.position.bearing if v.position.HasField("bearing") else None
-            except (ValueError, AttributeError):
-                pass
-            try:
-                entry["speed"] = v.position.speed if v.position.HasField("speed") else None
-            except (ValueError, AttributeError):
-                pass
-            if v.HasField("trip") and v.trip.route_id:
-                entry["route_id"] = v.trip.route_id
-            positions[vid] = entry
-        return positions
-    except Exception:
-        return {}
+        if vehicle.get("id"):
+            d["vehicle_code"] = vehicle["id"]
+        if vehicle.get("model"):
+            d["vehicle_model"] = vehicle["model"]

@@ -100,7 +100,7 @@ Home Assistant integration + Lovelace card for real-time public transport depart
 | [KA Świnoujście](https://ka.swinoujscie.pl) | Świnoujście (bus) | GTFS-RT (api6) | ✅ | 🗺️ | — |
 | [MZK Leszno](https://mzk.leszno.pl) | Leszno (bus) | Static GTFS | ❌ | ❌ | — |
 
-¹ Kraków: GPS available for **bus** stops via ZTP VehiclePositions route matching. Tram stops have realtime delays but no GPS (vehicle ID mismatch between zbiorkom.live and ZTP feeds).
+¹ Kraków: GPS for buses (matched by route + brigade) and for trams within a few stops of the stop (matched by upcoming stop + scheduled time), via zbiorkom.live api6-open.
 
 ### Data Sources
 
