@@ -118,7 +118,7 @@ Home Assistant integration + Lovelace card for real-time public transport depart
 
 ## Live Vehicle Map
 
-When a departure includes GPS coordinates, clicking the row opens a Leaflet map (powered by OpenStreetMap / CARTO tiles). The vehicle marker refreshes every 30 seconds while the map is open.
+When a departure includes GPS coordinates, clicking the row opens a Leaflet map (powered by OpenStreetMap tiles). The vehicle marker refreshes every 30 seconds while the map is open.
 
 - **All GTFS-RT cities** support the map via multi-strategy position matching: `vehicle_code` → `trip_id` → `route_id`
 - Markers show the route number inside a colored circle with a direction arrow

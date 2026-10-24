@@ -1360,9 +1360,12 @@ class MzkzgTransportCard extends HTMLElement {
         // CARTO basemaps now require an API key; OSM standard tiles need none, but OSM's tile
         // policy needs attribution and a Referer, which HA's page-wide no-referrer policy suppresses
         window.L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-          maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+          maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>',
           referrerPolicy: "strict-origin-when-cross-origin",
         }).addTo(map);
+        // Open attribution links in a new tab so a kiosk tablet or the companion app doesn't leave HA
+        const attributionPrefix = map.attributionControl.options.prefix;
+        if (attributionPrefix) map.attributionControl.setPrefix(attributionPrefix.replace(/<a /g, '<a target="_blank" rel="noopener" '));
         ctx.map = map;
 
         // Stop location marker

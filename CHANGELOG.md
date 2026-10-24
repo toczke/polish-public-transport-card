@@ -11,6 +11,7 @@
 ### Fixed
 - **Kraków outages** — departures keep updating when the stop list or vehicle positions are down
 - **Kraków DST** — correct order and times in the October fall-back hour
+- **Vehicle map tiles** — OpenStreetMap instead of CARTO, whose basemaps now need an API key (#35). On Home Assistant 2026.9+ tiles come through HA's own tile proxy; older versions send the instance origin as the Referer. Attribution links open in a new tab
 
 ## [1.6.0] — unreleased
 
