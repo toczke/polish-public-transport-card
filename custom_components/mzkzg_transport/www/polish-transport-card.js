@@ -1357,12 +1357,7 @@ class MzkzgTransportCard extends HTMLElement {
       requestAnimationFrame(() => {
         if (ctx.destroyed) return;
         const map = window.L.map(container, { zoomControl: true }).setView([lat, lng], 16);
-        // CARTO basemaps now require an API key; OSM standard tiles need none, but OSM's tile
-        // policy needs attribution and a Referer, which HA's page-wide no-referrer policy suppresses
-        window.L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-          maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>',
-          referrerPolicy: "strict-origin-when-cross-origin",
-        }).addTo(map);
+        this._addTileLayer(map, ctx);
         // Open attribution links in a new tab so a kiosk tablet or the companion app doesn't leave HA
         const attributionPrefix = map.attributionControl.options.prefix;
         if (attributionPrefix) map.attributionControl.setPrefix(attributionPrefix.replace(/<a /g, '<a target="_blank" rel="noopener" '));
@@ -1382,6 +1377,33 @@ class MzkzgTransportCard extends HTMLElement {
 
     if (window.L) { createMap(); }
     else { (this._leafletLoading || this._preloadLeaflet()).then(createMap); }
+  }
+
+  // OpenStreetMap tiles (CARTO's now need an API key). HA 2026.9+ proxies them through the
+  // instance (map_tiles integration) and identifies itself to OSM by User-Agent, so the browser
+  // sends OSM nothing. Older HA loads them directly with an origin Referer, because OSM serves
+  // browsers without one an "Access blocked" tile and HA pages set no-referrer.
+  async _addTileLayer(map, ctx) {
+    const fetchToken = () => this._hass.callWS({ type: "map_tiles/access_token" }).then(r => r?.token || null, () => null);
+    const token = await fetchToken();
+    if (ctx.destroyed) return;
+    const origin = (this._hass.auth?.data?.hassUrl || location.origin).replace(/\/+$/, "");
+    const proxyUrl = (t) => `${origin}/api/map_tiles/raster/{z}/{x}/{y}.png?token=${encodeURIComponent(t)}`;
+    const layer = window.L.tileLayer(token ? proxyUrl(token) : "https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors',
+      referrerPolicy: token ? undefined : "strict-origin-when-cross-origin",
+    }).addTo(map);
+    if (!token) return;
+    // Tokens rotate every 30 min with two valid at a time, so only a map left open longer has
+    // tiles refused. Throttled: a tile failing for another reason shouldn't ask on every pan.
+    let lastRefresh = 0;
+    layer.on("tileerror", async () => {
+      if (Date.now() - lastRefresh < 30000) return;
+      lastRefresh = Date.now();
+      const fresh = await fetchToken();
+      if (fresh && !ctx.destroyed) layer.setUrl(proxyUrl(fresh));
+    });
   }
 
   _renderAllVehicleMarkers(ctx, info, isMobile) {
