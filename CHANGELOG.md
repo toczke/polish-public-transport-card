@@ -3,10 +3,14 @@
 ## [Unreleased]
 
 ### Changed
-- **ZTP Kraków → zbiorkom.live api6-open** — departures, stop list and vehicle positions now come from `api.zbiorkom.live/api6-open/krakow` (the 4.8 API is being retired, #37). Existing stops keep working: pre-api6 ids (e.g. `bonarka-ska02`) are resolved to api6 ids (`bonarka-ska02-xruaf`) at runtime.
-- Stop picker now includes Mobilis / agglomeration stops (e.g. Bonarka SKA) and all tram platforms (fixes Plac Centralny im. R. Reagana 03/04, #17).
-- Kraków GPS: vehicles matched by route + brigade (buses) or upcoming stop + scheduled time (trams near the stop); adds `vehicle_code` and `vehicle_model`. Each vehicle is shown only on its next departure. The ZTP GTFS-RT feeds are no longer needed for Kraków.
-- `STOP_ID_PATTERN` accepts `+` (api6 ids of P+R stops).
+- **ZTP Kraków → zbiorkom.live api6-open** — departures, stops and vehicle positions from `api.zbiorkom.live/api6-open/krakow` (4.8 API is being retired, #37). Existing stops switch to api6 ids automatically; entity ids and history are kept
+- **Kraków stop picker** — adds Mobilis / agglomeration stops and all tram platforms (fixes Plac Centralny im. R. Reagana 03/04, #17)
+- **Kraków GPS** — vehicles matched by brigade (buses) or next stops (within ~3 stops); adds `vehicle_model`; covers edge stops (Kamień, Rusocice). `vehicle_code` now only for GPS-matched vehicles, so distant trams show none
+- `STOP_ID_PATTERN` accepts `+` (P+R stops)
+
+### Fixed
+- **Kraków outages** — departures keep updating when the stop list or vehicle positions are down
+- **Kraków DST** — correct order and times in the October fall-back hour
 
 ## [1.6.0] — unreleased
 
