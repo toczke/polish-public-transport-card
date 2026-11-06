@@ -1,6 +1,7 @@
 import { escapeHtml, routeColor, parseVehiclePosition } from "./utils.js";
 
 let leafletLoadPromise = null;
+let leafletCssPromise = null;
 
 export class VehicleMap {
   constructor(card) { this.card = card; }
@@ -8,39 +9,61 @@ export class VehicleMap {
     if (this.mapCtx) this.mapCtx.destroy();
   }
 
+  ensureLeafletCss() {
+    // HA loads Leaflet JS globally on some dashboards, but not necessarily its
+    // stylesheet. Without the CSS, tiles have `position: static` and the map
+    // renders as offset/checkerboard squares.
+    if (leafletCssPromise) return leafletCssPromise;
+    leafletCssPromise = new Promise((resolve) => {
+      const existing = document.getElementById("polish-transport-leaflet-css");
+      if (existing) {
+        if (existing.sheet) {
+          resolve();
+          return;
+        }
+        existing.addEventListener("load", () => resolve(), { once: true });
+        existing.addEventListener("error", () => resolve(), { once: true });
+        return;
+      }
+      const link = document.createElement("link");
+      link.id = "polish-transport-leaflet-css";
+      link.rel = "stylesheet";
+      link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+      link.addEventListener("load", () => resolve(), { once: true });
+      link.addEventListener("error", () => resolve(), { once: true });
+      document.head.appendChild(link);
+    });
+    return leafletCssPromise;
+  }
+
   preloadLeaflet() {
     // Share one loader across every card on the dashboard instead of injecting
     // duplicate Leaflet stylesheets/scripts per card.
-    if (window.L) return Promise.resolve(window.L);
     if (leafletLoadPromise) return leafletLoadPromise;
 
-    leafletLoadPromise = new Promise((resolve, reject) => {
-      if (!document.getElementById("polish-transport-leaflet-css")) {
-        const link = document.createElement("link");
-        link.id = "polish-transport-leaflet-css";
-        link.rel = "stylesheet";
-        link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
-        document.head.appendChild(link);
-      }
-      let script = document.getElementById("polish-transport-leaflet-js");
-      if (!script) {
-        script = document.createElement("script");
-        script.id = "polish-transport-leaflet-js";
-        script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
-        document.head.appendChild(script);
-      }
-      const onLoad = () => {
-        script.removeEventListener("error", onError);
-        resolve(window.L);
-      };
-      const onError = () => {
-        script.removeEventListener("load", onLoad);
-        script.remove();
-        leafletLoadPromise = null;
-        reject(new Error("Failed to load Leaflet"));
-      };
-      script.addEventListener("load", onLoad, { once: true });
-      script.addEventListener("error", onError, { once: true });
+    leafletLoadPromise = this.ensureLeafletCss().then(() => {
+      if (window.L) return window.L;
+      return new Promise((resolve, reject) => {
+        let script = document.getElementById("polish-transport-leaflet-js");
+        if (!script) {
+          script = document.createElement("script");
+          script.id = "polish-transport-leaflet-js";
+          script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
+          document.head.appendChild(script);
+        }
+        const onLoad = () => {
+          script.removeEventListener("error", onError);
+          resolve(window.L);
+        };
+        const onError = () => {
+          script.removeEventListener("load", onLoad);
+          script.remove();
+          leafletLoadPromise = null;
+          reject(new Error("Failed to load Leaflet"));
+        };
+        script.addEventListener("load", onLoad, { once: true });
+        script.addEventListener("error", onError, { once: true });
+      });
     });
     return leafletLoadPromise;
   }
@@ -161,8 +184,9 @@ export class VehicleMap {
       });
     };
 
-    if (window.L) { createMap(); }
-    else { this.preloadLeaflet().then(createMap).catch(() => ctx.destroy()); }
+    // Always go through preloadLeaflet: it also guarantees the Leaflet CSS is
+    // loaded, even when HA already provided the global `L` object.
+    this.preloadLeaflet().then(createMap).catch(() => ctx.destroy());
   }
 
   async addTileLayer(map, ctx) {
