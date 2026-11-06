@@ -6,18 +6,22 @@ import re
 
 from homeassistant.util import dt as dt_util
 
-from .const import TIME4BUS_TCZEW_LIVE_DEPARTURES_URL, TIME4BUS_TCZEW_SCHEDULE_DEPARTURES_URL
+from .const import TIME4BUS_API_BASE, TIME4BUS_OPERATORS
 from .http_utils import fetch_with_retry
 
 _LOGGER = logging.getLogger(__name__)
 
 
 async def fetch(coord: "MzkzgTransportCoordinator") -> dict:
-    """Fetch departures from Time4BUS for Tczew with live fallback."""
+    """Fetch departures from Time4BUS with live fallback."""
     session = await coord._get_session()
     now = dt_util.now()
-    live_url = f"{TIME4BUS_TCZEW_LIVE_DEPARTURES_URL}/{coord.stop_id}/departures"
-    schedule_url = f"{TIME4BUS_TCZEW_SCHEDULE_DEPARTURES_URL}/{coord.stop_id}/departures?date={now:%Y-%m-%d}"
+    operator = TIME4BUS_OPERATORS[coord.provider]
+    live_url = f"{TIME4BUS_API_BASE}/live/schedules/{operator}/stops/{coord.stop_id}/departures"
+    schedule_url = (
+        f"{TIME4BUS_API_BASE}/operators/{operator}/stops/"
+        f"{coord.stop_id}/departures?date={now:%Y-%m-%d}"
+    )
 
     live_data = None
     schedule_data = None

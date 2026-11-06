@@ -5,6 +5,6 @@ services:
     restart: unless-stopped
     network_mode: host
     volumes:
-      - ./ha-test-config:/config
+      - ./ha-test-config:/config:z
     environment:
       - TZ=Europe/Warsaw

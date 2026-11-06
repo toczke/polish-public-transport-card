@@ -50,6 +50,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             entry.data.get(CONF_PLK_TIER, "basic"),
         )
         coordinator._options = dict(entry.options)
+        coordinator.config_entry = entry
         try:
             await coordinator.async_config_entry_first_refresh()
         except Exception:
@@ -58,12 +59,42 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     domain_data["_coordinators"][entry.entry_id] = coordinators
 
+    # Register the parent operator device once here, so every platform can link its
+    # stop devices to it regardless of platform setup order.
+    from homeassistant.helpers import device_registry as dr
+
+    from .const import PROVIDER_LABELS
+
+    provider_label = PROVIDER_LABELS.get(provider, provider)
+    dr.async_get(hass).async_get_or_create(
+        config_entry_id=entry.entry_id,
+        identifiers={(DOMAIN, provider)},
+        name=provider_label,
+        manufacturer="MZKZG Transport",
+        model=provider,
+        entry_type=dr.DeviceEntryType.SERVICE,
+    )
+
     # Update options on change
     entry.async_on_unload(entry.add_update_listener(_async_update_options))
 
     if not domain_data.get("_card_registered"):
         await _register_card(hass)
         domain_data["_card_registered"] = True
+
+    if not hass.services.has_service(DOMAIN, "refresh_gtfs"):
+        async def handle_refresh_gtfs(call):
+            provider = call.data.get("provider")
+            gtfs_cache = hass.data[DOMAIN].get("_gtfsrt_cache", {})
+            if provider:
+                keys_to_remove = [k for k in gtfs_cache if k.startswith(provider)]
+                for k in keys_to_remove:
+                    gtfs_cache.pop(k, None)
+            else:
+                gtfs_cache.clear()
+            _LOGGER.info("GTFS cache cleared%s", f" for {provider}" if provider else "")
+        
+        hass.services.async_register(DOMAIN, "refresh_gtfs", handle_refresh_gtfs)
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
@@ -81,12 +112,27 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok and DOMAIN in hass.data:
         hass.data[DOMAIN]["_coordinators"].pop(entry.entry_id, None)
+        # A PLK entry owns the shared usage sensor while it is loaded. Drop the
+        # guard so a reload of the owning entry recreates the sensor (unloading
+        # a different PLK entry must not create a duplicate).
+        marker = "_plk_usage_sensor_plk_rail"
+        if (
+            entry.data.get(CONF_PROVIDER) == "plk_rail"
+            and hass.data[DOMAIN].get(marker) == entry.entry_id
+        ):
+            hass.data[DOMAIN].pop(marker, None)
         # Clean up shared caches if no more entries
         if not hass.data[DOMAIN].get("_coordinators"):
             for key in ("_plk_cache", "_plk_lock", "_ztm_fleet", "_ztm_gtfs_cache",
-                        "_ztm_gps", "_gtfsrt_cache", "_gtfsrt_vehicles", "_gtfsrt_positions",
-                        "_lodz_gtfs_data", "_krakow_meta", "_krakow_vehicles"):
+                        "_ztm_gps", "_gtfsrt_cache", "_gtfsrt_locks", "_gtfsrt_vehicles",
+                        "_gtfsrt_positions", "_lodz_gtfs_data", "_krakow_meta",
+                        "_krakow_vehicles"):
                 hass.data[DOMAIN].pop(key, None)
+            # Shared entity guards must be dropped with the entries that own them,
+            # otherwise a re-added provider would never recreate those entities.
+            for key in list(hass.data[DOMAIN]):
+                if key.startswith("_health_") or key.startswith("_plk_usage_sensor_"):
+                    hass.data[DOMAIN].pop(key, None)
     return unload_ok
 
 
@@ -125,10 +171,22 @@ async def _register_card(hass: HomeAssistant) -> None:
                     r for r in resources.async_items()
                     if "/mzkzg_transport/" in (r.get("url") or "") or "/polish_transport/" in (r.get("url") or "")
                 ]
-                # Remove all old entries so we replace with current version
+                # Create the current entry first — deleting first would leave the
+                # dashboard with no card resource at all if creation then fails.
+                if not any(r.get("url") == CARD_URL for r in existing):
+                    await resources.async_create_item({"res_type": "module", "url": CARD_URL})
                 for r in existing:
-                    await resources.async_delete_item(r["id"])
-                # Add current version
-                await resources.async_create_item({"res_type": "module", "url": CARD_URL})
+                    if r.get("url") != CARD_URL:
+                        await resources.async_delete_item(r["id"])
+            else:
+                _LOGGER.warning(
+                    "Lovelace is in YAML mode; add %s manually as a JavaScript module resource",
+                    CARD_URL,
+                )
+        else:
+            _LOGGER.warning(
+                "Lovelace resources unavailable; add %s manually as a JavaScript module resource",
+                CARD_URL,
+            )
     except (ImportError, AttributeError, TypeError, KeyError) as err:
         _LOGGER.warning("Failed to register Lovelace card resource: %s", err)

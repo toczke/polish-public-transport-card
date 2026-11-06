@@ -8,8 +8,9 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import CONF_PROVIDER, CONF_STOPS, DOMAIN, PROVIDER_LABELS
+from .const import CONF_PROVIDER, CONF_STOPS, DOMAIN, MAX_DEPARTURES, PROVIDER_LABELS, PROVIDER_PLK
 from .coordinator import MzkzgTransportCoordinator
+from .device_utils import async_link_device_to_parent
 
 
 async def async_setup_entry(
@@ -18,22 +19,8 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up MZKZG Transport sensor from a config entry."""
-    from homeassistant.helpers import device_registry as dr
-
     coordinators = hass.data[DOMAIN]["_coordinators"][entry.entry_id]
     provider = entry.data[CONF_PROVIDER]
-    provider_label = PROVIDER_LABELS.get(provider, provider)
-
-    # Register parent operator device
-    dev_reg = dr.async_get(hass)
-    dev_reg.async_get_or_create(
-        config_entry_id=entry.entry_id,
-        identifiers={(DOMAIN, provider)},
-        name=provider_label,
-        manufacturer="MZKZG Transport",
-        model=provider,
-        entry_type=dr.DeviceEntryType.SERVICE,
-    )
 
     entities = []
     is_multi = bool(entry.data.get(CONF_STOPS)) and len(coordinators) > 1
@@ -44,9 +31,14 @@ async def async_setup_entry(
         for coordinator in coordinators:
             entities.append(MzkzgTransportSensor(coordinator, entry))
 
-    # Add API usage sensor for PLK (once per entry)
-    if entry.data.get(CONF_PROVIDER) == "plk_rail":
-        entities.append(MzkzgPlkApiUsageSensor(hass, entry))
+    # Add the shared PLK API usage sensor once per Home Assistant instance. The usage
+    # counters are global, so a sensor per PLK entry would only duplicate the same
+    # unique id and make Home Assistant log "does not generate unique IDs" on startup.
+    if provider == PROVIDER_PLK:
+        marker = f"_plk_usage_sensor_{provider}"
+        if not hass.data[DOMAIN].get(marker):
+            hass.data[DOMAIN][marker] = entry.entry_id
+            entities.append(MzkzgPlkApiUsageSensor(hass, entry))
 
     async_add_entities(entities)
 
@@ -55,6 +47,7 @@ class MzkzgTransportSensor(CoordinatorEntity, SensorEntity):
     """Sensor representing departures from a single stop."""
 
     _attr_has_entity_name = True
+    _unrecorded_attributes = frozenset({"departures", "last_update", "timetable"})
 
     def __init__(self, coordinator: MzkzgTransportCoordinator, entry: ConfigEntry) -> None:
         """Initialize the sensor."""
@@ -72,8 +65,16 @@ class MzkzgTransportSensor(CoordinatorEntity, SensorEntity):
             "name": stop_label,
             "manufacturer": provider_label,
             "model": provider,
-            "via_device": (DOMAIN, provider),
         }
+
+    async def async_added_to_hass(self) -> None:
+        """Link this stop device to its operator device."""
+        await super().async_added_to_hass()
+        async_link_device_to_parent(
+            self.hass,
+            {(DOMAIN, f"{self.coordinator.provider}_{self.coordinator.stop_id}")},
+            {(DOMAIN, self.coordinator.provider)},
+        )
 
     @property
     def native_value(self) -> str | None:
@@ -91,19 +92,30 @@ class MzkzgTransportSensor(CoordinatorEntity, SensorEntity):
         data = self.coordinator.data
         if not data:
             return {}
-        return {
+        attrs = {
             "stop_id": data.get("stop_id"),
             "stop_name": data.get("stop_name"),
             "provider": data.get("provider"),
             "last_update": data.get("last_update"),
-            "departures": data.get("departures", []),
         }
+        if data.get("timetable"):
+            attrs["timetable"] = data["timetable"]
+        if "walking_distance_m" in data:
+            attrs["walking_distance_m"] = data["walking_distance_m"]
+            attrs["walking_time_min"] = data["walking_time_min"]
+            if hasattr(self.coordinator, "stop_lat") and self.coordinator.stop_lat is not None:
+                attrs["latitude"] = self.coordinator.stop_lat
+                attrs["longitude"] = self.coordinator.stop_lon
+
+        attrs["departures"] = data.get("departures", [])
+        return attrs
 
 
 class MzkzgAggregatedSensor(SensorEntity):
     """Sensor that merges departures from multiple stops (węzeł przesiadkowy)."""
 
     _attr_has_entity_name = True
+    _unrecorded_attributes = frozenset({"departures", "last_update"})
 
     def __init__(self, coordinators: list, entry: ConfigEntry) -> None:
         self._coordinators = coordinators
@@ -111,6 +123,7 @@ class MzkzgAggregatedSensor(SensorEntity):
         provider = coordinators[0].provider if coordinators else entry.data.get(CONF_PROVIDER, "")
         provider_label = PROVIDER_LABELS.get(provider, provider)
         name = entry.data.get("name", "")
+        self._provider = provider
         self._attr_unique_id = f"{DOMAIN}_{provider}_multi_{entry.entry_id}"
         self._attr_name = "Odjazdy"
         self._attr_icon = "mdi:bus-multiple"
@@ -119,7 +132,6 @@ class MzkzgAggregatedSensor(SensorEntity):
             "name": name or "Węzeł",
             "manufacturer": provider_label,
             "model": provider,
-            "via_device": (DOMAIN, provider),
         }
 
     @property
@@ -133,13 +145,21 @@ class MzkzgAggregatedSensor(SensorEntity):
     def extra_state_attributes(self) -> dict:
         deps = self._merged_departures()
         data = self._coordinators[0].data if self._coordinators else {}
-        return {
+        attrs = {
             "stop_id": "|".join(c.stop_id for c in self._coordinators),
             "stop_name": data.get("stop_name", ""),
             "provider": data.get("provider", ""),
             "last_update": data.get("last_update", ""),
-            "departures": deps,
         }
+        
+        # Calculate min walking distance across all aggregated stops
+        min_dist = min((c.data.get("walking_distance_m") for c in self._coordinators if c.data and "walking_distance_m" in c.data), default=None)
+        if min_dist is not None:
+            attrs["walking_distance_m"] = min_dist
+            attrs["walking_time_min"] = min((c.data.get("walking_time_min") for c in self._coordinators if c.data and "walking_time_min" in c.data), default=0)
+
+        attrs["departures"] = deps
+        return attrs
 
     def _merged_departures(self) -> list:
         all_deps = []
@@ -152,7 +172,7 @@ class MzkzgAggregatedSensor(SensorEntity):
                         seen.add(key)
                         all_deps.append(d)
         all_deps.sort(key=lambda d: d.get("estimated_time") or "")
-        return all_deps[:20]
+        return all_deps[:MAX_DEPARTURES]
 
     @property
     def available(self) -> bool:
@@ -163,6 +183,11 @@ class MzkzgAggregatedSensor(SensorEntity):
             await c.async_refresh()
 
     async def async_added_to_hass(self) -> None:
+        async_link_device_to_parent(
+            self.hass,
+            {(DOMAIN, f"{self._provider}_multi_{self._entry.entry_id}")},
+            {(DOMAIN, self._provider)},
+        )
         self.async_on_remove(
             self._entry.add_update_listener(self._async_update_from_coordinators)
         )
@@ -182,6 +207,7 @@ class MzkzgPlkApiUsageSensor(SensorEntity, RestoreEntity):
     def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
         """Initialize."""
         self._hass = hass
+        # Kept exactly as before so the existing entity is adopted on upgrade.
         self._attr_unique_id = f"{DOMAIN}_plk_api_usage"
         self._attr_name = "PLK API Usage"
         self._attr_device_info = {

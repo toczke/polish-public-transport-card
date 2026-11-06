@@ -5,309 +5,19 @@ import csv
 import logging
 import zipfile
 from datetime import timedelta
-from io import BytesIO, StringIO
+from io import BytesIO, StringIO, TextIOWrapper
 
 import aiohttp
 
 from homeassistant.util import dt as dt_util
 
-from .const import DOMAIN
+from .const import DOMAIN, MAX_DEPARTURES
 
 _LOGGER = logging.getLogger(__name__)
 
-
-def _read_csv(zf, filename):
-    """Read a GTFS CSV file from zip, return (header, rows) using proper CSV parsing."""
-    if filename not in zf.namelist():
-        return None, []
-    text = zf.read(filename).decode("utf-8-sig")
-    reader = csv.reader(StringIO(text))
-    header = next(reader)
-    return header, list(reader)
-
-# GTFS-RT city configs: static GTFS zip + realtime TripUpdates URL
-GTFSRT_CITIES = {
-    "gtfsrt_poznan": {
-        "gtfs_url": "https://www.ztm.poznan.pl/pl/dla-deweloperow/getGTFSFile",
-        "rt_url": "https://www.ztm.poznan.pl/pl/dla-deweloperow/getGtfsRtFile?file=trip_updates.pb",
-        "vehicles_url": "https://www.ztm.poznan.pl/pl/dla-deweloperow/getGtfsRtFile?file=vehicle_dictionary.csv",
-        "positions_url": "https://www.ztm.poznan.pl/pl/dla-deweloperow/getGtfsRtFile?file=vehicle_positions.pb",
-        "label": "ZTM Pozna\u0144",
-    },
-    "gtfsrt_lublin": {
-        "gtfs_url": "https://cdn.zbiorkom.live/gtfs/lublin.zip",
-        "rt_url": "https://cdn.zbiorkom.live/gtfs-rt/lublin.pb",
-        "positions_url": "https://cdn.zbiorkom.live/gtfs-rt/lublin.pb",
-        "label": "ZTM Lublin",
-    },
-    "gtfsrt_kielce": {
-        "gtfs_url": "https://cdn.zbiorkom.live/gtfs/kielce.zip",
-        "rt_url": "https://cdn.zbiorkom.live/gtfs-rt/kielce.pb",
-        "positions_url": "https://cdn.zbiorkom.live/gtfs-rt/kielce.pb",
-        "label": "MPK Kielce",
-    },
-    "gtfsrt_radom": {
-        "gtfs_url": "https://cdn.zbiorkom.live/gtfs/radom.zip",
-        "rt_url": "https://cdn.zbiorkom.live/gtfs-rt/radom.pb",
-        "positions_url": "https://cdn.zbiorkom.live/gtfs-rt/radom.pb",
-        "label": "MZDiK Radom",
-    },
-    "gtfsrt_czestochowa": {
-        "gtfs_url": "https://api.zbiorkom.live/api6-open/czestochowa/gtfs/default",
-        "rt_url": "https://api.zbiorkom.live/api6-open/czestochowa/gtfsRealtime/default/tripUpdates",
-        "positions_url": "https://api.zbiorkom.live/api6-open/czestochowa/gtfsRealtime/default/vehiclePositions",
-        "positions_format": "gtfsrt_protobuf",
-        "label": "MPK Cz\u0119stochowa",
-    },
-    "gtfsrt_elblag": {
-        "gtfs_url": "https://cdn.zbiorkom.live/gtfs/elblag.zip",
-        "rt_url": "https://cdn.zbiorkom.live/gtfs-rt/elblag.pb",
-        "positions_url": "https://cdn.zbiorkom.live/gtfs-rt/elblag.pb",
-        "label": "ZKM Elbl\u0105g",
-    },
-    "gtfsrt_gorzow": {
-        "gtfs_url": "https://cdn.zbiorkom.live/gtfs/gorzow.zip",
-        "rt_url": "https://cdn.zbiorkom.live/gtfs-rt/gorzow.pb",
-        "positions_url": "https://cdn.zbiorkom.live/gtfs-rt/gorzow.pb",
-        "label": "MZK Gorz\u00f3w Wlkp.",
-    },
-    "gtfsrt_suwalki": {
-        "gtfs_url": "https://cdn.zbiorkom.live/gtfs/suwalki.zip",
-        "rt_url": "https://cdn.zbiorkom.live/gtfs-rt/suwalki.pb",
-        "positions_url": "https://cdn.zbiorkom.live/gtfs-rt/suwalki.pb",
-        "label": "PGK Suwa\u0142ki",
-    },
-    "gtfsrt_przemysl": {
-        "gtfs_url": "https://cdn.zbiorkom.live/gtfs/przemysl.zip",
-        "rt_url": "https://cdn.zbiorkom.live/gtfs-rt/przemysl.pb",
-        "positions_url": "https://cdn.zbiorkom.live/gtfs-rt/przemysl.pb",
-        "label": "MZK Przemy\u015bl",
-    },
-    "gtfsrt_rybnik": {
-        "gtfs_url": "https://cdn.zbiorkom.live/gtfs/rybnik.zip",
-        "rt_url": "https://cdn.zbiorkom.live/gtfs-rt/rybnik.pb",
-        "positions_url": "https://cdn.zbiorkom.live/gtfs-rt/rybnik.pb",
-        "label": "ZTZ Rybnik",
-    },
-    "gtfsrt_kutno": {
-        "gtfs_url": "https://cdn.zbiorkom.live/gtfs/kutno.zip",
-        "rt_url": "https://cdn.zbiorkom.live/gtfs-rt/kutno.pb",
-        "positions_url": "https://cdn.zbiorkom.live/gtfs-rt/kutno.pb",
-        "label": "MZK Kutno",
-    },
-    "gtfsrt_legnica": {
-        "gtfs_url": "https://cdn.zbiorkom.live/gtfs/legnica.zip",
-        "rt_url": "https://cdn.zbiorkom.live/gtfs-rt/legnica.pb",
-        "positions_url": "https://cdn.zbiorkom.live/gtfs-rt/legnica.pb",
-        "label": "MPK Legnica",
-    },
-    "gtfsrt_szczecin": {
-        "gtfs_url": "https://www.zditm.szczecin.pl/storage/gtfs/gtfs.zip",
-        "rt_url": "https://www.zditm.szczecin.pl/storage/gtfs/gtfs-rt-trips.pb",
-        "positions_url": "https://www.zditm.szczecin.pl/api/v2/vehicles?format=json",
-        "label": "ZDiTM Szczecin",
-    },
-    "gtfsrt_warszawa": {
-        "gtfs_url": "https://mkuran.pl/gtfs/warsaw.zip",
-        "rt_url": "https://mkuran.pl/gtfs/warsaw/vehicles.pb",
-        "positions_url": "https://mkuran.pl/gtfs/warsaw/positions.json",
-        "label": "ZTM Warszawa",
-    },
-    "gtfsrt_elk": {
-        "gtfs_url": "https://mkuran.pl/gtfs/elk.zip",
-        "rt_url": "https://mkuran.pl/gtfs/elk.pb",
-        "positions_url": "https://mkuran.pl/gtfs/elk.pb",
-        "label": "MZK Ełk",
-    },
-    "gtfsrt_wkd": {
-        "gtfs_url": "https://mkuran.pl/gtfs/wkd.zip",
-        "rt_url": "https://mkuran.pl/gtfs/wkd.pb",
-        "label": "WKD",
-    },
-    "gtfs_bialystok": {
-        "gtfs_url": "https://api.zbiorkom.live/api6-open/bialystok/gtfs/default",
-        "rt_url": "https://api.zbiorkom.live/api6-open/bialystok/gtfsRealtime/default/tripUpdates",
-        "positions_url": "https://api.zbiorkom.live/api6-open/bialystok/gtfsRealtime/default/vehiclePositions",
-        "positions_format": "gtfsrt_protobuf",
-        "label": "BKM Białystok",
-    },
-    "gtfs_olsztyn": {
-        "gtfs_url": "https://api.zbiorkom.live/api6-open/olsztyn/gtfs/default",
-        "rt_url": "https://api.zbiorkom.live/api6-open/olsztyn/gtfsRealtime/default/tripUpdates",
-        "positions_url": "https://api.zbiorkom.live/api6-open/olsztyn/gtfsRealtime/default/vehiclePositions",
-        "positions_format": "gtfsrt_protobuf",
-        "label": "ZDZiT Olsztyn",
-    },
-    "gtfs_opole": {
-        "gtfs_url": "https://api.zbiorkom.live/api6-open/opole/gtfs/default",
-        "rt_url": "https://api.zbiorkom.live/api6-open/opole/gtfsRealtime/default/tripUpdates",
-        "positions_url": "https://api.zbiorkom.live/api6-open/opole/gtfsRealtime/default/vehiclePositions",
-        "positions_format": "gtfsrt_protobuf",
-        "label": "MZK Opole",
-    },
-    "gtfsrt_wroclaw": {
-        "gtfs_url": "https://cdn.zbiorkom.live/gtfs/wroclaw.zip",
-        "rt_url": "https://mapadlugoleka.klosok.eu/vehicle_positions.pb",
-        "positions_url": "https://mapadlugoleka.klosok.eu/vehicle_positions.pb",
-        "label": "MPK Wroc\u0142aw",
-    },
-    "gtfs_rzeszow": {
-        "gtfs_url": "https://api.zbiorkom.live/api6-open/rzeszow/gtfs/default",
-        "rt_url": "https://api.zbiorkom.live/api6-open/rzeszow/gtfsRealtime/default/tripUpdates",
-        "positions_url": "https://api.zbiorkom.live/api6-open/rzeszow/gtfsRealtime/default/vehiclePositions",
-        "positions_format": "gtfsrt_protobuf",
-        "label": "ZTM Rzeszów",
-    },
-        "gtfs_kalisz": {
-        "gtfs_url": "https://api.zbiorkom.live/api6-open/kalisz/gtfs/default",
-        "rt_url": "https://api.zbiorkom.live/api6-open/kalisz/gtfsRealtime/default/tripUpdates",
-        "positions_url": "https://api.zbiorkom.live/api6-open/kalisz/gtfsRealtime/default/vehiclePositions",
-        "positions_format": "gtfsrt_protobuf",
-        "label": "MZK Kalisz",
-    },
-    "gtfs_konin": {
-        "gtfs_url": "https://api.zbiorkom.live/api6-open/konin/gtfs/default",
-        "rt_url": "https://api.zbiorkom.live/api6-open/konin/gtfsRealtime/default/tripUpdates",
-        "positions_url": "https://api.zbiorkom.live/api6-open/konin/gtfsRealtime/default/vehiclePositions",
-        "positions_format": "gtfsrt_protobuf",
-        "label": "MZK Konin",
-    },
-    "gtfs_koszalin": {
-        "gtfs_url": "https://api.zbiorkom.live/api6-open/koszalin/gtfs/default",
-        "rt_url": "https://api.zbiorkom.live/api6-open/koszalin/gtfsRealtime/default/tripUpdates",
-        "positions_url": "https://api.zbiorkom.live/api6-open/koszalin/gtfsRealtime/default/vehiclePositions",
-        "positions_format": "gtfsrt_protobuf",
-        "label": "MZK Koszalin",
-    },
-    "gtfs_krosno": {
-        "gtfs_url": "https://api.zbiorkom.live/api6-open/krosno/gtfs/default",
-        "rt_url": "https://api.zbiorkom.live/api6-open/krosno/gtfsRealtime/default/tripUpdates",
-        "positions_url": "https://api.zbiorkom.live/api6-open/krosno/gtfsRealtime/default/vehiclePositions",
-        "positions_format": "gtfsrt_protobuf",
-        "label": "MKS Krosno",
-    },
-    "gtfs_pila": {
-        "gtfs_url": "https://api.zbiorkom.live/api6-open/pila/gtfs/default",
-        "rt_url": "https://api.zbiorkom.live/api6-open/pila/gtfsRealtime/default/tripUpdates",
-        "positions_url": "https://api.zbiorkom.live/api6-open/pila/gtfsRealtime/default/vehiclePositions",
-        "positions_format": "gtfsrt_protobuf",
-        "label": "MZK Piła",
-    },
-    "gtfs_plock": {
-        "gtfs_url": "https://api.zbiorkom.live/api6-open/plock/gtfs/default",
-        "rt_url": "https://api.zbiorkom.live/api6-open/plock/gtfsRealtime/default/tripUpdates",
-        "positions_url": "https://api.zbiorkom.live/api6-open/plock/gtfsRealtime/default/vehiclePositions",
-        "positions_format": "gtfsrt_protobuf",
-        "label": "KM Płock",
-    },
-    "gtfs_siedlce": {
-        "gtfs_url": "https://api.zbiorkom.live/api6-open/siedlce/gtfs/default",
-        "rt_url": "https://api.zbiorkom.live/api6-open/siedlce/gtfsRealtime/default/tripUpdates",
-        "positions_url": "https://api.zbiorkom.live/api6-open/siedlce/gtfsRealtime/default/vehiclePositions",
-        "positions_format": "gtfsrt_protobuf",
-        "label": "MPK Siedlce",
-    },
-    "gtfs_starachowice": {
-        "gtfs_url": "https://api.zbiorkom.live/api6-open/starachowice/gtfs/default",
-        "rt_url": "https://api.zbiorkom.live/api6-open/starachowice/gtfsRealtime/default/tripUpdates",
-        "positions_url": "https://api.zbiorkom.live/api6-open/starachowice/gtfsRealtime/default/vehiclePositions",
-        "positions_format": "gtfsrt_protobuf",
-        "label": "MZK Starachowice",
-    },
-    "gtfs_tarnow": {
-        "gtfs_url": "https://api.zbiorkom.live/api6-open/tarnow/gtfs/default",
-        "rt_url": "https://api.zbiorkom.live/api6-open/tarnow/gtfsRealtime/default/tripUpdates",
-        "positions_url": "https://api.zbiorkom.live/api6-open/tarnow/gtfsRealtime/default/vehiclePositions",
-        "positions_format": "gtfsrt_protobuf",
-        "label": "MPK Tarnów",
-    },
-    "gtfs_walbrzych": {
-        "gtfs_url": "https://api.zbiorkom.live/api6-open/walbrzych/gtfs/default",
-        "rt_url": "https://api.zbiorkom.live/api6-open/walbrzych/gtfsRealtime/default/tripUpdates",
-        "positions_url": "https://api.zbiorkom.live/api6-open/walbrzych/gtfsRealtime/default/vehiclePositions",
-        "positions_format": "gtfsrt_protobuf",
-        "label": "ZKM Wałbrzych",
-    },
-    "gtfs_swinoujscie": {
-        "gtfs_url": "https://api.zbiorkom.live/api6-open/swinoujscie/gtfs/default",
-        "rt_url": "https://api.zbiorkom.live/api6-open/swinoujscie/gtfsRealtime/default/tripUpdates",
-        "positions_url": "https://api.zbiorkom.live/api6-open/swinoujscie/gtfsRealtime/default/vehiclePositions",
-        "positions_format": "gtfsrt_protobuf",
-        "label": "KA Świnoujście",
-    },
-    "gtfs_bydgoszcz": {
-        "gtfs_url": "https://mkuran.pl/gtfs/bydgoszcz.zip",
-        "rt_url": None,
-        "label": "ZDMiKP Bydgoszcz",
-    },
-    "gtfs_mielec": {
-        "gtfs_url": "https://api.zbiorkom.live/api6-open/mielec/gtfs/default",
-        "rt_url": "https://api.zbiorkom.live/api6-open/mielec/gtfsRealtime/default/tripUpdates",
-        "positions_url": "https://api.zbiorkom.live/api6-open/mielec/gtfsRealtime/default/vehiclePositions",
-        "positions_format": "gtfsrt_protobuf",
-        "label": "MKS Mielec",
-    },
-    "gtfs_oswiecim": {
-        "gtfs_url": "https://api.zbiorkom.live/api6-open/oswiecim/gtfs/default",
-        "rt_url": "https://api.zbiorkom.live/api6-open/oswiecim/gtfsRealtime/default/tripUpdates",
-        "positions_url": "https://api.zbiorkom.live/api6-open/oswiecim/gtfsRealtime/default/vehiclePositions",
-        "positions_format": "gtfsrt_protobuf",
-        "label": "MZK Oświęcim",
-    },
-    "gtfs_radomsko": {
-        "gtfs_url": "https://api.zbiorkom.live/api6-open/radomsko/gtfs/default",
-        "rt_url": "https://api.zbiorkom.live/api6-open/radomsko/gtfsRealtime/default/tripUpdates",
-        "positions_url": "https://api.zbiorkom.live/api6-open/radomsko/gtfsRealtime/default/vehiclePositions",
-        "positions_format": "gtfsrt_protobuf",
-        "label": "MPK Radomsko",
-    },
-    "gtfs_debica": {
-        "gtfs_url": "https://api.zbiorkom.live/api6-open/debica/gtfs/default",
-        "rt_url": None,
-        "label": "MKS Dębica",
-    },
-    "gtfs_kolobrzeg": {
-        "gtfs_url": "https://api.zbiorkom.live/api6-open/kolobrzeg/gtfs/default",
-        "rt_url": None,
-        "label": "KM Kołobrzeg",
-    },
-    "gtfs_sanok": {
-        "gtfs_url": "https://api.zbiorkom.live/api6-open/sanok/gtfs/default",
-        "rt_url": None,
-        "label": "SPGK Sanok",
-    },
-    "gtfs_ostroleka": {
-        "gtfs_url": "https://api.zbiorkom.live/api6-open/ostroleka/gtfs/default",
-        "rt_url": None,
-        "label": "MZK Ostrołęka",
-    },
-    "gtfs_leszno": {
-        "gtfs_url": "https://cdn.zbiorkom.live/gtfs/leszno.zip",
-        "rt_url": None,
-        "label": "MZK Leszno",
-    },
-    "gtfsrt_torun": {
-        "gtfs_url": "https://api.zbiorkom.live/api6-open/torun/gtfs/default",
-        "rt_url": "https://api.zbiorkom.live/api6-open/torun/gtfsRealtime/default/tripUpdates",
-        "positions_url": "https://api.zbiorkom.live/api6-open/torun/gtfsRealtime/default/vehiclePositions",
-        "positions_format": "gtfsrt_protobuf",
-        "label": "MZK Toruń",
-    },
-    "gtfsrt_gzm": {
-        "gtfs_url": None,  # Dynamic - fetched from CKAN API
-        "gtfs_package_id": "317435cc-0075-4d10-b8ef-6e9b0010e90a",
-        "rt_url": "https://gtfsrt.transportgzm.pl:5443/gtfsrt/gzm/tripUpdates",
-        "positions_url": "https://gtfsrt.transportgzm.pl:5443/gtfsrt/gzm/vehiclePositions",
-        "positions_format": "gtfsrt_protobuf",
-        "label": "ZTM GZM (Katowice)",
-    },
-    "mpk_lodz": {
-        "gtfs_url": "https://otwarte.miasto.lodz.pl/wp-content/uploads/2025/06/GTFS.zip",
-        "rt_url": "https://otwarte.miasto.lodz.pl/wp-content/uploads/2025/06/trip_updates.bin",
-        "positions_url": "https://otwarte.miasto.lodz.pl/wp-content/uploads/2025/06/vehicle_positions.bin",
-        "label": "MPK \u0141\u00f3d\u017a",
-    },
-}
+from .gtfsrt_cities import GTFSRT_CITIES
+from .gtfsrt_parser import _parse_gtfs_zip, _parse_stop_times_for, _parse_stop_times_from_raw, _parse_gtfsrt_positions, _parse_rt_feed, _get_tomorrow_departures
+from .gtfsrt_gzm import _get_gzm_gtfs_url
 
 
 async def fetch(coord: "MzkzgTransportCoordinator") -> dict:
@@ -376,6 +86,7 @@ async def fetch(coord: "MzkzgTransportCoordinator") -> dict:
             "delay_seconds": delay_sec,
             "realtime": is_realtime,
             "vehicle_type": gtfs["routes"].get(route_id, {}).get("type", "bus"),
+            "route_color": gtfs["routes"].get(route_id, {}).get("color"),
             "vehicle_code": vehicle_code if is_realtime else None,
             "trip_id": trip_id,
             "wheelchair_accessible": trip_data.get("wheelchair"),
@@ -429,274 +140,70 @@ async def fetch(coord: "MzkzgTransportCoordinator") -> dict:
     # If fewer than 5 departures, load tomorrow's schedule
     if len(unique) < 5 and gtfs.get("_raw"):
         tomorrow = now + timedelta(days=1)
-        tomorrow_deps = _get_tomorrow_departures(gtfs, coord.stop_id, tomorrow, now)
+        tomorrow_prefix = f"{tomorrow:%Y%m%d}_"
+        tomorrow_key = f"{tomorrow_prefix}{coord.stop_id}"
+        tomorrow_cache = gtfs.setdefault("_tomorrow_departures", {})
+        if tomorrow_key not in tomorrow_cache:
+            for old_key in list(tomorrow_cache):
+                if not old_key.startswith(tomorrow_prefix):
+                    tomorrow_cache.pop(old_key)
+            tomorrow_cache[tomorrow_key] = await coord.hass.async_add_executor_job(
+                _get_tomorrow_departures, gtfs, coord.stop_id, tomorrow, now
+            )
+        tomorrow_deps = tomorrow_cache[tomorrow_key]
         for d in tomorrow_deps:
             est = (d.get("estimated_time") or "")[:16]
             key = (d.get("route"), d.get("headsign"), est)
             if key not in seen:
                 seen.add(key)
                 unique.append(d)
-                if len(unique) >= 20:
+                if len(unique) >= MAX_DEPARTURES:
                     break
 
     return {
         "stop_id": coord.stop_id,
         "stop_name": coord.stop_name,
         "provider": coord.provider,
-        "departures": unique[:20],
+        "departures": unique[:MAX_DEPARTURES],
         "last_update": now.isoformat(),
     }
 
 
-def _get_tomorrow_departures(gtfs, stop_id, tomorrow, now):
-    """Get scheduled departures for tomorrow from raw GTFS zip."""
-    from datetime import date as dt_date
-    
-    raw = gtfs.get("_raw")
-    if not raw:
-        return []
-    
-    tomorrow_str = tomorrow.strftime("%Y%m%d")
-    day_name = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"][tomorrow.weekday()]
-    
-    # Parse calendar for tomorrow's active services
-    active_services = set()
-    with zipfile.ZipFile(BytesIO(raw)) as zf:
-        header, rows = _read_csv(zf, "calendar.txt")
-        if header:
-            sid_idx = header.index("service_id")
-            day_idx = header.index(day_name) if day_name in header else -1
-            start_idx = header.index("start_date") if "start_date" in header else -1
-            end_idx = header.index("end_date") if "end_date" in header else -1
-            for parts in rows:
-                if len(parts) <= sid_idx:
-                    continue
-                active = day_idx >= 0 and len(parts) > day_idx and parts[day_idx] == "1"
-                if active and start_idx >= 0 and end_idx >= 0 and len(parts) > max(start_idx, end_idx):
-                    if parts[start_idx] > tomorrow_str or parts[end_idx] < tomorrow_str:
-                        active = False
-                if active:
-                    active_services.add(parts[sid_idx])
-
-        header, rows = _read_csv(zf, "calendar_dates.txt")
-        if header:
-            sid_idx = header.index("service_id")
-            date_idx = header.index("date")
-            etype_idx = header.index("exception_type")
-            for parts in rows:
-                if len(parts) <= max(sid_idx, date_idx, etype_idx):
-                    continue
-                if parts[date_idx] != tomorrow_str:
-                    continue
-                if parts[etype_idx] == "1":
-                    active_services.add(parts[sid_idx])
-                elif parts[etype_idx] == "2":
-                    active_services.discard(parts[sid_idx])
-
-    if not active_services:
-        return []
-
-    tomorrow_trips = {}
-    stop_times = []
-    with zipfile.ZipFile(BytesIO(raw)) as zf:
-        header, rows = _read_csv(zf, "trips.txt")
-        if header:
-            tid_idx = header.index("trip_id")
-            rid_idx = header.index("route_id")
-            svc_idx = header.index("service_id")
-            hs_idx = header.index("trip_headsign") if "trip_headsign" in header else -1
-            for parts in rows:
-                if len(parts) <= max(tid_idx, rid_idx, svc_idx):
-                    continue
-                if parts[svc_idx] not in active_services:
-                    continue
-                tomorrow_trips[parts[tid_idx]] = {
-                    "route_id": parts[rid_idx],
-                    "headsign": parts[hs_idx] if hs_idx >= 0 and len(parts) > hs_idx else "",
-                }
-
-        header, rows = _read_csv(zf, "stop_times.txt")
-        if header:
-            tid_idx = header.index("trip_id")
-            sid_idx = header.index("stop_id")
-            time_column = "departure_time" if "departure_time" in header else "arrival_time"
-            time_idx = header.index(time_column)
-            hs_idx = header.index("stop_headsign") if "stop_headsign" in header else -1
-            for parts in rows:
-                if len(parts) <= max(tid_idx, sid_idx, time_idx) or parts[sid_idx] != stop_id:
-                    continue
-                trip_id = parts[tid_idx]
-                trip = tomorrow_trips.get(trip_id)
-                if not trip:
-                    continue
-                try:
-                    h, m, s = map(int, parts[time_idx].split(":"))
-                except (TypeError, ValueError):
-                    continue
-                stop_times.append({
-                    "trip_id": trip_id,
-                    "route_id": trip["route_id"],
-                    "departure_time": (h, m, s),
-                    "headsign": parts[hs_idx] if hs_idx >= 0 and len(parts) > hs_idx else "",
-                })
-
-    departures = []
-    
-    for st in stop_times:
-        trip_id = st["trip_id"]
-        trip = tomorrow_trips[trip_id]
-        
-        route_id = st["route_id"]
-        route_name = gtfs["routes"].get(route_id, {}).get("short_name", route_id)
-        headsign = st.get("headsign") or trip.get("headsign", "")
-        
-        h, m, s = st["departure_time"]
-        dep_dt = tomorrow.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(hours=h, minutes=m, seconds=s)
-        
-        if dep_dt < now:
-            continue
-
-        departures.append({
-            "route": route_name,
-            "headsign": headsign,
-            "estimated_time": dep_dt.isoformat(),
-            "theoretical_time": dep_dt.isoformat(),
-            "delay_seconds": 0,
-            "realtime": False,
-            "vehicle_type": gtfs["routes"].get(route_id, {}).get("type", "bus"),
-            "provider": "schedule",
-        })
-
-    departures.sort(key=lambda x: x.get("estimated_time") or "")
-    return departures[:15]
-
-
-# Bytes pulled from the end of a remote zip — enough for the central directory
-# of a GTFS feed (~20 members), which is what zipfile needs to locate a member.
-_ZIP_TAIL_BYTES = 65536
-
-
-async def _fetch_range(session, url: str, start: int, end: int):
-    """Fetch bytes [start, end] of a remote file. Returns (data, status) or (None, status)."""
-    headers = {"Range": f"bytes={start}-{end}"}
-    async with session.get(
-        url, headers=headers, timeout=aiohttp.ClientTimeout(total=30)
-    ) as resp:
-        if resp.status not in (200, 206):
-            return None, resp.status
-        return await resp.read(), resp.status
-
-
-async def _peek_zip_member(session, url: str, size: int, member: str) -> str | None:
-    """Read a single small member out of a remote zip using HTTP range requests.
-
-    Avoids downloading the whole archive (GZM ships ~10 MB per zip, 20+ zips) just to
-    read a few hundred bytes of calendar.txt. Returns the decoded text, or None if the
-    member is absent or the server does not honour range requests.
-    """
-    tail_len = min(_ZIP_TAIL_BYTES, size)
-    data, status = await _fetch_range(session, url, size - tail_len, size - 1)
-    if data is None:
-        return None
-
-    if status == 200:
-        # Server ignored the Range header and sent the whole archive.
-        with zipfile.ZipFile(BytesIO(data)) as zf:
-            return zf.read(member).decode("utf-8-sig")
-
-    # Rebuild a sparse copy of the archive: only the regions we actually fetch are
-    # populated, which is all zipfile touches (end-of-central-directory, then the
-    # member's local header + data at its recorded offset). Slice assignment must stay
-    # length-exact or every recorded offset shifts.
-    if len(data) != tail_len:
-        return None
-    buf = bytearray(size)
-    buf[size - tail_len:] = data
-
-    with zipfile.ZipFile(BytesIO(bytes(buf))) as zf:
-        info = zf.getinfo(member)
-
-    start = info.header_offset
-    # local header (30 B) + filename + extra field (padded) + compressed payload
-    end = min(start + 30 + len(info.filename) + 128 + info.compress_size + 32, size - 1)
-    chunk, _ = await _fetch_range(session, url, start, end)
-    if chunk is None:
-        return None
-    buf[start:start + len(chunk)] = chunk
-
-    with zipfile.ZipFile(BytesIO(bytes(buf))) as zf:
-        return zf.read(member).decode("utf-8-sig")
-
-
-def _calendar_covers(text: str, target) -> bool:
-    """True if calendar.txt declares a service running on the target date."""
-    day_name = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"][target.weekday()]
-    target_str = target.strftime("%Y%m%d")
-    for row in csv.DictReader(StringIO(text)):
-        if row.get(day_name) != "1":
-            continue
-        if (row.get("start_date") or "") <= target_str <= (row.get("end_date") or ""):
-            return True
-    return False
-
-
-async def _get_gzm_gtfs_url(session, package_id: str, target_date=None) -> str | None:
-    """Fetch the GZM GTFS URL covering target_date (default: today) from the CKAN API.
-
-    GZM publishes one archive per service day rather than a single rolling feed, and the
-    CKAN resource list is not ordered by the day each archive covers — its names only
-    carry the *publication* date. Picking an arbitrary resource yields an archive whose
-    calendar.txt does not include today, so every trip is filtered out as inactive and
-    the stop reports no departures (issue #13). Probe each candidate's calendar.txt and
-    take the first one that actually covers the day we need.
-    """
-    try:
-        ckan_url = f"https://otwartedane.metropoliagzm.pl/api/3/action/package_show?id={package_id}"
-        async with session.get(ckan_url, timeout=aiohttp.ClientTimeout(total=15)) as resp:
-            if resp.status != 200:
-                return None
-            data = await resp.json()
-
-        resources = [
-            r
-            for r in data.get("result", {}).get("resources", [])
-            if "schedule" in (r.get("name") or "").lower()
-            and (r.get("format") or "").lower() == "zip"
-        ]
-        if not resources:
-            return None
-
-        if target_date is None:
-            target_date = dt_util.now().date()
-
-        # Most recently published first, so a re-issued archive wins over a stale one.
-        resources.sort(key=lambda r: r.get("last_modified") or r.get("created") or "", reverse=True)
-
-        for r in resources:
-            url, size = r.get("url"), r.get("size")
-            if not url or not size:
-                continue
-            try:
-                calendar = await _peek_zip_member(session, url, int(size), "calendar.txt")
-            except (KeyError, zipfile.BadZipFile, aiohttp.ClientError, OSError) as e:
-                _LOGGER.debug("GZM: could not inspect %s: %s", r.get("name"), e)
-                continue
-            if calendar and _calendar_covers(calendar, target_date):
-                _LOGGER.debug("GZM: using %s for %s", r.get("name"), target_date)
-                return url
-
-        _LOGGER.warning(
-            "GZM: no GTFS archive covers %s; falling back to most recent (%s)",
-            target_date,
-            resources[0].get("name"),
-        )
-        return resources[0].get("url")
-    except Exception as e:
-        _LOGGER.debug("GZM CKAN lookup failed: %s", e)
-        return None
-
-
 async def _get_gtfs_data(coord, session, city_cfg, now):
+    """Load GTFS data once when several stops refresh concurrently."""
+    domain_data = coord.hass.data[DOMAIN]
+    locks = domain_data.setdefault("_gtfsrt_locks", {})
+    lock = locks.setdefault(coord.provider, asyncio.Lock())
+    async with lock:
+        return await _get_gtfs_data_locked(coord, session, city_cfg, now)
+
+
+async def _download_zip(coord, session, url, path_suffix):
+    import os
+    zip_path = coord.hass.config.path(f"mzkzg_gtfs_{coord.provider}{path_suffix}.zip")
+    try:
+        async with session.get(url, timeout=aiohttp.ClientTimeout(total=120)) as resp:
+            if resp.status != 200:
+                raise Exception(f"HTTP {resp.status}")
+            data = await resp.read()
+        def save_zip():
+            with open(zip_path, "wb") as f:
+                f.write(data)
+        await coord.hass.async_add_executor_job(save_zip)
+        return data
+    except Exception as e:
+        def load_zip():
+            if os.path.exists(zip_path):
+                with open(zip_path, "rb") as f:
+                    return f.read()
+            return None
+        data = await coord.hass.async_add_executor_job(load_zip)
+        if not data:
+            _LOGGER.warning("GTFS-RT: failed to fetch GTFS for %s (%s): %s", coord.provider, path_suffix, e)
+            return None
+        return data
+
+async def _get_gtfs_data_locked(coord, session, city_cfg, now):
     """Load and cache parsed GTFS data (daily)."""
     cache = coord.hass.data[DOMAIN].setdefault("_gtfsrt_cache", {})
     today = now.strftime("%Y%m%d")
@@ -704,295 +211,61 @@ async def _get_gtfs_data(coord, session, city_cfg, now):
 
     if cache.get(cache_key):
         gtfs = cache[cache_key]
-        # Parse stop_times for this specific stop if not already done
         if coord.stop_id not in gtfs["stop_times"] and gtfs.get("_raw"):
-            _parse_stop_times_for(gtfs, coord.stop_id)
+            await coord.hass.async_add_executor_job(_parse_stop_times_for, gtfs, coord.stop_id)
         return gtfs
 
-    # Clean old cache entries for this provider (memory leak fix)
     prefix = f"{coord.provider}_"
     for old_key in list(cache.keys()):
         if old_key.startswith(prefix) and old_key != cache_key:
             old_gtfs = cache.pop(old_key, None)
             if old_gtfs:
-                # Free raw zip memory
                 old_gtfs.pop("_raw", None)
                 old_gtfs.pop("_raw_tram", None)
             _LOGGER.debug("Cleaned old GTFS cache: %s", old_key)
 
     try:
         gtfs_url = city_cfg.get("gtfs_url")
-        
-        # Dynamic URL for GZM — must be the archive covering today's service day
         if not gtfs_url and city_cfg.get("gtfs_package_id"):
             gtfs_url = await _get_gzm_gtfs_url(session, city_cfg["gtfs_package_id"], now.date())
             if not gtfs_url:
                 _LOGGER.warning("GTFS-RT: could not get dynamic URL for GZM")
                 return None
 
-        async with session.get(gtfs_url, timeout=aiohttp.ClientTimeout(total=120)) as resp:
-            if resp.status != 200:
-                return None
-            data = await resp.read()
-
-        gtfs = _parse_gtfs_zip(data)
-
-        # Merge secondary GTFS zip (e.g. Kraków tram)
+        # P1 Performance: Parallel GTFS downloads
+        tasks = [_download_zip(coord, session, gtfs_url, "")]
         if city_cfg.get("gtfs_url_tram"):
-            try:
-                async with session.get(city_cfg["gtfs_url_tram"], timeout=aiohttp.ClientTimeout(total=120)) as resp2:
-                    if resp2.status == 200:
-                        data2 = await resp2.read()
-                        gtfs2 = _parse_gtfs_zip(data2)
-                        gtfs["stops"].update(gtfs2["stops"])
-                        gtfs["routes"].update(gtfs2["routes"])
-                        gtfs["trips"].update(gtfs2["trips"])
-                        # Store secondary raw zip for stop_times parsing
-                        gtfs["_raw_tram"] = data2
-            except Exception as e:
-                _LOGGER.debug("GTFS-RT: failed to load tram GTFS for %s: %s", coord.provider, e)
+            tasks.append(_download_zip(coord, session, city_cfg["gtfs_url_tram"], "_tram"))
+            
+        results = await asyncio.gather(*tasks)
+        data = results[0]
+        data2 = results[1] if len(results) > 1 else None
+
+        if not data:
+            _LOGGER.warning("GTFS-RT: Network failed and no local fallback for %s", coord.provider)
+            return None
+
+        gtfs = await coord.hass.async_add_executor_job(_parse_gtfs_zip, data)
+
+        if city_cfg.get("gtfs_url_tram"):
+            if data2:
+                try:
+                    gtfs2 = await coord.hass.async_add_executor_job(_parse_gtfs_zip, data2)
+                    gtfs["stops"].update(gtfs2["stops"])
+                    gtfs["routes"].update(gtfs2["routes"])
+                    gtfs["trips"].update(gtfs2["trips"])
+                    gtfs["_raw_tram"] = data2
+                except Exception as e:
+                    _LOGGER.debug("GTFS-RT: failed to parse tram GTFS for %s: %s", coord.provider, e)
 
         cache[cache_key] = gtfs
         # Parse stop_times for current stop
         if coord.stop_id not in gtfs["stop_times"]:
-            _parse_stop_times_for(gtfs, coord.stop_id)
+            await coord.hass.async_add_executor_job(_parse_stop_times_for, gtfs, coord.stop_id)
         return gtfs
     except Exception as e:
         _LOGGER.warning("GTFS-RT: failed to load GTFS for %s: %s", coord.provider, e)
         return cache.get(cache_key)
-
-
-def _parse_gtfs_zip(data: bytes) -> dict:
-    """Parse relevant GTFS files from zip."""
-    from datetime import date as dt_date
-
-    stops = {}
-    routes = {}
-    trips = {}
-    stop_times = {}  # stop_id -> list of {trip_id, route_id, departure_time, headsign}
-    raw_zip = data
-    today = dt_date.today()
-    today_str = today.strftime("%Y%m%d")
-    day_name = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"][today.weekday()]
-
-    with zipfile.ZipFile(BytesIO(data)) as zf:
-        # calendar.txt — active services
-        active_services = set()
-        has_calendar = False
-        any_weekday_match = False
-        header, rows = _read_csv(zf, "calendar.txt")
-        if header:
-            has_calendar = True
-            sid_idx = header.index("service_id")
-            day_idx = header.index(day_name) if day_name in header else -1
-            start_idx = header.index("start_date") if "start_date" in header else -1
-            end_idx = header.index("end_date") if "end_date" in header else -1
-            for parts in rows:
-                if len(parts) <= sid_idx:
-                    continue
-                svc = parts[sid_idx]
-                active = day_idx >= 0 and len(parts) > day_idx and parts[day_idx] == "1"
-                if active:
-                    any_weekday_match = True
-                if active and start_idx >= 0 and end_idx >= 0 and len(parts) > max(start_idx, end_idx):
-                    if parts[start_idx] > today_str or parts[end_idx] < today_str:
-                        active = False
-                if active:
-                    active_services.add(svc)
-
-        # calendar_dates.txt — exceptions
-        header, rows = _read_csv(zf, "calendar_dates.txt")
-        if header:
-            has_calendar = True
-            sid_idx = header.index("service_id")
-            date_idx = header.index("date")
-            etype_idx = header.index("exception_type")
-            for parts in rows:
-                if len(parts) <= max(sid_idx, date_idx, etype_idx):
-                    continue
-                if parts[date_idx] != today_str:
-                    continue
-                svc = parts[sid_idx]
-                if parts[etype_idx] == "1":
-                    active_services.add(svc)
-                elif parts[etype_idx] == "2":
-                    active_services.discard(svc)
-
-        # stops.txt
-        header, rows = _read_csv(zf, "stops.txt")
-        if header:
-            id_idx = header.index("stop_id")
-            name_idx = header.index("stop_name")
-            for parts in rows:
-                if len(parts) > max(id_idx, name_idx):
-                    stops[parts[id_idx]] = {"name": parts[name_idx]}
-
-        # routes.txt
-        header, rows = _read_csv(zf, "routes.txt")
-        if header:
-            id_idx = header.index("route_id")
-            sn_idx = header.index("route_short_name") if "route_short_name" in header else -1
-            rt_idx = header.index("route_type") if "route_type" in header else -1
-            for parts in rows:
-                if len(parts) > id_idx:
-                    rid = parts[id_idx]
-                    short = parts[sn_idx] if sn_idx >= 0 and len(parts) > sn_idx else rid
-                    rtype = "tram" if rt_idx >= 0 and len(parts) > rt_idx and parts[rt_idx] == "0" else "bus"
-                    routes[rid] = {"short_name": short, "type": rtype}
-
-        # trips.txt
-        header, rows = _read_csv(zf, "trips.txt")
-        if header:
-            tid_idx = header.index("trip_id")
-            rid_idx = header.index("route_id")
-            hs_idx = header.index("trip_headsign") if "trip_headsign" in header else -1
-            svc_idx = header.index("service_id") if "service_id" in header else -1
-            wc_idx = header.index("wheelchair_accessible") if "wheelchair_accessible" in header else -1
-            bike_idx = header.index("bikes_allowed") if "bikes_allowed" in header else -1
-            filter_by_service = has_calendar and any_weekday_match
-            for parts in rows:
-                if len(parts) > max(tid_idx, rid_idx):
-                    tid = parts[tid_idx]
-                    if filter_by_service and svc_idx >= 0 and len(parts) > svc_idx:
-                        if parts[svc_idx] not in active_services:
-                            continue
-                    rid = parts[rid_idx]
-                    hs = parts[hs_idx] if hs_idx >= 0 and len(parts) > hs_idx else ""
-                    trip = {"route_id": rid, "headsign": hs}
-                    if wc_idx >= 0 and len(parts) > wc_idx and parts[wc_idx] == "1":
-                        trip["wheelchair"] = True
-                    if bike_idx >= 0 and len(parts) > bike_idx and parts[bike_idx] == "1":
-                        trip["bike"] = True
-                    trips[tid] = trip
-
-        # Store raw zip for on-demand stop_times parsing
-        raw_zip = data
-
-    return {"stops": stops, "routes": routes, "trips": trips, "stop_times": stop_times, "_raw": raw_zip}
-
-
-def _parse_stop_times_for(gtfs, stop_id):
-    """Parse stop_times from cached raw zip for a specific stop."""
-    raw = gtfs.get("_raw")
-    if not raw:
-        return
-    trips = gtfs["trips"]
-    stops = gtfs["stops"]
-    with zipfile.ZipFile(BytesIO(raw)) as zf:
-        if "stop_times.txt" not in zf.namelist():
-            return
-        text = zf.read("stop_times.txt").decode("utf-8-sig")
-        reader = csv.reader(StringIO(text))
-        header = next(reader)
-        tid_idx = header.index("trip_id")
-        sid_idx = header.index("stop_id")
-        dep_idx = header.index("departure_time")
-        hs_idx = header.index("stop_headsign") if "stop_headsign" in header else -1
-        seq_idx = header.index("stop_sequence") if "stop_sequence" in header else -1
-
-        # First pass: collect our stop's entries + track last stop per trip (for headsign)
-        our_entries = []
-        last_seq_per_trip = {}  # trip_id -> (max_seq, stop_id)
-        need_headsign = set()
-
-        for parts in reader:
-            if len(parts) <= max(tid_idx, sid_idx, dep_idx):
-                continue
-            tid = parts[tid_idx]
-            if tid not in trips:
-                continue
-            sid = parts[sid_idx]
-            seq = int(parts[seq_idx]) if seq_idx >= 0 and len(parts) > seq_idx and parts[seq_idx].isdigit() else 0
-
-            if sid == stop_id:
-                dep_str = parts[dep_idx]
-                try:
-                    h, m, s = [int(x) for x in dep_str.split(":")]
-                except (ValueError, IndexError):
-                    continue
-                hs = ""
-                if hs_idx >= 0 and len(parts) > hs_idx:
-                    hs = parts[hs_idx]
-                hs = hs or trips[tid].get("headsign", "")
-                our_entries.append({"trip_id": tid, "route_id": trips[tid].get("route_id", ""), "departure_time": (h, m, s), "headsign": hs, "stop_sequence": str(seq)})
-                if not hs:
-                    need_headsign.add(tid)
-
-            # Track last stop for trips needing headsign
-            if tid in need_headsign or (sid == stop_id and not trips[tid].get("headsign")):
-                prev = last_seq_per_trip.get(tid, (-1, ""))
-                if seq > prev[0]:
-                    last_seq_per_trip[tid] = (seq, sid)
-
-        # Fill in headsigns from last stop name
-        if need_headsign and last_seq_per_trip:
-            for entry in our_entries:
-                if not entry["headsign"] and entry["trip_id"] in last_seq_per_trip:
-                    last_sid = last_seq_per_trip[entry["trip_id"]][1]
-                    entry["headsign"] = stops.get(last_sid, {}).get("name", "")
-
-        gtfs["stop_times"][stop_id] = our_entries
-
-    # Also parse from secondary (tram) zip if present
-    if gtfs.get("_raw_tram"):
-        _parse_stop_times_from_raw(gtfs, stop_id, gtfs["_raw_tram"])
-
-
-def _parse_stop_times_from_raw(gtfs, stop_id, raw_data):
-    """Parse stop_times from a raw GTFS zip and append to gtfs['stop_times'][stop_id]."""
-    trips = gtfs["trips"]
-    stops = gtfs["stops"]
-    with zipfile.ZipFile(BytesIO(raw_data)) as zf:
-        if "stop_times.txt" not in zf.namelist():
-            return
-        text = zf.read("stop_times.txt").decode("utf-8-sig")
-        reader = csv.reader(StringIO(text))
-        header = next(reader)
-        tid_idx = header.index("trip_id")
-        sid_idx = header.index("stop_id")
-        dep_idx = header.index("departure_time")
-        hs_idx = header.index("stop_headsign") if "stop_headsign" in header else -1
-        seq_idx = header.index("stop_sequence") if "stop_sequence" in header else -1
-
-        our_entries = []
-        last_seq_per_trip = {}
-        need_headsign = set()
-
-        for parts in reader:
-            if len(parts) <= max(tid_idx, sid_idx, dep_idx):
-                continue
-            tid = parts[tid_idx]
-            if tid not in trips:
-                continue
-            sid = parts[sid_idx]
-            seq = int(parts[seq_idx]) if seq_idx >= 0 and len(parts) > seq_idx and parts[seq_idx].isdigit() else 0
-
-            if sid == stop_id:
-                dep_str = parts[dep_idx]
-                try:
-                    h, m, s = [int(x) for x in dep_str.split(":")]
-                except (ValueError, IndexError):
-                    continue
-                hs = ""
-                if hs_idx >= 0 and len(parts) > hs_idx:
-                    hs = parts[hs_idx]
-                hs = hs or trips[tid].get("headsign", "")
-                our_entries.append({"trip_id": tid, "route_id": trips[tid].get("route_id", ""), "departure_time": (h, m, s), "headsign": hs, "stop_sequence": str(seq)})
-                if not hs:
-                    need_headsign.add(tid)
-
-            if tid in need_headsign or (sid == stop_id and not trips[tid].get("headsign")):
-                prev = last_seq_per_trip.get(tid, (-1, ""))
-                if seq > prev[0]:
-                    last_seq_per_trip[tid] = (seq, sid)
-
-        if need_headsign and last_seq_per_trip:
-            for entry in our_entries:
-                if not entry["headsign"] and entry["trip_id"] in last_seq_per_trip:
-                    last_sid = last_seq_per_trip[entry["trip_id"]][1]
-                    entry["headsign"] = stops.get(last_sid, {}).get("name", "")
-
-        gtfs["stop_times"].setdefault(stop_id, []).extend(our_entries)
 
 
 async def _get_vehicle_dict(coord, session, city_cfg) -> dict:
@@ -1149,39 +422,6 @@ async def _enrich_with_gps_positions(coord, session, city_cfg, departures):
         _LOGGER.debug("GPS positions failed for %s: %s", coord.provider, e)
 
 
-def _parse_gtfsrt_positions(raw):
-    """Parse a GTFS-RT VehiclePositions payload into positions keyed by vehicle ID."""
-    from google.transit import gtfs_realtime_pb2
-
-    feed = gtfs_realtime_pb2.FeedMessage()
-    feed.ParseFromString(raw)
-    positions = {}
-    for entity in feed.entity:
-        if not entity.HasField("vehicle"):
-            continue
-        vehicle = entity.vehicle
-        vehicle_id = vehicle.vehicle.id or vehicle.vehicle.label or ""
-        vehicle_id = vehicle_id.split("/")[-1] if "/" in vehicle_id else vehicle_id
-        if not vehicle_id or not vehicle.HasField("position"):
-            continue
-        entry = {
-            "lat": vehicle.position.latitude,
-            "lng": vehicle.position.longitude,
-        }
-        try:
-            entry["bearing"] = vehicle.position.bearing if vehicle.position.HasField("bearing") else None
-        except (ValueError, AttributeError):
-            pass
-        try:
-            entry["speed"] = vehicle.position.speed if vehicle.position.HasField("speed") else None
-        except (ValueError, AttributeError):
-            pass
-        if vehicle.HasField("trip") and vehicle.trip.route_id:
-            entry["route_id"] = vehicle.trip.route_id
-        positions[vehicle_id] = entry
-    return positions
-
-
 def _apply_positions(departures, positions):
     """Add vehicle_lat/lng to departures matching positions by vehicle_code (or route_id fallback)."""
     # Build route_id → best position map for cities without vehicle_code (e.g. Wrocław)
@@ -1207,6 +447,11 @@ def _apply_positions(departures, positions):
                 candidates.append(candidates.pop(0))  # round-robin
         if p is None:
             continue
+        
+        # P1 Data Quality: Reject sentinel (0.0, 0.0) coordinates
+        if abs(p["lat"]) < 0.0001 and abs(p["lng"]) < 0.0001:
+            continue
+            
         d["vehicle_lat"] = p["lat"]
         d["vehicle_lng"] = p["lng"]
         if p.get("bearing") is not None:
@@ -1236,7 +481,7 @@ async def _get_rt_delays(session, rt_url: str) -> dict:
                 _LOGGER.debug("GTFS-RT attempt %d failed: %s, retrying...", attempt + 1, e)
                 await asyncio.sleep([1, 3, 7][attempt])
         except Exception as e:
-            _LOGGER.warning("GTFS-RT: failed to fetch RT data from %s: %s", rt_url, e)
+            _LOGGER.debug("GTFS-RT: failed to parse RT data from %s: %s", rt_url, e)
             return {}
     
     if last_err:
@@ -1244,28 +489,3 @@ async def _get_rt_delays(session, rt_url: str) -> dict:
     return {}
 
 
-def _parse_rt_feed(feed) -> dict:
-    """Parse a GTFS-RT FeedMessage into {key: (delay, vehicle_label)} with route-level fallback."""
-    delays = {}
-    for entity in feed.entity:
-        if not entity.HasField("trip_update"):
-            continue
-        trip_id = entity.trip_update.trip.trip_id
-        route_id = entity.trip_update.trip.route_id if entity.trip_update.trip.route_id else ""
-        vehicle_label = ""
-        if entity.trip_update.HasField("vehicle"):
-            v = entity.trip_update.vehicle
-            vid = v.id or v.label or ""
-            vehicle_label = vid.split("/")[-1] if "/" in vid else vid
-        for stu in entity.trip_update.stop_time_update:
-            delay = stu.departure.delay if stu.HasField("departure") else (stu.arrival.delay if stu.HasField("arrival") else 0)
-            if stu.stop_id:
-                delays[f"{trip_id}_{stu.stop_id}"] = (delay, vehicle_label)
-                if route_id:
-                    delays[f"route_{route_id}_{stu.stop_id}"] = (delay, vehicle_label)
-            if stu.stop_sequence:
-                delays[f"{trip_id}_seq{stu.stop_sequence}"] = (delay, vehicle_label)
-            delays[trip_id] = (delay, vehicle_label)
-            if route_id:
-                delays[f"route_{route_id}"] = (delay, vehicle_label)
-    return delays

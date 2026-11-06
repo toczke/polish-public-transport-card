@@ -2,29 +2,26 @@ name: CI
 
 on:
   push:
-    branches: [main, code-cleanup, '**']
+    branches: [main, code-cleanup, "**"]
+    tags: ["v*"]
   pull_request:
     branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-  HA_URL: ${{ secrets.HA_URL || 'http://localhost:8123' }}
 
 jobs:
-  test:
-    runs-on: self-hosted
-    strategy:
-      fail-fast: false
-      matrix:
-        city:
-          - {name: "Gdańsk (ZTM)", marker: "gdansk"}
-          - {name: "Gdynia (ZKM)", marker: "gdynia"}
-          - {name: "Tczew (Time4Bus)", marker: "tczew"}
-          - {name: "KiedyPrzyjedzie", marker: "kiedyprzyjedzie"}
-          - {name: "GTFS-RT", marker: "gtfsrt"}
-          - {name: "Łódź", marker: "lodz"}
-          - {name: "Common", marker: "common"}
-    name: test-${{ matrix.city.marker }}
+  python:
+    name: Python tests
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -32,92 +29,127 @@ jobs:
           python-version: "3.12"
           cache: pip
           cache-dependency-path: requirements_test.txt
-      - run: pip install -r requirements_test.txt
-      - name: "Test: ${{ matrix.city.name }}"
-        run: python -m pytest tests/ -m "${{ matrix.city.marker }}" -q --tb=short
+      - name: Install test dependencies
+        run: pip install -r requirements_test.txt
+      - name: Compile Python
+        run: python -m compileall -q custom_components tests
+      - name: Run full test suite
+        run: python -m pytest -q --tb=short
 
-  test-plk:
-    runs-on: self-hosted
-    if: always()
-    continue-on-error: true
-    name: test-plk (PKP/PLK)
+  frontend:
+    name: Frontend lint and build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Build card
+        run: npm run build
+      - name: Verify committed card is up to date
+        run: |
+          if ! git diff --exit-code -- custom_components/mzkzg_transport/www/polish-transport-card.js; then
+            echo "::error::The built card is stale. Run 'npm run build' and commit the result."
+            exit 1
+          fi
+
+  validate:
+    name: Manifest, translations and HACS
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-          cache: pip
-          cache-dependency-path: requirements_test.txt
-      - run: pip install -r requirements_test.txt
-      - name: Test PLK
-        run: python -m pytest tests/ -m "plk" -q --tb=short
+      - name: Validate manifest, translations and versions
+        run: |
+          python - <<'PY'
+          import json, os, re, sys
+          from pathlib import Path
+
+          manifest = json.loads(Path("custom_components/mzkzg_transport/manifest.json").read_text(encoding="utf-8"))
+          hacs = json.loads(Path("hacs.json").read_text(encoding="utf-8"))
+          en = json.loads(Path("custom_components/mzkzg_transport/translations/en.json").read_text(encoding="utf-8"))
+          pl = json.loads(Path("custom_components/mzkzg_transport/translations/pl.json").read_text(encoding="utf-8"))
+
+          assert manifest.get("domain") == "mzkzg_transport", manifest
+          assert manifest.get("version"), "manifest.version is missing"
+          assert manifest.get("config_flow") is True
+          assert hacs.get("name"), "hacs.json is missing name"
+          assert en.keys() == pl.keys(), f"translation sections differ: {en.keys() ^ pl.keys()}"
+          for section in ("config", "options"):
+              if section in en:
+                  assert en[section] == pl[section] or en[section].keys() == pl[section].keys()
+
+          src = Path("src/utils.js").read_text(encoding="utf-8")
+          card_version = re.search(r'MZKZG_VERSION\s*=\s*"([^"]+)"', src)
+          assert card_version, "MZKZG_VERSION missing from src/utils.js"
+          assert card_version.group(1) == manifest["version"], (
+              f"manifest {manifest['version']} != card {card_version.group(1)}"
+          )
+
+          ref = os.environ.get("GITHUB_REF", "")
+          if ref.startswith("refs/tags/v"):
+              tag_version = ref.rsplit("/", 1)[-1].lstrip("v")
+              assert tag_version == manifest["version"], (
+                  f"tag {tag_version} != manifest {manifest['version']}"
+              )
+
+          print(f"OK: {manifest['domain']} v{manifest['version']}")
+          PY
+
+      - name: Home Assistant hassfest
+        uses: home-assistant/actions/hassfest@master
+
+      - name: HACS validation
+        uses: hacs/action@main
+        with:
+          category: integration
 
   e2e:
-    runs-on: self-hosted
-    needs: [test]
+    name: Card E2E (optional)
+    runs-on: ubuntu-latest
+    needs: [frontend]
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: "24"
+          cache: npm
       - name: Check HA availability
-        id: ha_check
-        run: curl -sf $HA_URL/api/ -o /dev/null && echo "available=true" >> $GITHUB_OUTPUT || echo "available=false" >> $GITHUB_OUTPUT
-      - name: Install Playwright
-        if: steps.ha_check.outputs.available == 'true'
+        id: ha
+        env:
+          HA_URL: ${{ secrets.HA_URL || 'http://localhost:8123' }}
+        run: |
+          if curl -sf "$HA_URL/api/" -o /dev/null; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Install browsers
+        if: steps.ha.outputs.available == 'true'
         run: |
           npm ci
           npx playwright install --with-deps chromium
-      - name: Run E2E tests
-        if: steps.ha_check.outputs.available == 'true'
+      - name: Run E2E
+        if: steps.ha.outputs.available == 'true'
         run: npx playwright test
-      - name: Skip E2E (HA not available)
-        if: steps.ha_check.outputs.available != 'true'
-        run: echo "E2E skipped - Home Assistant not reachable"
+      - name: Skip E2E
+        if: steps.ha.outputs.available != 'true'
+        run: echo "Home Assistant is not reachable; E2E skipped."
 
-  lint:
-    runs-on: self-hosted
+  release-gate:
+    name: Release gate
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    needs: [python, frontend, validate]
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "24"
-      - name: Check Python syntax
-        run: python -m py_compile custom_components/mzkzg_transport/*.py
-      - name: Check JS syntax
-        run: node --check custom_components/mzkzg_transport/www/polish-transport-card.js
-
-  validate:
-    runs-on: self-hosted
-    steps:
-      - uses: actions/checkout@v4
-      - name: Validate manifest
-        run: |
-          python3 << 'EOF'
-          import json
-          m=json.load(open('custom_components/mzkzg_transport/manifest.json'))
-          assert 'version' in m
-          assert 'domain' in m
-          print(f'OK: {m["domain"]} v{m["version"]}')
-          EOF
-      - name: Validate translations
-        run: |
-          python3 << 'EOF'
-          import json
-          en = set(json.load(open('custom_components/mzkzg_transport/translations/en.json')).keys())
-          pl = set(json.load(open('custom_components/mzkzg_transport/translations/pl.json')).keys())
-          assert en == pl, f'Mismatch: {en ^ pl}'
-          print('Translations OK')
-          EOF
-      - name: Validate HACS
-        run: |
-          python3 << 'EOF'
-          import json
-          h=json.load(open('hacs.json'))
-          assert 'name' in h
-          print(f'HACS OK: {h["name"]}')
-          EOF
+      - name: Confirm release tag is fully green
+        run: echo "All CI jobs passed for ${GITHUB_REF_NAME}."

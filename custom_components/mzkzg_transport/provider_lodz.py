@@ -286,8 +286,8 @@ async def _load_gtfs(coord, session=None) -> dict | None:
                     mapping.setdefault(stop_id, []).append(stop_id)
 
         # Parse full GTFS schedule
-        from .provider_gtfsrt import _parse_gtfs_zip
-        gtfs = _parse_gtfs_zip(zip_bytes)
+        from .gtfsrt_parser import _parse_gtfs_zip
+        gtfs = await coord.hass.async_add_executor_job(_parse_gtfs_zip, zip_bytes)
 
         result = {"stop_mapping": mapping, "gtfs": gtfs, "_date": today}
         cache.clear()
@@ -353,7 +353,7 @@ async def _get_gtfs_zip(coord, session=None) -> bytes | None:
     if await loop.run_in_executor(None, _zip_exists):
         try:
             async with http_session.head(
-                LODZ_GTFS_URL, timeout=aiohttp.ClientTimeout(total=15), ssl=False
+                LODZ_GTFS_URL, timeout=aiohttp.ClientTimeout(total=15)
             ) as resp:
                 if resp.status == 200:
                     remote_etag = resp.headers.get("ETag", "")
@@ -380,7 +380,7 @@ async def _get_gtfs_zip(coord, session=None) -> bytes | None:
     if need_download:
         try:
             async with http_session.get(
-                LODZ_GTFS_URL, timeout=aiohttp.ClientTimeout(total=120), ssl=False
+                LODZ_GTFS_URL, timeout=aiohttp.ClientTimeout(total=120)
             ) as resp:
                 if resp.status != 200:
                     _LOGGER.debug("Łódź GTFS download failed: HTTP %d", resp.status)
@@ -426,7 +426,7 @@ async def _get_gtfs_zip(coord, session=None) -> bytes | None:
 
 def _get_gtfs_stop_departures(gtfs: dict, gtfs_stop_id: str, now, coord) -> list:
     """Get scheduled departures from GTFS for a specific stop (within _GTFS_MAX_HOURS)."""
-    from .provider_gtfsrt import _parse_stop_times_for
+    from .gtfsrt_parser import _parse_stop_times_for
 
     stop_id_key = str(gtfs_stop_id)
     if stop_id_key not in gtfs.get("stop_times", {}):
@@ -469,7 +469,7 @@ async def _fetch_delays(session) -> dict:
         from google.transit import gtfs_realtime_pb2
 
         async with session.get(
-            LODZ_TRIP_UPDATES, timeout=10, ssl=False
+            LODZ_TRIP_UPDATES, timeout=10
         ) as resp:
             if resp.status != 200:
                 return {}
@@ -505,7 +505,7 @@ async def _enrich_lodz_vehicle_positions(session, departures: list) -> None:
     try:
         from google.transit import gtfs_realtime_pb2
 
-        async with session.get(LODZ_VEHICLE_POSITIONS, timeout=10, ssl=False) as resp:
+        async with session.get(LODZ_VEHICLE_POSITIONS, timeout=10) as resp:
             if resp.status != 200:
                 return
             raw = await resp.read()

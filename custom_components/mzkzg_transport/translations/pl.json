@@ -10,7 +10,7 @@
       },
       "api_key": {
         "title": "Klucz API PLK",
-        "description": "Wprowadź klucz API PKP PLK OpenData. Zarejestruj się na https://dane.plk-sa.pl",
+        "description": "Wprowadź klucz API PKP PLK OpenData. Zarejestruj się na {url}",
         "data": {
           "api_key": "Klucz API",
           "plk_tier": "Limit zapytań"
@@ -58,7 +58,8 @@
           "sleep_enabled": "Włącz tryb uśpienia",
           "sleep_start": "Początek uśpienia (GG:MM)",
           "sleep_end": "Koniec uśpienia (GG:MM)",
-          "fallback_min": "Minimalna liczba odjazdów do uzupełnienia rozkładem (Łódź)"
+          "fallback_min": "Minimalna liczba odjazdów do uzupełnienia rozkładem (Łódź)",
+          "timetable_lines": "Linie do pe?nego rozk?adu (oddzielone przecinkami)"
         }
       }
     }

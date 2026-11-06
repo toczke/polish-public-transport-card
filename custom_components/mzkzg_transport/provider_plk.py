@@ -10,7 +10,7 @@ import aiohttp
 from homeassistant.helpers.update_coordinator import UpdateFailed
 from homeassistant.util import dt as dt_util
 
-from .const import DOMAIN, PLK_API_BASE, PROVIDER_PLK
+from .const import DOMAIN, MAX_DEPARTURES, PLK_API_BASE, PROVIDER_PLK
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -28,11 +28,14 @@ async def fetch(coord: "MzkzgTransportCoordinator") -> dict:
 
     plk_cache = coord.hass.data[DOMAIN].setdefault("_plk_cache", {})
     plk_lock = coord.hass.data[DOMAIN].setdefault("_plk_lock", asyncio.Lock())
+    # After a 429 stop hammering the API for a while. The cached schedule and the
+    # last operations snapshot keep the entities usable during the cooldown.
+    rate_limited = plk_cache.get("_backoff_until", 0) > now.timestamp()
 
     async with plk_lock:
         cache_age = (now - plk_cache.get("_ts", now - timedelta(days=1))).total_seconds()
 
-        if cache_age > coord.update_interval.total_seconds():
+        if cache_age > coord.update_interval.total_seconds() and not rate_limited:
             all_plk_stations = set()
             for coords in coord.hass.data[DOMAIN].get("_coordinators", {}).values():
                 for c in (coords if isinstance(coords, list) else [coords]):
@@ -56,8 +59,11 @@ async def fetch(coord: "MzkzgTransportCoordinator") -> dict:
                 raise
             except Exception as e:
                 if "429" in str(e):
-                    _LOGGER.warning("PLK API rate limit hit, skipping this cycle")
+                    _LOGGER.warning(
+                        "PLK API rate limit hit; backing off for 15 minutes"
+                    )
                     plk_cache["_429_count"] = plk_cache.get("_429_count", 0) + 1
+                    plk_cache["_backoff_until"] = now.timestamp() + 900
                 else:
                     _LOGGER.debug("PLK operations fetch failed for %s: %s", stations_param, e)
 
@@ -71,13 +77,15 @@ async def fetch(coord: "MzkzgTransportCoordinator") -> dict:
 
     if cached_date == today and plk_cache.get(sched_cache_key):
         sched_data = plk_cache[sched_cache_key]
+    elif rate_limited:
+        sched_data = plk_cache.get(sched_cache_key)
     else:
         try:
             sched_url = f"{PLK_API_BASE}/schedules"
             params = {
                 "stations": coord.stop_id,
                 "dateFrom": today,
-                "dateTo": today,
+                "dateTo": (now + timedelta(days=1)).strftime("%Y-%m-%d"),
                 "dictionaries": "true",
                 "fullRoute": "true",
             }
@@ -88,7 +96,9 @@ async def fetch(coord: "MzkzgTransportCoordinator") -> dict:
                 plk_cache["_req_count"] = plk_cache.get("_req_count", 0) + 1
         except Exception as e:
             if "429" in str(e):
-                _LOGGER.warning("PLK API rate limit hit on schedules")
+                _LOGGER.warning("PLK API rate limit hit on schedules; backing off for 15 minutes")
+                plk_cache["_429_count"] = plk_cache.get("_429_count", 0) + 1
+                plk_cache["_backoff_until"] = now.timestamp() + 900
             else:
                 _LOGGER.debug("PLK schedules fetch failed for %s: %s", coord.stop_id, e)
 
@@ -218,7 +228,7 @@ async def fetch(coord: "MzkzgTransportCoordinator") -> dict:
                 break
 
     departures.sort(key=lambda x: x.get("estimated_time") or "")
-    departures = departures[:30]
+    departures = departures[:MAX_DEPARTURES]
     return {
         "stop_id": coord.stop_id,
         "stop_name": coord.stop_name or f"Stacja {coord.stop_id}",

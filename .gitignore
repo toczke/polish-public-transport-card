@@ -15,3 +15,5 @@ dev/server.err.log
 .coverage
 test-results/
 playwright-report/
+scratch/
+test_leaflet.html

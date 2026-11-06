@@ -16,5 +16,6 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "tczew: Time4Bus Tczew tests")
     config.addinivalue_line("markers", "kiedyprzyjedzie: kiedyPrzyjedzie providers")
     config.addinivalue_line("markers", "gtfsrt: GTFS-RT providers")
+    config.addinivalue_line("markers", "krakow: ZTP Kraków (zbiorkom.live) tests")
     config.addinivalue_line("markers", "plk: PLK rail tests")
     config.addinivalue_line("markers", "common: common/shared tests")

@@ -1,7 +1,7 @@
 # Polish Public Transport Card
 
 [![HACS](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
-[![Version](https://img.shields.io/badge/version-1.5.0-blue.svg)](https://github.com/toczke/polish-public-transport-card/releases)
+[![Version](https://img.shields.io/badge/version-1.6.7-blue.svg)](https://github.com/toczke/polish-public-transport-card/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Tests](https://img.shields.io/badge/tests-90%20passed-success.svg)]()
 
@@ -59,7 +59,8 @@ Home Assistant integration + Lovelace card for real-time public transport depart
 | [PKS Słupsk](https://pksslupsk.pl) | Słupsk region | kiedyPrzyjedzie | ✅ | ❌ | bike, wheelchair, AC |
 | [MZK Starogard Gd.](https://starogard.kiedyprzyjedzie.pl) | Starogard (city) | kiedyPrzyjedzie | ✅ | ❌ | bike, wheelchair, AC |
 | [PKS Starogard Gd.](https://pksstarogard.kiedyprzyjedzie.pl) | Starogard region | kiedyPrzyjedzie | ✅ | ❌ | bike, wheelchair, AC |
-| [Komunikacja Bytów](https://bytow.kiedyprzyjedzie.pl) | Bytów (city) | kiedyPrzyjedzie | ✅ | ❌ | bike, wheelchair, AC |
+| [Komunikacja Bytów](https://time4bus.com) | Bytów (city) | Time4BUS | ✅ | ❌ | wheelchair, AC |
+| [MZK Bielsko-Biała](https://bielsko.kiedyprzyjedzie.pl) | Bielsko-Biała (city) | kiedyPrzyjedzie | ✅ | ❌ | bike, wheelchair, AC |
 | [Powiat Człuchowski](https://czluchow.kiedyprzyjedzie.pl) | Człuchów region | kiedyPrzyjedzie | ✅ | ❌ | bike, wheelchair, AC |
 | [PKP / SKM / PolRegio / IC](https://portalpasazera.pl) | Railway stations | PLK API | ✅ | ❌ | platform, track, carrier |
 | [MPK Łódź](https://mpk.lodz.pl) | Łódź (bus, tram) | GTFS-RT (official) | ✅ | 🗺️ | 120 bus stop groups |
@@ -86,7 +87,7 @@ Home Assistant integration + Lovelace card for real-time public transport depart
 | [MZK Opole](https://mzkopole.pl) | Opole (bus) | GTFS-RT (api6) | ✅ | 🗺️ | side number |
 | [ZTM Rzeszów](https://ztm.rzeszow.pl) | Rzeszów (bus) | GTFS-RT (api6) | ✅ | 🗺️ | side number |
 | [MZK Toruń](https://mzk.torun.pl) | Toruń (bus, tram) | GTFS-RT (api6) | ✅ | 🗺️ | side number |
-| [MPK Wrocław](https://mpk.wroc.pl) | Wrocław (bus, tram) | GTFS + GPS | ✅ | 🗺️ | — |
+| [MPK Wrocław](https://mpk.wroc.pl) | Wrocław (bus, tram) | GTFS-RT (api6) | ✅ | 🗺️ | — |
 | [MZK Kalisz](https://mzk.kalisz.pl) | Kalisz (bus) | GTFS-RT (api6) | ✅ | 🗺️ | — |
 | [MZK Konin](https://mzk-konin.pl) | Konin (bus) | GTFS-RT (api6) | ✅ | 🗺️ | — |
 | [MZK Koszalin](https://mzk.koszalin.pl) | Koszalin (bus) | GTFS-RT (api6) | ✅ | 🗺️ | — |
@@ -98,27 +99,34 @@ Home Assistant integration + Lovelace card for real-time public transport depart
 | [MPK Tarnów](https://mpk.tarnow.pl) | Tarnów (bus) | GTFS-RT (api6) | ✅ | 🗺️ | — |
 | [ZKM Wałbrzych](https://zkm.walbrzych.pl) | Wałbrzych (bus) | GTFS-RT (api6) | ✅ | 🗺️ | — |
 | [KA Świnoujście](https://ka.swinoujscie.pl) | Świnoujście (bus) | GTFS-RT (api6) | ✅ | 🗺️ | — |
-| [MZK Leszno](https://mzk.leszno.pl) | Leszno (bus) | Static GTFS | ❌ | ❌ | — |
+| [MZK Leszno](https://mzk.leszno.pl) | Leszno (bus) | GTFS-RT (api6) | ✅ | 🗺️ | — |
+| [ZDMiKP Bydgoszcz](https://zdmikp.bydgoszcz.pl) | Bydgoszcz (bus, tram) | Static GTFS | ❌ | ❌ | — |
+| [MKS Mielec](https://mks.mielec.pl) | Mielec (bus) | GTFS-RT (api6) | ✅ | 🗺️ | — |
+| [MZK Oświęcim](https://mzk.oswiecim.pl) | Oświęcim (bus) | GTFS-RT (api6) | ✅ | 🗺️ | — |
+| [MPK Radomsko](https://mpk.radomsko.pl) | Radomsko (bus) | GTFS-RT (api6) | ✅ | 🗺️ | — |
+| [MKS Dębica](https://mks.debica.pl) | Dębica (bus) | Static GTFS | ❌ | ❌ | — |
+| [KM Kołobrzeg](https://km.kolobrzeg.pl) | Kołobrzeg (bus) | Static GTFS | ❌ | ❌ | — |
+| [SPGK Sanok](https://spgk.sanok.pl) | Sanok (bus) | Static GTFS | ❌ | ❌ | — |
+| [MZK Ostrołęka](https://mzk.ostroleka.pl) | Ostrołęka (bus) | Static GTFS | ❌ | ❌ | — |
 
-¹ Kraków: GPS available for **bus** stops via ZTP VehiclePositions route matching. Tram stops have realtime delays but no GPS (vehicle ID mismatch between zbiorkom.live and ZTP feeds).
+¹ Kraków: GPS for buses (matched by route + brigade) and for trams within a few stops of the stop (matched by upcoming stop + scheduled time), via zbiorkom.live api6-open.
 
 ### Data Sources
 
 | Source | Cities | RT Format |
 |--------|--------|-----------|
-| **api.zbiorkom.live (api6)** | Białystok, Częstochowa, Olsztyn, Opole, Rzeszów, Toruń | GTFS-RT protobuf |
-| **cdn.zbiorkom.live (CDN)** | Elbląg, Gorzów Wlkp., Kielce, Kutno, Legnica, Lublin, Przemyśl, Radom, Rybnik, Suwałki | GTFS-RT protobuf |
-| **mkuran.pl** | Ełk, WKD, Warszawa | GTFS-RT protobuf / JSON |
-| **City-specific** | Gdańsk, Gdynia, GZM, Kraków, Łódź, Poznań, Szczecin, Wrocław | mixed |
+| **api.zbiorkom.live (api6)** | Białystok, Częstochowa, Elbląg, Gorzów Wlkp., Kielce, Kutno, Legnica, Leszno, Lublin, Olsztyn, Opole, Przemyśl, Radom, Rybnik, Rzeszów, Suwałki, Toruń, Wrocław + 1.6.0 providers | GTFS-RT protobuf |
+| **mkuran.pl** | Bydgoszcz, Ełk, WKD, Warszawa | GTFS-RT protobuf / JSON |
+| **City-specific** | Gdańsk, Gdynia, GZM, Kraków, Łódź, Poznań, Szczecin | mixed |
 | **kiedyPrzyjedzie.pl** | 11 regional carriers | REST API |
 | **PLK OpenData** | PKP / SKM / PolRegio / IC | REST API |
-| **Time4BUS** | Tczew | REST API |
+| **Time4BUS** | Bytów, Tczew | REST API |
 
 ---
 
 ## Live Vehicle Map
 
-When a departure includes GPS coordinates, clicking the row opens a Leaflet map (powered by OpenStreetMap / CARTO tiles). The vehicle marker refreshes every 30 seconds while the map is open.
+When a departure includes GPS coordinates, clicking the row opens a Leaflet map (powered by OpenStreetMap tiles, served through Home Assistant's own tile proxy on 2026.9 and later). The vehicle marker refreshes every 30 seconds while the map is open.
 
 - **All GTFS-RT cities** support the map via multi-strategy position matching: `vehicle_code` → `trip_id` → `route_id`
 - Markers show the route number inside a colored circle with a direction arrow
@@ -128,21 +136,17 @@ When a departure includes GPS coordinates, clicking the row opens a Leaflet map 
 
 ---
 
-## What's New in 1.5.0
+## What's New in 1.6.7
 
-- **Live vehicle map for all GTFS-RT cities** — GPS enrichment via `vehicle_code`, `trip_id`, and `route_id` fallback matching
-- **Łódź switched to official GTFS-RT** — uses `otwarte.miasto.lodz.pl` feeds with 100% trip_id overlap
-- **Łódź bus stop groups** — 120 transfer hubs from `GetMapBusStopGroupList` API, selectable as single aggregated sensors
-- **6 api6‑open cities activated** — Białystok, Częstochowa, Olsztyn, Opole, Rzeszów, Toruń now have RT delays + GPS
-- **New providers** — Toruń, Wrocław, Ełk (all with GPS)
-- **Route‑level RT fallback** — cities with mismatched GTFS/RT trip_ids (Poznań, Wrocław) now receive delays via route matching
-- **Speed normalization** — all providers report vehicle speed in km/h; protobuf `HasField` compatibility fixes
-- **GPS without vehicle_code** — positions fetched even when RT trip_updates are unavailable
-- **Calendar resilience** — GTFS feeds that don't cover today's weekday fall back to showing all scheduled departures
-- **Blocking I/O fixes** — file operations moved to executor threads
-- **Config flow improvements** — HH:MM validation on sleep times, DRY provider options
-- **Resilient setup** — individual stop failures in multi-stop entries don't block sibling stops
-- **Minimal map markers** — clean circle + arrow design without popup or pulse animation
+- **Kraków on zbiorkom.live api6-open** — new stop picker (all tram platforms and agglomeration stops), brigade/next-stop GPS matching and automatic legacy stop-id migration
+- **Wrocław and 11 api6 feeds fixed** — Lublin, Kielce, Radom, Elbląg, Gorzów, Suwałki, Przemyśl, Rybnik, Kutno, Legnica and Leszno now use static + realtime api6 endpoints
+- **Correct service-day filtering** — feeds with only `calendar_dates.txt` no longer show departures from other weekdays
+- **New providers** — MZK Bielsko-Biała and Bytów (moved to Time4BUS)
+- **Memory/OOM work** — streamed GTFS parsing, executor offload, a per-provider load lock and parallel archive downloads
+- **Offline GTFS fallback** — the last schedule is kept on disk and served when the source is unavailable
+- **Beta 1.6 features** — PLK delay sensor, route colors, `refresh_gtfs` service, walking distance/time, English editor and advanced OptionsFlow filters
+- **Card** — OpenStreetMap through HA `map_tiles`, `exclude_destinations`, `min_departures`, max rows up to 100 and per-sensor overrides
+- **Reliability** — PLK 429 backoff, TLS verification everywhere, single shared PLK usage sensor, recorder-friendly attributes and fixed translation placeholders
 
 ---
 
@@ -173,6 +177,35 @@ Restart Home Assistant.
 4. **Łódź only**: choose between "Single Stop" or "Bus Stop Group" (transfer hub) — the latter expands into one aggregated sensor covering all platforms
 5. For PKP/PLK: enter your API key from [dane.plk-sa.pl](https://dane.plk-sa.pl)
 
+**Rail vs bus:** for train departures choose the **Polskie Linie Kolejowe** provider.
+PLK station labels end with `PKP` (e.g. `Zabierzów PKP`), so they are not confused with
+nearby bus stops from ZTP/KiedyPrzyjedzie.
+
+**Multiple stops:** add the integration once per stop. Entries of the same provider share
+the operator device, the GTFS cache, the PLK request budget and the live-vehicle snapshot,
+so adding several stops does not multiply upstream requests. A single entry can also hold
+several stops (`stops:` in the config entry) and then exposes one aggregated sensor.
+
+### Full-day timetable (kiedyPrzyjedzie)
+
+For kiedyPrzyjedzie providers, open **Configure** on the entry and set
+**Timetable lines** to a comma-separated list (e.g. `854, 870`). The sensor then exposes a
+`timetable` attribute with `today` and `tomorrow` arrays, while the normal `departures`
+attribute stays short for the card:
+
+```yaml
+{{ state_attr('sensor.pks_gdansk_dworzec_odjazdy', 'timetable').today }}
+```
+
+The timetable responses are cached for an hour. Times are ISO 8601 strings.
+
+### Offline fallback
+
+Every successfully downloaded GTFS archive is stored under
+`/config/.storage/mzkzg_transport/gtfs/`. If the upstream server is unreachable, the
+integration keeps serving the last saved schedule (without realtime delays) instead of
+showing no departures.
+
 ---
 
 ## Card Configuration
@@ -188,9 +221,11 @@ The card registers itself automatically. In the Lovelace UI: **Add Card → Poli
 | `entities` | list | required | Sensor entity IDs (string or object with per-sensor overrides) |
 | `display_preset` | string | `standard` | `standard` / `compact` / `e_ink` |
 | `view_mode` | string | `mixed` | `mixed` (merged timeline) / `tabs` (per-stop) |
-| `max_departures` | int | `10` | Max rows per stop (1–20) |
+| `max_departures` | int | `10` | Max rows per stop (1–100) |
+| `min_departures` | int | `0` | Minimum rows; shorter lists are padded with empty rows |
 | `filter_routes` | list | — | Show only these routes |
 | `destination_filter` | list | — | Show only these destinations |
+| `exclude_destinations` | list | — | Hide departures whose destination contains any of these strings |
 | `filter_platform` | string | — | Show only this platform |
 | `filter_track` | string | — | Show only this track |
 | `highlight_mode` | bool | `false` | Dim instead of hide filtered routes |
@@ -208,10 +243,13 @@ entities:
   - entity: sensor.gdansk_main_odjazdy
     filter_routes: ["2", "8"]
     destination_filter: ["Wrzeszcz"]
+    exclude_destinations: ["Poznań Główny"]
+    max_departures: 40
   - entity: sensor.gdynia_central_odjazdy
     filter_routes: ["147"]
     realtime_only: true
 filter_routes: ["N1"]
+min_departures: 5
 ```
 
 ---

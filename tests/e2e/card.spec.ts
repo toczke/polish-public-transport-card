@@ -82,6 +82,149 @@ test('opens the vehicle map for positioned departures from any provider', async 
   expect(result.openedMap).toMatchObject({ lat: 50.2649, lng: 19.0238 });
 });
 
+test('does not accumulate tab listeners during departure updates', async ({ page }) => {
+  const scriptPath = path.resolve(
+    'custom_components/mzkzg_transport/www/polish-transport-card.js'
+  );
+
+  await page.goto('about:blank');
+  await page.addScriptTag({ path: scriptPath });
+
+  const calls = await page.evaluate(() => {
+    const card = document.createElement('mzkzg-transport-card') as any;
+    card.setConfig({
+      type: 'custom:mzkzg-transport-card',
+      entities: ['sensor.first', 'sensor.second'],
+      view_mode: 'tabs',
+    });
+    let render = 0;
+    card._renderDeps = () => `<div>${render++}</div>`;
+    card.hass = {
+      states: {
+        'sensor.first': { attributes: { stop_name: 'First', departures: [] } },
+        'sensor.second': { attributes: { stop_name: 'Second', departures: [] } },
+      },
+    };
+    document.body.appendChild(card);
+
+    card._updateContent();
+    card._updateContent();
+    card._updateContent();
+
+    let clickCalls = 0;
+    card._updateContent = () => { clickCalls += 1; };
+    card.shadowRoot.querySelector('.tab[data-tab="1"]').click();
+    card.remove();
+    return clickCalls;
+  });
+
+  expect(calls).toBe(1);
+});
+
+test('shares Leaflet assets and destroys an open map on disconnect', async ({ page }) => {
+  const scriptPath = path.resolve(
+    'custom_components/mzkzg_transport/www/polish-transport-card.js'
+  );
+
+  await page.goto('about:blank');
+  await page.addScriptTag({ path: scriptPath });
+
+  const result = await page.evaluate(async () => {
+    const first = document.createElement('mzkzg-transport-card') as any;
+    const second = document.createElement('mzkzg-transport-card') as any;
+    const originalAppend = document.head.appendChild.bind(document.head);
+    document.head.appendChild = ((node: Node) => {
+      const result = originalAppend(node);
+      if ((node as HTMLElement).id === 'polish-transport-leaflet-js') {
+        queueMicrotask(() => {
+          (window as any).L = {};
+          node.dispatchEvent(new Event('load'));
+        });
+      }
+      return result;
+    }) as typeof document.head.appendChild;
+
+    const firstLoad = first._preloadLeaflet();
+    const secondLoad = second._preloadLeaflet();
+    await Promise.all([firstLoad, secondLoad]);
+    document.head.appendChild = originalAppend;
+
+    let mapRemoved = false;
+    let observerDisconnected = false;
+    const map = {
+      setView() { return this; },
+      removeLayer() {},
+      invalidateSize() {},
+      remove() { mapRemoved = true; },
+    };
+    (window as any).L = {
+      map: () => map,
+      tileLayer: () => ({ addTo() {} }),
+      circleMarker: () => ({ addTo() {} }),
+    };
+    (window as any).ResizeObserver = class {
+      observe() {}
+      disconnect() { observerDisconnected = true; }
+    };
+
+    document.body.appendChild(first);
+    first._showVehicleMap(50.0, 19.0, {
+      entityId: 'sensor.vehicle',
+      code: '42',
+      route: '7',
+    });
+    const overlay = first._mapCtx.overlay;
+    await new Promise(requestAnimationFrame);
+    first.remove();
+
+    return {
+      sharedPromise: firstLoad === secondLoad,
+      stylesheets: document.querySelectorAll('#polish-transport-leaflet-css').length,
+      scripts: document.querySelectorAll('#polish-transport-leaflet-js').length,
+      overlayRemoved: !overlay.isConnected,
+      contextCleared: first._mapCtx === null,
+      mapRemoved,
+      observerDisconnected,
+    };
+  });
+
+  expect(result).toEqual({
+    sharedPromise: true,
+    stylesheets: 1,
+    scripts: 1,
+    overlayRemoved: true,
+    contextCleared: true,
+    mapRemoved: true,
+    observerDisconnected: true,
+  });
+});
+
+test('runs the refresh timer only while connected', async ({ page }) => {
+  const scriptPath = path.resolve(
+    'custom_components/mzkzg_transport/www/polish-transport-card.js'
+  );
+
+  await page.goto('about:blank');
+  await page.addScriptTag({ path: scriptPath });
+
+  const result = await page.evaluate(() => {
+    const card = document.createElement('mzkzg-transport-card') as any;
+    card.setConfig({ type: 'custom:mzkzg-transport-card', entities: [] });
+    card.hass = { states: {} };
+    const detachedTimer = card._tickTimer;
+    document.body.appendChild(card);
+    const connectedTimer = card._tickTimer;
+    card.remove();
+    return {
+      detached: detachedTimer === null,
+      connected: connectedTimer !== null,
+      cleaned: card._tickTimer === null,
+    };
+  });
+
+  expect(result).toEqual({ detached: true, connected: true, cleaned: true });
+});
+
 test.describe('Card rendering', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto(`${HA_URL}/dashboard-testing/ztm-gdansk`);

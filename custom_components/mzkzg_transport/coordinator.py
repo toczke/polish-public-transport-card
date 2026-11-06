@@ -73,6 +73,8 @@ class MzkzgTransportCoordinator(DataUpdateCoordinator):
         self.provider = provider
         self.stop_name = name
         self.api_key = api_key
+        self.stop_lat: float | None = None
+        self.stop_lon: float | None = None
         self._options: dict = {}
         self._routes_map: dict[str, str] = {}
         self._routes_load_failed_at: float = 0
@@ -226,6 +228,31 @@ class MzkzgTransportCoordinator(DataUpdateCoordinator):
                 from . import provider_zkm
                 data = await provider_zkm.fetch(self)
             data["departures"] = self._deduplicate_prefer_rt(data.get("departures", []))
+
+            # P2.5 — Enrich with stop coordinates and walking distance from HA home
+            # Try to get stop coordinates from GTFS cache (GTFS-RT providers only)
+            if self.stop_lat is None and self.provider in GTFSRT_PROVIDERS:
+                try:
+                    gtfs_cache = self.hass.data.get(DOMAIN, {}).get("_gtfsrt_cache", {})
+                    from homeassistant.util import dt as dt_util
+                    today = dt_util.now().strftime("%Y%m%d")
+                    gtfs = gtfs_cache.get(f"{self.provider}_{today}")
+                    if gtfs:
+                        stop_info = gtfs.get("stops", {}).get(self.stop_id, {})
+                        if "lat" in stop_info and "lon" in stop_info:
+                            self.stop_lat = stop_info["lat"]
+                            self.stop_lon = stop_info["lon"]
+                except Exception:
+                    pass
+
+            if self.stop_lat is not None:
+                from .walking import stop_walking_info
+                home_lat = self.hass.config.latitude
+                home_lon = self.hass.config.longitude
+                walking = stop_walking_info(home_lat, home_lon, self.stop_lat, self.stop_lon)
+                if walking:
+                    data.update(walking)
+
             return data
         except Exception as err:
             _LOGGER.debug("Fetch error for %s (%s): %s", self.stop_id, self.provider, err, exc_info=True)

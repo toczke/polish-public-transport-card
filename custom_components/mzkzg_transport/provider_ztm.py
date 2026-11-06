@@ -47,7 +47,7 @@ async def fetch(coord: "MzkzgTransportCoordinator") -> dict:
     try:
         gtfs = await _load_gtfs(coord, session, now)
         if gtfs:
-            gtfs_deps = _get_gtfs_departures(gtfs, coord.stop_id, now)
+            gtfs_deps = await _get_gtfs_departures(coord, gtfs, coord.stop_id, now)
             seen = set()
             seen_rt = set()
             for d in unique:
@@ -127,6 +127,8 @@ def _parse_api_departures(data: dict, fleet: dict, now) -> list:
         vinfo = fleet.get(vcode, {})
         characteristics = str(vinfo.get("vehicleCharacteristics", "")).lower()
         departures.append({
+            "trip_id": d.get("tripId"),
+            "route_id_int": d.get("routeId"),
             "route": str(d.get("routeShortName") or d.get("routeId") or "?"),
             "headsign": d.get("headsign") or d.get("tripHeadsign") or "—",
             "estimated_time": est_time.isoformat() if est_time else "",
@@ -204,14 +206,14 @@ async def _load_gtfs(coord, session, now) -> dict | None:
 
     try:
         async with session.get(
-            ZTM_GDANSK_GTFS_URL, timeout=aiohttp.ClientTimeout(total=60), ssl=False
+            ZTM_GDANSK_GTFS_URL, timeout=aiohttp.ClientTimeout(total=60)
         ) as resp:
             if resp.status != 200:
                 return None
             data = await resp.read()
 
-        from .provider_gtfsrt import _parse_gtfs_zip
-        gtfs = _parse_gtfs_zip(data)
+        from .gtfsrt_parser import _parse_gtfs_zip
+        gtfs = await coord.hass.async_add_executor_job(_parse_gtfs_zip, data)
         cache[today] = gtfs
 
         for old_key in list(cache.keys()):
@@ -224,12 +226,12 @@ async def _load_gtfs(coord, session, now) -> dict | None:
         return None
 
 
-def _get_gtfs_departures(gtfs: dict, stop_id: str, now) -> list:
+async def _get_gtfs_departures(coord, gtfs: dict, stop_id: str, now) -> list:
     """Get scheduled departures from GTFS for a given stop."""
-    from .provider_gtfsrt import _parse_stop_times_for
+    from .gtfsrt_parser import _parse_stop_times_for
 
     if stop_id not in gtfs.get("stop_times", {}):
-        _parse_stop_times_for(gtfs, stop_id)
+        await coord.hass.async_add_executor_job(_parse_stop_times_for, gtfs, stop_id)
 
     stop_times = gtfs.get("stop_times", {}).get(stop_id, [])
     departures = []
@@ -289,7 +291,7 @@ async def _get_vehicle_positions(coord, session: aiohttp.ClientSession) -> dict:
         return cache["data"]
     try:
         async with session.get(
-            ZTM_GDANSK_GPS_URL, timeout=aiohttp.ClientTimeout(total=15), ssl=False
+            ZTM_GDANSK_GPS_URL, timeout=aiohttp.ClientTimeout(total=15)
         ) as resp:
             if resp.status == 200:
                 raw = await resp.json()

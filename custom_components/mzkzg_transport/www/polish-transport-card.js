@@ -1,338 +1,1034 @@
-/**
- * Polish Transport Card
- * Unified Lovelace card for Polish public transport providers.
- * Reads data from mzkzg_transport HA integration sensors.
- */
-
-const MZKZG_VERSION = "1.5.0";
-
-const LOCALE = {
-  pl: {
-    no_entities: "Dodaj encje sensorów w konfiguracji",
-    no_departures: "Brak nadchodzących odjazdów",
-    unavailable: "Dane niedostępne — sprawdź połączenie",
-    missing_entities: "Brak encji w HA — sprawdź konfigurację karty",
-    plk_rate_limit: "Limit API wyczerpany — dane odświeżą się automatycznie",
-    cancelled: "odwołany",
-    track: "tor",
-    min: "min",
-    departing: "Odjeżdża",
-    editor_data: "Dane",
-    editor_appearance: "Wygląd",
-    editor_filtering: "Filtrowanie",
-    editor_interactions: "Interakcje",
-    editor_advanced: "Zaawansowane",
-  },
-  en: {
-    no_entities: "Add sensor entities in configuration",
-    no_departures: "No upcoming departures",
-    unavailable: "Data unavailable — check connection",
-    missing_entities: "Configured entities were not found in Home Assistant",
-    plk_rate_limit: "API rate limit reached — data will refresh automatically",
-    cancelled: "cancelled",
-    track: "track",
-    min: "min",
-    departing: "Departing",
-    editor_data: "Data",
-    editor_appearance: "Appearance",
-    editor_filtering: "Filtering",
-    editor_interactions: "Interactions",
-    editor_advanced: "Advanced",
-  },
+//#region node_modules/@lit/reactive-element/css-tag.js
+var e = globalThis, t = e.ShadowRoot && (e.ShadyCSS === void 0 || e.ShadyCSS.nativeShadow) && "adoptedStyleSheets" in Document.prototype && "replace" in CSSStyleSheet.prototype, n = Symbol(), r = /* @__PURE__ */ new WeakMap(), i = class {
+	constructor(e, t, r) {
+		if (this._$cssResult$ = !0, r !== n) throw Error("CSSResult is not constructable. Use `unsafeCSS` or `css` instead.");
+		this.cssText = e, this.t = t;
+	}
+	get styleSheet() {
+		let e = this.o, n = this.t;
+		if (t && e === void 0) {
+			let t = n !== void 0 && n.length === 1;
+			t && (e = r.get(n)), e === void 0 && ((this.o = e = new CSSStyleSheet()).replaceSync(this.cssText), t && r.set(n, e));
+		}
+		return e;
+	}
+	toString() {
+		return this.cssText;
+	}
+}, a = (e) => new i(typeof e == "string" ? e : e + "", void 0, n), o = (e, ...t) => new i(e.length === 1 ? e[0] : t.reduce((t, n, r) => t + ((e) => {
+	if (!0 === e._$cssResult$) return e.cssText;
+	if (typeof e == "number") return e;
+	throw Error("Value passed to 'css' function must be a 'css' function result: " + e + ". Use 'unsafeCSS' to pass non-literal values, but take care to ensure page security.");
+})(n) + e[r + 1], e[0]), e, n), s = (n, r) => {
+	if (t) n.adoptedStyleSheets = r.map((e) => e instanceof CSSStyleSheet ? e : e.styleSheet);
+	else for (let t of r) {
+		let r = document.createElement("style"), i = e.litNonce;
+		i !== void 0 && r.setAttribute("nonce", i), r.textContent = t.cssText, n.appendChild(r);
+	}
+}, c = t ? (e) => e : (e) => e instanceof CSSStyleSheet ? ((e) => {
+	let t = "";
+	for (let n of e.cssRules) t += n.cssText;
+	return a(t);
+})(e) : e, { is: l, defineProperty: u, getOwnPropertyDescriptor: d, getOwnPropertyNames: f, getOwnPropertySymbols: p, getPrototypeOf: m } = Object, h = globalThis, g = h.trustedTypes, ee = g ? g.emptyScript : "", _ = h.reactiveElementPolyfillSupport, v = (e, t) => e, y = {
+	toAttribute(e, t) {
+		switch (t) {
+			case Boolean:
+				e = e ? ee : null;
+				break;
+			case Object:
+			case Array: e = e == null ? e : JSON.stringify(e);
+		}
+		return e;
+	},
+	fromAttribute(e, t) {
+		let n = e;
+		switch (t) {
+			case Boolean:
+				n = e !== null;
+				break;
+			case Number:
+				n = e === null ? null : Number(e);
+				break;
+			case Object:
+			case Array: try {
+				n = JSON.parse(e);
+			} catch {
+				n = null;
+			}
+		}
+		return n;
+	}
+}, te = (e, t) => !l(e, t), ne = {
+	attribute: !0,
+	type: String,
+	converter: y,
+	reflect: !1,
+	useDefault: !1,
+	hasChanged: te
 };
-
-function t(key) {
-  const lang = (document.documentElement.lang || navigator.language || "pl").slice(0, 2);
-  return (LOCALE[lang] || LOCALE.pl)[key] || LOCALE.pl[key] || key;
-}
-
-/* ── Helpers ─────────────────────────────────────────────────────────────── */
-
-function escapeHtml(value) {
-  return String(value ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"})[c]);
-}
-
-function parseVehiclePosition(lat, lng) {
-  if (lat == null || lng == null || lat === "" || lng === "") return null;
-  const parsedLat = Number(lat);
-  const parsedLng = Number(lng);
-  if (!Number.isFinite(parsedLat) || !Number.isFinite(parsedLng)) return null;
-  if (parsedLat < -90 || parsedLat > 90 || parsedLng < -180 || parsedLng > 180) return null;
-  return [parsedLat, parsedLng];
-}
-
-function minutesUntil(isoStr) {
-  if (!isoStr) return null;
-  let dep;
-  if (/^\d{1,2}:\d{2}/.test(isoStr)) {
-    const now = new Date();
-    const [h, m, s] = isoStr.split(":").map(Number);
-    dep = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m, s || 0);
-    if ((dep - now) < -3600000) dep.setDate(dep.getDate() + 1);
-  } else {
-    dep = new Date(isoStr);
-  }
-  if (isNaN(dep.getTime())) return null;
-  return Math.round((dep - Date.now()) / 60000);
-}
-
-function formatTime(isoStr) {
-  if (!isoStr) return "—";
-  if (/^\d{1,2}:\d{2}/.test(isoStr)) return isoStr.slice(0, 5);
-  return new Date(isoStr).toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
-}
-
-function formatMins(min) {
-  if (min === null || min < 0) return "";
-  if (min === 0) return "&lt;1 min";
-  if (min >= 60) { const h = Math.floor(min/60), m = min%60; return m ? `${h}h ${m}min` : `${h}h`; }
-  return `${min} min`;
-}
-
-function routeColor(route, provider) {
-  const s = String(route || "");
-  if (/^[Nn]/.test(s)) return "#1e293b";  // Night lines (all providers)
-  if (provider === "zkm_gdynia") {
-    const n = parseInt(s, 10);
-    if (!isNaN(n) && n >= 20 && n <= 29) return "#0891b2";
-    return "#ea580c";
-  }
-  if (provider === "mzk_wejherowo") return "#478AC9";
-  if (provider === "plk_rail") {
-    const r = s.toUpperCase();
-    if (r.startsWith("S") && r.length <= 3) return "#1a3668";  // SKM: S1, S2, S3...
-    if (r === "EIP" || r === "EIC") return "#1a1a4e";
-    if (r === "IC") return "#f57c00";
-    if (r === "TLK") return "#7b1fa2";
-    return "#d32f2f";  // Polregio R, RE, PKM, Os
-  }
-  if (provider === "ztm_gdansk") {
-    const n = parseInt(s, 10);
-    if (!isNaN(n) && n < 100) {
-      if (n >= 90) return "#8b5cf6";  // 9x special
-      if (n >= 60 && n < 70) return "#f59e0b";  // 6x seasonal summer
-      if (n <= 15) return "#0369a1";  // tram (1-13)
-      return "#DA2128";  // bus
-    }
-    return "#DA2128";
-  }
-  if (provider === "gtfsrt_poznan") {
-    const n = parseInt(s, 10);
-    if (!isNaN(n) && n <= 18) return "#006b3f";  // tram
-    if (!isNaN(n) && n >= 100) return "#15803d";  // bus 100+
-    return "#2d8a4e";
-  }
-  if (provider === "gtfsrt_lublin") {
-    const n = parseInt(s, 10);
-    if (!isNaN(n) && n <= 10) return "#1565c0";  // trolejbus
-    if (!isNaN(n) && n >= 150) return "#0d47a1";  // express
-    return "#1976d2";  // bus
-  }
-  if (provider === "gtfsrt_kielce") {
-    const n = parseInt(s, 10);
-    if (!isNaN(n) && n <= 5) return "#004d40";  // tram (Kielce has none but future-proof)
-    return "#00796b";  // bus
-  }
-  if (provider === "gtfsrt_czestochowa") {
-    const n = parseInt(s, 10);
-    if (!isNaN(n) && n <= 15) return "#b71c1c";  // tram
-    return "#d32f2f";  // bus
-  }
-  if (provider === "gtfsrt_elblag") {
-    const n = parseInt(s, 10);
-    if (!isNaN(n) && n <= 5) return "#01579b";  // tram
-    return "#0277bd";  // bus
-  }
-  if (provider === "gtfsrt_gorzow") {
-    const n = parseInt(s, 10);
-    if (!isNaN(n) && n <= 3) return "#1b5e20";  // tram
-    return "#2e7d32";  // bus
-  }
-  if (provider === "gtfsrt_rybnik") return "#880e4f";
-  if (provider === "gtfsrt_gzm") {
-    const n = parseInt(s, 10);
-    if (!isNaN(n) && n <= 43) return "#009b3a";  // tram
-    return "#1565c0";  // bus
-  }
-  if (provider === "gtfsrt_radom") return "#4a148c";
-  if (provider === "gtfsrt_suwalki") return "#283593";
-  if (provider === "gtfsrt_przemysl") return "#e65100";
-  if (provider === "gtfsrt_kutno") return "#006064";
-  if (provider === "gtfsrt_legnica") return "#b71c1c";
-  if (provider === "mpk_lodz") {
-    const n = parseInt(s, 10);
-    if (!isNaN(n) && n <= 20) return "#ad1457";  // tram
-    return "#c62828";  // bus
-  }
-  if (PROVIDER_BADGE_COLORS[provider]) return PROVIDER_BADGE_COLORS[provider];
-  return "#005eb8";
-}
-
-function normalizeText(t) {
-  return (t || "").replace(/\s/g, "").toLowerCase().replace(/\d+$/, "");
-}
-
-function normalizeList(value) {
-  if (Array.isArray(value)) return value.map(v => String(v).trim()).filter(Boolean);
-  if (value === undefined || value === null) return [];
-  return String(value).split(",").map(v => v.trim()).filter(Boolean);
-}
-
-function normalizeEntityEntry(item) {
-  if (typeof item === "string") return { entity: item };
-  if (!item || typeof item !== "object" || typeof item.entity !== "string") return null;
-  const entry = { entity: item.entity };
-  if ("filter_routes" in item) entry.filter_routes = normalizeList(item.filter_routes);
-  if ("destination_filter" in item) entry.destination_filter = normalizeList(item.destination_filter);
-  if ("filter_platform" in item) entry.filter_platform = item.filter_platform == null ? "" : String(item.filter_platform);
-  if ("filter_track" in item) entry.filter_track = item.filter_track == null ? "" : String(item.filter_track);
-  if ("realtime_only" in item) entry.realtime_only = item.realtime_only === true;
-  if ("hide_terminus" in item) entry.hide_terminus = item.hide_terminus === true;
-  if ("highlight_mode" in item) entry.highlight_mode = item.highlight_mode === true;
-  return entry;
-}
-
-function normalizeActionConfig(cfg, fallbackAction = "none") {
-  if (!cfg || typeof cfg !== "object") return { action: fallbackAction };
-  const action = String(cfg.action || fallbackAction).toLowerCase();
-  const out = { action };
-  if (cfg.navigation_path) out.navigation_path = String(cfg.navigation_path);
-  if (cfg.url_path) out.url_path = String(cfg.url_path);
-  if (cfg.perform_action) out.perform_action = String(cfg.perform_action);
-  if (cfg.service) out.service = String(cfg.service);
-  if (cfg.data && typeof cfg.data === "object") out.data = cfg.data;
-  if (cfg.target && typeof cfg.target === "object") out.target = cfg.target;
-  return out;
-}
-
-function fireHassEvent(node, type, detail = {}) {
-  node.dispatchEvent(new CustomEvent(type, { detail, bubbles: true, composed: true }));
-}
-
-const PROVIDER_HEADER_COLORS = {
-  kiedyprzyjedzie_pks_gdansk: "#475569",
-  kiedyprzyjedzie_albatros: "#166534",
-  kiedyprzyjedzie_gryf: "#2f2f2f",
-  kiedyprzyjedzie_nord_express: "#9d174d",
-  kiedyprzyjedzie_pks_gdynia: "#0f766e",
-  kiedyprzyjedzie_mzk_malbork: "#14532d",
-  kiedyprzyjedzie_pks_slupsk: "#0f172a",
-  kiedyprzyjedzie_mzk_starogard: "#7f1d1d",
-  kiedyprzyjedzie_pks_starogard: "#1e3a8a",
-  kiedyprzyjedzie_bytow: "#155e75",
-  kiedyprzyjedzie_czluchow: "#991b1b",
-  time4bus_tczew: "#1d4ed8",
-  gtfsrt_poznan: "#15803d",
-  gtfsrt_lublin: "#0054a0",
-  gtfsrt_kielce: "#006d3f",
-  gtfsrt_radom: "#4a2080",
-  gtfsrt_czestochowa: "#e30613",
-  gtfsrt_elblag: "#003d7c",
-  gtfsrt_gorzow: "#009640",
-  gtfsrt_suwalki: "#2e5090",
-  gtfsrt_przemysl: "#d4760a",
-  gtfsrt_rybnik: "#8b1a2d",
-  gtfsrt_kutno: "#0072bc",
-  gtfsrt_legnica: "#d4213d",
-  gtfsrt_gzm: "#009b3a",
-  zbiorkom_krakow: "#e2001a",
-  gtfsrt_szczecin: "#005ca9",
-  gtfsrt_warszawa: "#c4161c",
-  gtfsrt_elk: "#1a5276",
-  gtfsrt_wkd: "#4a235a",
-  gtfs_bialystok: "#1e40af",
-  gtfs_olsztyn: "#065f46",
-  gtfs_opole: "#7c2d12",
-  gtfs_rzeszow: "#4338ca",
-  gtfs_leszno: "#0f766e",
-  mpk_lodz: "#e11d48",
+Symbol.metadata ??= Symbol("metadata"), h.litPropertyMetadata ??= /* @__PURE__ */ new WeakMap();
+var b = class extends HTMLElement {
+	static addInitializer(e) {
+		this._$Ei(), (this.l ??= []).push(e);
+	}
+	static get observedAttributes() {
+		return this.finalize(), this._$Eh && [...this._$Eh.keys()];
+	}
+	static createProperty(e, t = ne) {
+		if (t.state && (t.attribute = !1), this._$Ei(), this.prototype.hasOwnProperty(e) && ((t = Object.create(t)).wrapped = !0), this.elementProperties.set(e, t), !t.noAccessor) {
+			let n = Symbol(), r = this.getPropertyDescriptor(e, n, t);
+			r !== void 0 && u(this.prototype, e, r);
+		}
+	}
+	static getPropertyDescriptor(e, t, n) {
+		let { get: r, set: i } = d(this.prototype, e) ?? {
+			get() {
+				return this[t];
+			},
+			set(e) {
+				this[t] = e;
+			}
+		};
+		return {
+			get: r,
+			set(t) {
+				let a = r?.call(this);
+				i?.call(this, t), this.requestUpdate(e, a, n);
+			},
+			configurable: !0,
+			enumerable: !0
+		};
+	}
+	static getPropertyOptions(e) {
+		return this.elementProperties.get(e) ?? ne;
+	}
+	static _$Ei() {
+		if (this.hasOwnProperty(v("elementProperties"))) return;
+		let e = m(this);
+		e.finalize(), e.l !== void 0 && (this.l = [...e.l]), this.elementProperties = new Map(e.elementProperties);
+	}
+	static finalize() {
+		if (this.hasOwnProperty(v("finalized"))) return;
+		if (this.finalized = !0, this._$Ei(), this.hasOwnProperty(v("properties"))) {
+			let e = this.properties, t = [...f(e), ...p(e)];
+			for (let n of t) this.createProperty(n, e[n]);
+		}
+		let e = this[Symbol.metadata];
+		if (e !== null) {
+			let t = litPropertyMetadata.get(e);
+			if (t !== void 0) for (let [e, n] of t) this.elementProperties.set(e, n);
+		}
+		this._$Eh = /* @__PURE__ */ new Map();
+		for (let [e, t] of this.elementProperties) {
+			let n = this._$Eu(e, t);
+			n !== void 0 && this._$Eh.set(n, e);
+		}
+		this.elementStyles = this.finalizeStyles(this.styles);
+	}
+	static finalizeStyles(e) {
+		let t = [];
+		if (Array.isArray(e)) {
+			let n = new Set(e.flat(1 / 0).reverse());
+			for (let e of n) t.unshift(c(e));
+		} else e !== void 0 && t.push(c(e));
+		return t;
+	}
+	static _$Eu(e, t) {
+		let n = t.attribute;
+		return !1 === n ? void 0 : typeof n == "string" ? n : typeof e == "string" ? e.toLowerCase() : void 0;
+	}
+	constructor() {
+		super(), this._$Ep = void 0, this.isUpdatePending = !1, this.hasUpdated = !1, this._$Em = null, this._$Ev();
+	}
+	_$Ev() {
+		this._$ES = new Promise((e) => this.enableUpdating = e), this._$AL = /* @__PURE__ */ new Map(), this._$E_(), this.requestUpdate(), this.constructor.l?.forEach((e) => e(this));
+	}
+	addController(e) {
+		(this._$EO ??= /* @__PURE__ */ new Set()).add(e), this.renderRoot !== void 0 && this.isConnected && e.hostConnected?.();
+	}
+	removeController(e) {
+		this._$EO?.delete(e);
+	}
+	_$E_() {
+		let e = /* @__PURE__ */ new Map(), t = this.constructor.elementProperties;
+		for (let n of t.keys()) this.hasOwnProperty(n) && (e.set(n, this[n]), delete this[n]);
+		e.size > 0 && (this._$Ep = e);
+	}
+	createRenderRoot() {
+		let e = this.shadowRoot ?? this.attachShadow(this.constructor.shadowRootOptions);
+		return s(e, this.constructor.elementStyles), e;
+	}
+	connectedCallback() {
+		this.renderRoot ??= this.createRenderRoot(), this.enableUpdating(!0), this._$EO?.forEach((e) => e.hostConnected?.());
+	}
+	enableUpdating(e) {}
+	disconnectedCallback() {
+		this._$EO?.forEach((e) => e.hostDisconnected?.());
+	}
+	attributeChangedCallback(e, t, n) {
+		this._$AK(e, n);
+	}
+	_$ET(e, t) {
+		let n = this.constructor.elementProperties.get(e), r = this.constructor._$Eu(e, n);
+		if (r !== void 0 && !0 === n.reflect) {
+			let i = (n.converter?.toAttribute === void 0 ? y : n.converter).toAttribute(t, n.type);
+			this._$Em = e, i == null ? this.removeAttribute(r) : this.setAttribute(r, i), this._$Em = null;
+		}
+	}
+	_$AK(e, t) {
+		let n = this.constructor, r = n._$Eh.get(e);
+		if (r !== void 0 && this._$Em !== r) {
+			let e = n.getPropertyOptions(r), i = typeof e.converter == "function" ? { fromAttribute: e.converter } : e.converter?.fromAttribute === void 0 ? y : e.converter;
+			this._$Em = r;
+			let a = i.fromAttribute(t, e.type);
+			this[r] = a ?? this._$Ej?.get(r) ?? a, this._$Em = null;
+		}
+	}
+	requestUpdate(e, t, n, r = !1, i) {
+		if (e !== void 0) {
+			let a = this.constructor;
+			if (!1 === r && (i = this[e]), n ??= a.getPropertyOptions(e), !((n.hasChanged ?? te)(i, t) || n.useDefault && n.reflect && i === this._$Ej?.get(e) && !this.hasAttribute(a._$Eu(e, n)))) return;
+			this.C(e, t, n);
+		}
+		!1 === this.isUpdatePending && (this._$ES = this._$EP());
+	}
+	C(e, t, { useDefault: n, reflect: r, wrapped: i }, a) {
+		n && !(this._$Ej ??= /* @__PURE__ */ new Map()).has(e) && (this._$Ej.set(e, a ?? t ?? this[e]), !0 !== i || a !== void 0) || (this._$AL.has(e) || (this.hasUpdated || n || (t = void 0), this._$AL.set(e, t)), !0 === r && this._$Em !== e && (this._$Eq ??= /* @__PURE__ */ new Set()).add(e));
+	}
+	async _$EP() {
+		this.isUpdatePending = !0;
+		try {
+			await this._$ES;
+		} catch (e) {
+			Promise.reject(e);
+		}
+		let e = this.scheduleUpdate();
+		return e != null && await e, !this.isUpdatePending;
+	}
+	scheduleUpdate() {
+		return this.performUpdate();
+	}
+	performUpdate() {
+		if (!this.isUpdatePending) return;
+		if (!this.hasUpdated) {
+			if (this.renderRoot ??= this.createRenderRoot(), this._$Ep) {
+				for (let [e, t] of this._$Ep) this[e] = t;
+				this._$Ep = void 0;
+			}
+			let e = this.constructor.elementProperties;
+			if (e.size > 0) for (let [t, n] of e) {
+				let { wrapped: e } = n, r = this[t];
+				!0 !== e || this._$AL.has(t) || r === void 0 || this.C(t, void 0, n, r);
+			}
+		}
+		let e = !1, t = this._$AL;
+		try {
+			e = this.shouldUpdate(t), e ? (this.willUpdate(t), this._$EO?.forEach((e) => e.hostUpdate?.()), this.update(t)) : this._$EM();
+		} catch (t) {
+			throw e = !1, this._$EM(), t;
+		}
+		e && this._$AE(t);
+	}
+	willUpdate(e) {}
+	_$AE(e) {
+		this._$EO?.forEach((e) => e.hostUpdated?.()), this.hasUpdated || (this.hasUpdated = !0, this.firstUpdated(e)), this.updated(e);
+	}
+	_$EM() {
+		this._$AL = /* @__PURE__ */ new Map(), this.isUpdatePending = !1;
+	}
+	get updateComplete() {
+		return this.getUpdateComplete();
+	}
+	getUpdateComplete() {
+		return this._$ES;
+	}
+	shouldUpdate(e) {
+		return !0;
+	}
+	update(e) {
+		this._$Eq &&= this._$Eq.forEach((e) => this._$ET(e, this[e])), this._$EM();
+	}
+	updated(e) {}
+	firstUpdated(e) {}
 };
-
-const PROVIDER_DISPLAY_NAMES = {
-  ztm_gdansk: "ZTM Gdańsk",
-  zkm_gdynia: "ZKM Gdynia",
-  mzk_wejherowo: "MZK Wejherowo",
-  plk_rail: "Polskie Linie Kolejowe",
-  kiedyprzyjedzie_pks_gdansk: "PKS Gdańsk",
-  kiedyprzyjedzie_albatros: "Albatros",
-  kiedyprzyjedzie_gryf: "GRYF",
-  kiedyprzyjedzie_nord_express: "Nord Express",
-  kiedyprzyjedzie_pks_gdynia: "PKS Gdynia",
-  kiedyprzyjedzie_mzk_malbork: "MZK Malbork",
-  kiedyprzyjedzie_pks_slupsk: "PKS Słupsk",
-  kiedyprzyjedzie_mzk_starogard: "MZK Starogard",
-  kiedyprzyjedzie_pks_starogard: "PKS Starogard",
-  kiedyprzyjedzie_bytow: "Komunikacja Miejska Bytów",
-  kiedyprzyjedzie_czluchow: "Powiat Człuchowski",
-  time4bus_tczew: "Komunikacja Miejska Tczew",
-  gtfsrt_poznan: "ZTM Poznań",
-  gtfsrt_lublin: "ZTM Lublin",
-  gtfsrt_kielce: "MPK Kielce",
-  gtfsrt_radom: "MZDiK Radom",
-  gtfsrt_czestochowa: "MPK Częstochowa",
-  gtfsrt_elblag: "ZKM Elbląg",
-  gtfsrt_gorzow: "MZK Gorzów Wlkp.",
-  gtfsrt_suwalki: "PGK Suwałki",
-  gtfsrt_przemysl: "MZK Przemyśl",
-  gtfsrt_rybnik: "ZTZ Rybnik",
-  gtfsrt_kutno: "MZK Kutno",
-  gtfsrt_legnica: "MPK Legnica",
-  gtfsrt_gzm: "ZTM GZM (Katowice)",
-  zbiorkom_krakow: "ZTP Kraków",
-  gtfsrt_szczecin: "ZDiTM Szczecin",
-  gtfsrt_warszawa: "ZTM Warszawa",
-  gtfsrt_elk: "MZK Ełk",
-  gtfsrt_wkd: "WKD",
-  gtfs_bialystok: "BKM Białystok",
-  gtfs_olsztyn: "ZDZiT Olsztyn",
-  gtfs_opole: "MZK Opole",
-  gtfs_rzeszow: "ZTM Rzeszów",
-  gtfs_leszno: "MZK Leszno",
-  mpk_lodz: "MPK Łódź",
+b.elementStyles = [], b.shadowRootOptions = { mode: "open" }, b[v("elementProperties")] = /* @__PURE__ */ new Map(), b[v("finalized")] = /* @__PURE__ */ new Map(), _?.({ ReactiveElement: b }), (h.reactiveElementVersions ??= []).push("2.1.2");
+//#endregion
+//#region node_modules/lit-html/lit-html.js
+var x = globalThis, re = (e) => e, S = x.trustedTypes, ie = S ? S.createPolicy("lit-html", { createHTML: (e) => e }) : void 0, ae = "$lit$", C = `lit$${Math.random().toFixed(9).slice(2)}$`, oe = "?" + C, se = `<${oe}>`, w = document, T = () => w.createComment(""), E = (e) => e === null || typeof e != "object" && typeof e != "function", D = Array.isArray, ce = (e) => D(e) || typeof e?.[Symbol.iterator] == "function", O = "[ 	\n\f\r]", k = /<(?:(!--|\/[^a-zA-Z])|(\/?[a-zA-Z][^>\s]*)|(\/?$))/g, A = /-->/g, le = />/g, j = RegExp(`>|${O}(?:([^\\s"'>=/]+)(${O}*=${O}*(?:[^ \t\n\f\r"'\`<>=]|("|')|))|$)`, "g"), ue = /'/g, de = /"/g, M = /^(?:script|style|textarea|title)$/i, fe = (e) => (t, ...n) => ({
+	_$litType$: e,
+	strings: t,
+	values: n
+}), N = fe(1), P = fe(2), F = Symbol.for("lit-noChange"), I = Symbol.for("lit-nothing"), pe = /* @__PURE__ */ new WeakMap(), L = w.createTreeWalker(w, 129);
+function me(e, t) {
+	if (!D(e) || !e.hasOwnProperty("raw")) throw Error("invalid template strings array");
+	return ie === void 0 ? t : ie.createHTML(t);
+}
+var he = (e, t) => {
+	let n = e.length - 1, r = [], i, a = t === 2 ? "<svg>" : t === 3 ? "<math>" : "", o = k;
+	for (let t = 0; t < n; t++) {
+		let n = e[t], s, c, l = -1, u = 0;
+		for (; u < n.length && (o.lastIndex = u, c = o.exec(n), c !== null);) u = o.lastIndex, o === k ? c[1] === "!--" ? o = A : c[1] === void 0 ? c[2] === void 0 ? c[3] !== void 0 && (o = j) : (M.test(c[2]) && (i = RegExp("</" + c[2], "g")), o = j) : o = le : o === j ? c[0] === ">" ? (o = i ?? k, l = -1) : c[1] === void 0 ? l = -2 : (l = o.lastIndex - c[2].length, s = c[1], o = c[3] === void 0 ? j : c[3] === "\"" ? de : ue) : o === de || o === ue ? o = j : o === A || o === le ? o = k : (o = j, i = void 0);
+		let d = o === j && e[t + 1].startsWith("/>") ? " " : "";
+		a += o === k ? n + se : l >= 0 ? (r.push(s), n.slice(0, l) + ae + n.slice(l) + C + d) : n + C + (l === -2 ? t : d);
+	}
+	return [me(e, a + (e[n] || "<?>") + (t === 2 ? "</svg>" : t === 3 ? "</math>" : "")), r];
+}, R = class e {
+	constructor({ strings: t, _$litType$: n }, r) {
+		let i;
+		this.parts = [];
+		let a = 0, o = 0, s = t.length - 1, c = this.parts, [l, u] = he(t, n);
+		if (this.el = e.createElement(l, r), L.currentNode = this.el.content, n === 2 || n === 3) {
+			let e = this.el.content.firstChild;
+			e.replaceWith(...e.childNodes);
+		}
+		for (; (i = L.nextNode()) !== null && c.length < s;) {
+			if (i.nodeType === 1) {
+				if (i.hasAttributes()) for (let e of i.getAttributeNames()) if (e.endsWith(ae)) {
+					let t = u[o++], n = i.getAttribute(e).split(C), r = /([.?@])?(.*)/.exec(t);
+					c.push({
+						type: 1,
+						index: a,
+						name: r[2],
+						strings: n,
+						ctor: r[1] === "." ? _e : r[1] === "?" ? ve : r[1] === "@" ? ye : V
+					}), i.removeAttribute(e);
+				} else e.startsWith(C) && (c.push({
+					type: 6,
+					index: a
+				}), i.removeAttribute(e));
+				if (M.test(i.tagName)) {
+					let e = i.textContent.split(C), t = e.length - 1;
+					if (t > 0) {
+						i.textContent = S ? S.emptyScript : "";
+						for (let n = 0; n < t; n++) i.append(e[n], T()), L.nextNode(), c.push({
+							type: 2,
+							index: ++a
+						});
+						i.append(e[t], T());
+					}
+				}
+			} else if (i.nodeType === 8) {
+				if (i.data === oe) c.push({
+					type: 2,
+					index: a
+				});
+				else {
+					let e = -1;
+					for (; (e = i.data.indexOf(C, e + 1)) !== -1;) c.push({
+						type: 7,
+						index: a
+					}), e += C.length - 1;
+				}
+			}
+			a++;
+		}
+	}
+	static createElement(e, t) {
+		let n = w.createElement("template");
+		return n.innerHTML = e, n;
+	}
 };
-
-const PROVIDER_BADGE_COLORS = {
-  kiedyprzyjedzie_pks_gdansk: "#0f766e",
-  kiedyprzyjedzie_albatros: "#22c55e",
-  kiedyprzyjedzie_gryf: "#facc15",
-  kiedyprzyjedzie_nord_express: "#ec4899",
-  kiedyprzyjedzie_pks_gdynia: "#16a34a",
-  kiedyprzyjedzie_mzk_malbork: "#d97706",
-  kiedyprzyjedzie_pks_slupsk: "#2563eb",
-  kiedyprzyjedzie_mzk_starogard: "#dc2626",
-  kiedyprzyjedzie_pks_starogard: "#0ea5e9",
-  kiedyprzyjedzie_bytow: "#14b8a6",
-  kiedyprzyjedzie_czluchow: "#f97316",
-  time4bus_tczew: "#dc2626",
-  gtfsrt_poznan: "#22c55e",
-  gtfsrt_lublin: "#3b82f6",
-  gtfsrt_kielce: "#10b981",
-  gtfsrt_radom: "#8b5cf6",
-  gtfsrt_czestochowa: "#ef4444",
-  gtfsrt_elblag: "#0ea5e9",
-  gtfsrt_gorzow: "#34d399",
-  gtfsrt_suwalki: "#6366f1",
-  gtfsrt_przemysl: "#f59e0b",
-  gtfsrt_rybnik: "#e11d48",
-  gtfsrt_kutno: "#06b6d4",
-  gtfsrt_legnica: "#f43f5e",
-  gtfsrt_gzm: "#22c55e",
-  zbiorkom_krakow: "#dc2626",
-  gtfsrt_szczecin: "#2563eb",
-  gtfsrt_warszawa: "#b91c1c",
-  gtfsrt_elk: "#0369a1",
-  gtfsrt_wkd: "#7c3aed",
-  gtfs_bialystok: "#3b82f6",
-  gtfs_olsztyn: "#10b981",
-  gtfs_opole: "#f97316",
-  gtfs_rzeszow: "#8b5cf6",
-  gtfs_leszno: "#14b8a6",
-  mpk_lodz: "#fb7185",
+function z(e, t, n = e, r) {
+	if (t === F) return t;
+	let i = r === void 0 ? n._$Cl : n._$Co?.[r], a = E(t) ? void 0 : t._$litDirective$;
+	return i?.constructor !== a && (i?._$AO?.(!1), a === void 0 ? i = void 0 : (i = new a(e), i._$AT(e, n, r)), r === void 0 ? n._$Cl = i : (n._$Co ??= [])[r] = i), i !== void 0 && (t = z(e, i._$AS(e, t.values), i, r)), t;
+}
+var ge = class {
+	constructor(e, t) {
+		this._$AV = [], this._$AN = void 0, this._$AD = e, this._$AM = t;
+	}
+	get parentNode() {
+		return this._$AM.parentNode;
+	}
+	get _$AU() {
+		return this._$AM._$AU;
+	}
+	u(e) {
+		let { el: { content: t }, parts: n } = this._$AD, r = (e?.creationScope ?? w).importNode(t, !0);
+		L.currentNode = r;
+		let i = L.nextNode(), a = 0, o = 0, s = n[0];
+		for (; s !== void 0;) {
+			if (a === s.index) {
+				let t;
+				s.type === 2 ? t = new B(i, i.nextSibling, this, e) : s.type === 1 ? t = new s.ctor(i, s.name, s.strings, this, e) : s.type === 6 && (t = new be(i, this, e)), this._$AV.push(t), s = n[++o];
+			}
+			a !== s?.index && (i = L.nextNode(), a++);
+		}
+		return L.currentNode = w, r;
+	}
+	p(e) {
+		let t = 0;
+		for (let n of this._$AV) n !== void 0 && (n.strings === void 0 ? n._$AI(e[t]) : (n._$AI(e, n, t), t += n.strings.length - 2)), t++;
+	}
+}, B = class e {
+	get _$AU() {
+		return this._$AM?._$AU ?? this._$Cv;
+	}
+	constructor(e, t, n, r) {
+		this.type = 2, this._$AH = I, this._$AN = void 0, this._$AA = e, this._$AB = t, this._$AM = n, this.options = r, this._$Cv = r?.isConnected ?? !0;
+	}
+	get parentNode() {
+		let e = this._$AA.parentNode, t = this._$AM;
+		return t !== void 0 && e?.nodeType === 11 && (e = t.parentNode), e;
+	}
+	get startNode() {
+		return this._$AA;
+	}
+	get endNode() {
+		return this._$AB;
+	}
+	_$AI(e, t = this) {
+		e = z(this, e, t), E(e) ? e === I || e == null || e === "" ? (this._$AH !== I && this._$AR(), this._$AH = I) : e !== this._$AH && e !== F && this._(e) : e._$litType$ === void 0 ? e.nodeType === void 0 ? ce(e) ? this.k(e) : this._(e) : this.T(e) : this.$(e);
+	}
+	O(e) {
+		return this._$AA.parentNode.insertBefore(e, this._$AB);
+	}
+	T(e) {
+		this._$AH !== e && (this._$AR(), this._$AH = this.O(e));
+	}
+	_(e) {
+		this._$AH !== I && E(this._$AH) ? this._$AA.nextSibling.data = e : this.T(w.createTextNode(e)), this._$AH = e;
+	}
+	$(e) {
+		let { values: t, _$litType$: n } = e, r = typeof n == "number" ? this._$AC(e) : (n.el === void 0 && (n.el = R.createElement(me(n.h, n.h[0]), this.options)), n);
+		if (this._$AH?._$AD === r) this._$AH.p(t);
+		else {
+			let e = new ge(r, this), n = e.u(this.options);
+			e.p(t), this.T(n), this._$AH = e;
+		}
+	}
+	_$AC(e) {
+		let t = pe.get(e.strings);
+		return t === void 0 && pe.set(e.strings, t = new R(e)), t;
+	}
+	k(t) {
+		D(this._$AH) || (this._$AH = [], this._$AR());
+		let n = this._$AH, r, i = 0;
+		for (let a of t) i === n.length ? n.push(r = new e(this.O(T()), this.O(T()), this, this.options)) : r = n[i], r._$AI(a), i++;
+		i < n.length && (this._$AR(r && r._$AB.nextSibling, i), n.length = i);
+	}
+	_$AR(e = this._$AA.nextSibling, t) {
+		for (this._$AP?.(!1, !0, t); e !== this._$AB;) {
+			let t = re(e).nextSibling;
+			re(e).remove(), e = t;
+		}
+	}
+	setConnected(e) {
+		this._$AM === void 0 && (this._$Cv = e, this._$AP?.(e));
+	}
+}, V = class {
+	get tagName() {
+		return this.element.tagName;
+	}
+	get _$AU() {
+		return this._$AM._$AU;
+	}
+	constructor(e, t, n, r, i) {
+		this.type = 1, this._$AH = I, this._$AN = void 0, this.element = e, this.name = t, this._$AM = r, this.options = i, n.length > 2 || n[0] !== "" || n[1] !== "" ? (this._$AH = Array(n.length - 1).fill(/* @__PURE__ */ new String()), this.strings = n) : this._$AH = I;
+	}
+	_$AI(e, t = this, n, r) {
+		let i = this.strings, a = !1;
+		if (i === void 0) e = z(this, e, t, 0), a = !E(e) || e !== this._$AH && e !== F, a && (this._$AH = e);
+		else {
+			let r = e, o, s;
+			for (e = i[0], o = 0; o < i.length - 1; o++) s = z(this, r[n + o], t, o), s === F && (s = this._$AH[o]), a ||= !E(s) || s !== this._$AH[o], s === I ? e = I : e !== I && (e += (s ?? "") + i[o + 1]), this._$AH[o] = s;
+		}
+		a && !r && this.j(e);
+	}
+	j(e) {
+		e === I ? this.element.removeAttribute(this.name) : this.element.setAttribute(this.name, e ?? "");
+	}
+}, _e = class extends V {
+	constructor() {
+		super(...arguments), this.type = 3;
+	}
+	j(e) {
+		this.element[this.name] = e === I ? void 0 : e;
+	}
+}, ve = class extends V {
+	constructor() {
+		super(...arguments), this.type = 4;
+	}
+	j(e) {
+		this.element.toggleAttribute(this.name, !!e && e !== I);
+	}
+}, ye = class extends V {
+	constructor(e, t, n, r, i) {
+		super(e, t, n, r, i), this.type = 5;
+	}
+	_$AI(e, t = this) {
+		if ((e = z(this, e, t, 0) ?? I) === F) return;
+		let n = this._$AH, r = e === I && n !== I || e.capture !== n.capture || e.once !== n.once || e.passive !== n.passive, i = e !== I && (n === I || r);
+		r && this.element.removeEventListener(this.name, this, n), i && this.element.addEventListener(this.name, this, e), this._$AH = e;
+	}
+	handleEvent(e) {
+		typeof this._$AH == "function" ? this._$AH.call(this.options?.host ?? this.element, e) : this._$AH.handleEvent(e);
+	}
+}, be = class {
+	constructor(e, t, n) {
+		this.element = e, this.type = 6, this._$AN = void 0, this._$AM = t, this.options = n;
+	}
+	get _$AU() {
+		return this._$AM._$AU;
+	}
+	_$AI(e) {
+		z(this, e);
+	}
+}, xe = x.litHtmlPolyfillSupport;
+xe?.(R, B), (x.litHtmlVersions ??= []).push("3.3.3");
+var Se = (e, t, n) => {
+	let r = n?.renderBefore ?? t, i = r._$litPart$;
+	if (i === void 0) {
+		let e = n?.renderBefore ?? null;
+		r._$litPart$ = i = new B(t.insertBefore(T(), e), e, void 0, n ?? {});
+	}
+	return i._$AI(e), i;
+}, H = globalThis, U = class extends b {
+	constructor() {
+		super(...arguments), this.renderOptions = { host: this }, this._$Do = void 0;
+	}
+	createRenderRoot() {
+		let e = super.createRenderRoot();
+		return this.renderOptions.renderBefore ??= e.firstChild, e;
+	}
+	update(e) {
+		let t = this.render();
+		this.hasUpdated || (this.renderOptions.isConnected = this.isConnected), super.update(e), this._$Do = Se(t, this.renderRoot, this.renderOptions);
+	}
+	connectedCallback() {
+		super.connectedCallback(), this._$Do?.setConnected(!0);
+	}
+	disconnectedCallback() {
+		super.disconnectedCallback(), this._$Do?.setConnected(!1);
+	}
+	render() {
+		return F;
+	}
 };
-
-/* ── CSS ─────────────────────────────────────────────────────────────────── */
-
-const CARD_CSS = `
+U._$litElement$ = !0, U.finalized = !0, H.litElementHydrateSupport?.({ LitElement: U });
+var Ce = H.litElementPolyfillSupport;
+Ce?.({ LitElement: U }), (H.litElementVersions ??= []).push("4.2.2");
+//#endregion
+//#region src/editor.js
+var we = [
+	{
+		name: "entities",
+		selector: { entity: {
+			multiple: !0,
+			domain: "sensor"
+		} }
+	},
+	{
+		type: "grid",
+		name: "",
+		schema: [{
+			name: "title",
+			selector: { text: {} }
+		}, {
+			name: "icon",
+			selector: { icon: {} }
+		}]
+	},
+	{
+		type: "grid",
+		name: "",
+		schema: [{
+			name: "display_preset",
+			selector: { select: { options: [
+				{
+					value: "standard",
+					label: "Standard"
+				},
+				{
+					value: "compact",
+					label: "Compact"
+				},
+				{
+					value: "e_ink",
+					label: "E-ink"
+				}
+			] } }
+		}, {
+			name: "view_mode",
+			selector: { select: { options: [{
+				value: "mixed",
+				label: "Mixed"
+			}, {
+				value: "tabs",
+				label: "Tabs"
+			}] } }
+		}]
+	},
+	{
+		type: "grid",
+		name: "",
+		schema: [
+			{
+				name: "max_departures",
+				selector: { number: {
+					min: 1,
+					max: 100,
+					mode: "box"
+				} }
+			},
+			{
+				name: "min_departures",
+				selector: { number: {
+					min: 0,
+					max: 100,
+					mode: "box"
+				} }
+			},
+			{
+				name: "refresh_interval",
+				selector: { number: {
+					min: 10,
+					max: 300,
+					mode: "box",
+					unit_of_measurement: "s"
+				} }
+			}
+		]
+	},
+	{
+		name: "header_color",
+		selector: { text: { type: "color" } }
+	},
+	{
+		type: "expandable",
+		title: "Filtry globalne",
+		schema: [
+			{
+				name: "filter_routes",
+				selector: { text: { multiple: !0 } }
+			},
+			{
+				name: "destination_filter",
+				selector: { text: { multiple: !0 } }
+			},
+			{
+				name: "exclude_destinations",
+				selector: { text: { multiple: !0 } }
+			},
+			{
+				name: "filter_platform",
+				selector: { text: {} }
+			},
+			{
+				name: "filter_track",
+				selector: { text: {} }
+			},
+			{
+				name: "highlight_mode",
+				selector: { boolean: {} }
+			},
+			{
+				name: "hide_terminus",
+				selector: { boolean: {} }
+			},
+			{
+				name: "realtime_only",
+				selector: { boolean: {} }
+			}
+		]
+	},
+	{
+		type: "expandable",
+		title: "Opcje wizualne",
+		schema: [
+			{
+				name: "show_stop_name",
+				selector: { boolean: {} }
+			},
+			{
+				name: "group_by_provider",
+				selector: { boolean: {} }
+			},
+			{
+				name: "show_delays",
+				selector: { boolean: {} }
+			},
+			{
+				name: "show_footer",
+				selector: { boolean: {} }
+			},
+			{
+				name: "show_bike",
+				selector: { boolean: {} }
+			},
+			{
+				name: "show_wheelchair",
+				selector: { boolean: {} }
+			},
+			{
+				name: "show_ac",
+				selector: { boolean: {} }
+			},
+			{
+				name: "show_ticket_machine",
+				selector: { boolean: {} }
+			}
+		]
+	}
+], Te = class extends U {
+	static get properties() {
+		return {
+			hass: { type: Object },
+			_config: { type: Object }
+		};
+	}
+	setConfig(e) {
+		this._config = { ...e };
+	}
+	_valueChanged(e) {
+		if (!this._config || !this.hass) return;
+		let t = e.detail.value;
+		typeof t.filter_routes == "string" && (t.filter_routes = t.filter_routes.split(",").map((e) => e.trim()).filter((e) => e)), typeof t.destination_filter == "string" && (t.destination_filter = t.destination_filter.split(",").map((e) => e.trim()).filter((e) => e)), this._config = {
+			...this._config,
+			...t
+		};
+		let n = new CustomEvent("config-changed", {
+			detail: { config: this._config },
+			bubbles: !0,
+			composed: !0
+		});
+		this.dispatchEvent(n);
+	}
+	render() {
+		return !this.hass || !this._config ? N`` : N`
+      <ha-form
+        .hass=${this.hass}
+        .data=${this._config}
+        .schema=${we}
+        .computeLabel=${this._computeLabel}
+        @value-changed=${this._valueChanged}
+      ></ha-form>
+    `;
+	}
+	_computeLabel(e) {
+		return ((this.hass?.language ?? "en") === "pl" ? {
+			entities: "Encje (Sensory)",
+			title: "Tytuł",
+			icon: "Ikona",
+			display_preset: "Motyw",
+			view_mode: "Widok",
+			max_departures: "Maksymalna liczba odjazdów",
+			min_departures: "Minimalna liczba odjazdów (puste wiersze)",
+			refresh_interval: "Odświeżanie",
+			header_color: "Kolor nagłówka",
+			filter_routes: "Filtruj linie",
+			destination_filter: "Filtruj kierunki",
+			exclude_destinations: "Wyklucz kierunki",
+			filter_platform: "Filtruj peron",
+			filter_track: "Filtruj tor",
+			highlight_mode: "Podświetlaj zamiast ukrywać",
+			hide_terminus: "Ukryj kończące trasę",
+			realtime_only: "Tylko realtime",
+			show_stop_name: "Pokaż nazwę przystanku",
+			group_by_provider: "Grupuj po przewoźniku",
+			show_delays: "Pokaż opóźnienia",
+			show_footer: "Pokaż stopkę",
+			show_bike: "Ikona roweru",
+			show_wheelchair: "Ikona wózka",
+			show_ac: "Ikona klimatyzacji",
+			show_ticket_machine: "Ikona biletomatu"
+		} : {
+			entities: "Entities (Sensors)",
+			title: "Title",
+			icon: "Icon",
+			display_preset: "Display preset",
+			view_mode: "View mode",
+			max_departures: "Max departures",
+			min_departures: "Min departures (empty rows padding)",
+			refresh_interval: "Refresh interval",
+			header_color: "Header color",
+			filter_routes: "Filter routes",
+			destination_filter: "Destination filter",
+			exclude_destinations: "Exclude destinations",
+			filter_platform: "Filter platform",
+			filter_track: "Filter track",
+			highlight_mode: "Highlight mode",
+			hide_terminus: "Hide terminus",
+			realtime_only: "Real-time only",
+			show_stop_name: "Show stop name",
+			group_by_provider: "Group by provider",
+			show_delays: "Show delays",
+			show_footer: "Show footer",
+			show_bike: "Show bike info",
+			show_wheelchair: "Show wheelchair info",
+			show_ac: "Show A/C info",
+			show_ticket_machine: "Show ticket machine"
+		})[e.name] || e.name;
+	}
+};
+customElements.define("mzkzg-transport-card-editor", Te), customElements.define("polish-transport-card-editor", class extends Te {});
+//#endregion
+//#region node_modules/lit-html/directive.js
+var Ee = {
+	ATTRIBUTE: 1,
+	CHILD: 2,
+	PROPERTY: 3,
+	BOOLEAN_ATTRIBUTE: 4,
+	EVENT: 5,
+	ELEMENT: 6
+}, De = (e) => (...t) => ({
+	_$litDirective$: e,
+	values: t
+}), Oe = class {
+	constructor(e) {}
+	get _$AU() {
+		return this._$AM._$AU;
+	}
+	_$AT(e, t, n) {
+		this._$Ct = e, this._$AM = t, this._$Ci = n;
+	}
+	_$AS(e, t) {
+		return this.update(e, t);
+	}
+	update(e, t) {
+		return this.render(...t);
+	}
+}, W = class extends Oe {
+	constructor(e) {
+		if (super(e), this.it = I, e.type !== Ee.CHILD) throw Error(this.constructor.directiveName + "() can only be used in child bindings");
+	}
+	render(e) {
+		if (e === I || e == null) return this._t = void 0, this.it = e;
+		if (e === F) return e;
+		if (typeof e != "string") throw Error(this.constructor.directiveName + "() called with a non-string value");
+		if (e === this.it) return this._t;
+		this.it = e;
+		let t = [e];
+		return t.raw = t, this._t = {
+			_$litType$: this.constructor.resultType,
+			strings: t,
+			values: []
+		};
+	}
+};
+W.directiveName = "unsafeHTML", W.resultType = 1;
+var G = De(W), ke = "1.6.7", K = {
+	pl: {
+		no_entities: "Dodaj encje sensorów w konfiguracji",
+		no_departures: "Brak nadchodzących odjazdów",
+		unavailable: "Dane niedostępne — sprawdź połączenie",
+		missing_entities: "Brak encji w HA — sprawdź konfigurację karty",
+		plk_rate_limit: "Limit API wyczerpany — dane odświeżą się automatycznie",
+		cancelled: "odwołany",
+		track: "tor",
+		min: "min",
+		departing: "Odjeżdża",
+		editor_data: "Dane",
+		editor_appearance: "Wygląd",
+		editor_filtering: "Filtrowanie",
+		editor_interactions: "Interakcje",
+		editor_advanced: "Zaawansowane"
+	},
+	en: {
+		no_entities: "Add sensor entities in configuration",
+		no_departures: "No upcoming departures",
+		unavailable: "Data unavailable — check connection",
+		missing_entities: "Configured entities were not found in Home Assistant",
+		plk_rate_limit: "API rate limit reached — data will refresh automatically",
+		cancelled: "cancelled",
+		track: "track",
+		min: "min",
+		departing: "Departing",
+		editor_data: "Data",
+		editor_appearance: "Appearance",
+		editor_filtering: "Filtering",
+		editor_interactions: "Interactions",
+		editor_advanced: "Advanced"
+	}
+};
+function q(e) {
+	return (K[(document.documentElement.lang || navigator.language || "pl").slice(0, 2)] || K.pl)[e] || K.pl[e] || e;
+}
+function J(e) {
+	return String(e ?? "").replace(/[&<>"']/g, (e) => ({
+		"&": "&amp;",
+		"<": "&lt;",
+		">": "&gt;",
+		"\"": "&quot;",
+		"'": "&#39;"
+	})[e]);
+}
+function Y(e, t) {
+	if (e == null || t == null || e === "" || t === "") return null;
+	let n = Number(e), r = Number(t);
+	return !Number.isFinite(n) || !Number.isFinite(r) || n < -90 || n > 90 || r < -180 || r > 180 ? null : [n, r];
+}
+function Ae(e) {
+	if (!e) return null;
+	let t;
+	if (/^\d{1,2}:\d{2}/.test(e)) {
+		let n = /* @__PURE__ */ new Date(), [r, i, a] = e.split(":").map(Number);
+		t = new Date(n.getFullYear(), n.getMonth(), n.getDate(), r, i, a || 0), t - n < -36e5 && t.setDate(t.getDate() + 1);
+	} else t = new Date(e);
+	return isNaN(t.getTime()) ? null : Math.round((t - Date.now()) / 6e4);
+}
+function X(e) {
+	return e ? /^\d{1,2}:\d{2}/.test(e) ? e.slice(0, 5) : new Date(e).toLocaleTimeString("pl-PL", {
+		hour: "2-digit",
+		minute: "2-digit"
+	}) : "—";
+}
+function je(e) {
+	if (e === null || e < 0) return "";
+	if (e === 0) return "&lt;1 min";
+	if (e >= 60) {
+		let t = Math.floor(e / 60), n = e % 60;
+		return n ? `${t}h ${n}min` : `${t}h`;
+	}
+	return `${e} min`;
+}
+function Z(e, t, n = null) {
+	if (n) return n;
+	let r = String(e || "");
+	if (/^[Nn]/.test(r)) return "#1e293b";
+	if (t === "zkm_gdynia") {
+		let e = parseInt(r, 10);
+		return !isNaN(e) && e >= 20 && e <= 29 ? "#0891b2" : "#ea580c";
+	}
+	if (t === "mzk_wejherowo") return "#478AC9";
+	if (t === "plk_rail") {
+		let e = r.toUpperCase();
+		return e.startsWith("S") && e.length <= 3 ? "#1a3668" : e === "EIP" || e === "EIC" ? "#1a1a4e" : e === "IC" ? "#f57c00" : e === "TLK" ? "#7b1fa2" : "#d32f2f";
+	}
+	if (t === "ztm_gdansk") {
+		let e = parseInt(r, 10);
+		return !isNaN(e) && e < 100 ? e >= 90 ? "#8b5cf6" : e >= 60 && e < 70 ? "#f59e0b" : e <= 15 ? "#0369a1" : "#DA2128" : "#DA2128";
+	}
+	if (t === "gtfsrt_poznan") {
+		let e = parseInt(r, 10);
+		return !isNaN(e) && e <= 18 ? "#006b3f" : !isNaN(e) && e >= 100 ? "#15803d" : "#2d8a4e";
+	}
+	if (t === "gtfsrt_lublin") {
+		let e = parseInt(r, 10);
+		return !isNaN(e) && e <= 10 ? "#1565c0" : !isNaN(e) && e >= 150 ? "#0d47a1" : "#1976d2";
+	}
+	if (t === "gtfsrt_kielce") {
+		let e = parseInt(r, 10);
+		return !isNaN(e) && e <= 5 ? "#004d40" : "#00796b";
+	}
+	if (t === "gtfsrt_czestochowa") {
+		let e = parseInt(r, 10);
+		return !isNaN(e) && e <= 15 ? "#b71c1c" : "#d32f2f";
+	}
+	if (t === "gtfsrt_elblag") {
+		let e = parseInt(r, 10);
+		return !isNaN(e) && e <= 5 ? "#01579b" : "#0277bd";
+	}
+	if (t === "gtfsrt_gorzow") {
+		let e = parseInt(r, 10);
+		return !isNaN(e) && e <= 3 ? "#1b5e20" : "#2e7d32";
+	}
+	if (t === "gtfsrt_rybnik") return "#880e4f";
+	if (t === "gtfsrt_gzm") {
+		let e = parseInt(r, 10);
+		return !isNaN(e) && e <= 43 ? "#009b3a" : "#1565c0";
+	}
+	if (t === "gtfsrt_radom") return "#4a148c";
+	if (t === "gtfsrt_suwalki") return "#283593";
+	if (t === "gtfsrt_przemysl") return "#e65100";
+	if (t === "gtfsrt_kutno") return "#006064";
+	if (t === "gtfsrt_legnica") return "#b71c1c";
+	if (t === "mpk_lodz") {
+		let e = parseInt(r, 10);
+		return !isNaN(e) && e <= 20 ? "#ad1457" : "#c62828";
+	}
+	return Fe[t] ? Fe[t] : "#005eb8";
+}
+function Me(e) {
+	return Array.isArray(e) ? e.map((e) => String(e).trim()).filter(Boolean) : e == null ? [] : String(e).split(",").map((e) => e.trim()).filter(Boolean);
+}
+function Q(e, t = "none") {
+	if (!e || typeof e != "object") return { action: t };
+	let n = { action: String(e.action || t).toLowerCase() };
+	return e.navigation_path && (n.navigation_path = String(e.navigation_path)), e.url_path && (n.url_path = String(e.url_path)), e.perform_action && (n.perform_action = String(e.perform_action)), e.service && (n.service = String(e.service)), e.data && typeof e.data == "object" && (n.data = e.data), e.target && typeof e.target == "object" && (n.target = e.target), n;
+}
+function Ne(e, t, n = {}) {
+	e.dispatchEvent(new CustomEvent(t, {
+		detail: n,
+		bubbles: !0,
+		composed: !0
+	}));
+}
+var Pe = {
+	kiedyprzyjedzie_pks_gdansk: "#475569",
+	kiedyprzyjedzie_albatros: "#166534",
+	kiedyprzyjedzie_gryf: "#2f2f2f",
+	kiedyprzyjedzie_nord_express: "#9d174d",
+	kiedyprzyjedzie_pks_gdynia: "#0f766e",
+	kiedyprzyjedzie_mzk_malbork: "#14532d",
+	kiedyprzyjedzie_pks_slupsk: "#0f172a",
+	kiedyprzyjedzie_mzk_starogard: "#7f1d1d",
+	kiedyprzyjedzie_pks_starogard: "#1e3a8a",
+	kiedyprzyjedzie_bytow: "#155e75",
+	kiedyprzyjedzie_czluchow: "#991b1b",
+	time4bus_tczew: "#1d4ed8",
+	gtfsrt_poznan: "#15803d",
+	gtfsrt_lublin: "#0054a0",
+	gtfsrt_kielce: "#006d3f",
+	gtfsrt_radom: "#4a2080",
+	gtfsrt_czestochowa: "#e30613",
+	gtfsrt_elblag: "#003d7c",
+	gtfsrt_gorzow: "#009640",
+	gtfsrt_suwalki: "#2e5090",
+	gtfsrt_przemysl: "#d4760a",
+	gtfsrt_rybnik: "#8b1a2d",
+	gtfsrt_kutno: "#0072bc",
+	gtfsrt_legnica: "#d4213d",
+	gtfsrt_gzm: "#009b3a",
+	zbiorkom_krakow: "#e2001a",
+	gtfsrt_szczecin: "#005ca9",
+	gtfsrt_warszawa: "#c4161c",
+	gtfsrt_elk: "#1a5276",
+	gtfsrt_wkd: "#4a235a",
+	gtfs_bialystok: "#1e40af",
+	gtfs_olsztyn: "#065f46",
+	gtfs_opole: "#7c2d12",
+	gtfs_rzeszow: "#4338ca",
+	gtfs_leszno: "#0f766e",
+	mpk_lodz: "#e11d48"
+}, Fe = {
+	kiedyprzyjedzie_pks_gdansk: "#0f766e",
+	kiedyprzyjedzie_albatros: "#22c55e",
+	kiedyprzyjedzie_gryf: "#facc15",
+	kiedyprzyjedzie_nord_express: "#ec4899",
+	kiedyprzyjedzie_pks_gdynia: "#16a34a",
+	kiedyprzyjedzie_mzk_malbork: "#d97706",
+	kiedyprzyjedzie_pks_slupsk: "#2563eb",
+	kiedyprzyjedzie_mzk_starogard: "#dc2626",
+	kiedyprzyjedzie_pks_starogard: "#0ea5e9",
+	kiedyprzyjedzie_bytow: "#14b8a6",
+	kiedyprzyjedzie_czluchow: "#f97316",
+	time4bus_tczew: "#dc2626",
+	gtfsrt_poznan: "#22c55e",
+	gtfsrt_lublin: "#3b82f6",
+	gtfsrt_kielce: "#10b981",
+	gtfsrt_radom: "#8b5cf6",
+	gtfsrt_czestochowa: "#ef4444",
+	gtfsrt_elblag: "#0ea5e9",
+	gtfsrt_gorzow: "#34d399",
+	gtfsrt_suwalki: "#6366f1",
+	gtfsrt_przemysl: "#f59e0b",
+	gtfsrt_rybnik: "#e11d48",
+	gtfsrt_kutno: "#06b6d4",
+	gtfsrt_legnica: "#f43f5e",
+	gtfsrt_gzm: "#22c55e",
+	zbiorkom_krakow: "#dc2626",
+	gtfsrt_szczecin: "#2563eb",
+	gtfsrt_warszawa: "#b91c1c",
+	gtfsrt_elk: "#0369a1",
+	gtfsrt_wkd: "#7c3aed",
+	gtfs_bialystok: "#3b82f6",
+	gtfs_olsztyn: "#10b981",
+	gtfs_opole: "#f97316",
+	gtfs_rzeszow: "#8b5cf6",
+	gtfs_leszno: "#14b8a6",
+	mpk_lodz: "#fb7185"
+}, Ie = o`
 :host {
   display: block;
   --mzkzg-text: var(--primary-text-color, #111);
@@ -363,11 +1059,13 @@ ha-card {
 .dep-row { transition: opacity 0.4s, max-height 0.4s, padding 0.4s; max-height: 80px; overflow: hidden; }
 .dep-row.departing { opacity: 0; max-height: 0; padding-top: 0; padding-bottom: 0; }
 ha-card.e-ink .dep-row { transition: none; }
-.tabs { display: flex; border-bottom: 1px solid var(--divider-color, #e5e5e5); }
-.tab { flex: 1; padding: 8px 14px; font-size: 12px; font-weight: 600; color: var(--mzkzg-muted); cursor: pointer; white-space: nowrap; border-bottom: 2px solid transparent; text-align: center; }
+.tabs { display: flex; overflow-x: auto; scrollbar-width: none; border-bottom: 1px solid var(--divider-color, #e5e5e5); }
+.tabs::-webkit-scrollbar { display: none; }
+.tab { flex: 1 0 auto; min-width: max-content; padding: 8px 14px; font-size: 12px; font-weight: 600; color: var(--mzkzg-muted); cursor: pointer; white-space: nowrap; border-bottom: 2px solid transparent; text-align: center; }
 .tab.active { color: var(--mzkzg-text); border-bottom-color: var(--primary-color, #005eb8); }
 .tab:hover { color: var(--mzkzg-text); }
 .tab:focus-visible { outline: 2px solid var(--mzkzg-focus); outline-offset: -2px; }
+.provider-header { padding: 4px 14px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; background: rgba(0, 0, 0, 0.04); color: var(--mzkzg-muted); border-bottom: 1px solid var(--divider-color, #e5e5e5); border-top: 1px solid var(--divider-color, #e5e5e5); margin-top: -1px; }
 .dep-row {
   display: flex; align-items: center; gap: 10px;
   padding: 10px 14px; border-bottom: 1px solid var(--mzkzg-divider); min-height: 52px;
@@ -502,1417 +1200,587 @@ ha-card.compact .footer { padding: 5px 12px; }
 /* Container query setup */
 :host { container-type: inline-size; }
 ha-card { container-type: inline-size; }
-`;
-
-const BUS_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 16.01L16.01 15.99"/><path d="M6 16.01L6.01 15.99"/><path d="M20 22V15V8M20 8H18V2H22V8H20Z"/><path d="M4 20V22H6V20H4Z" fill="currentColor"/><path d="M14 20V22H16V20H14Z" fill="currentColor"/><path d="M16 20H2.6A.6.6 0 012 19.4V12.6c0-.33.27-.6.6-.6H16"/><path d="M14 8H6M14 2H6C3.79 2 2 3.79 2 6V8"/></svg>`;
-
-// Unified SVG feature icons (official MDI, 14x14)
-const ICON_BIKE = `<svg viewBox="0 0 24 24" width="14" height="14"><path fill="currentColor" d="M5,20.5A3.5,3.5 0 0,1 1.5,17A3.5,3.5 0 0,1 5,13.5A3.5,3.5 0 0,1 8.5,17A3.5,3.5 0 0,1 5,20.5M5,12A5,5 0 0,0 0,17A5,5 0 0,0 5,22A5,5 0 0,0 10,17A5,5 0 0,0 5,12M14.8,10H19V8.2H15.8L13.86,4.93C13.57,4.43 13,4.1 12.4,4.1C11.93,4.1 11.5,4.29 11.2,4.6L7.5,8.29C7.19,8.6 7,9 7,9.5C7,10.13 7.33,10.66 7.85,10.97L11.2,13V18H13V11.5L10.75,9.85L13.07,7.5M19,20.5A3.5,3.5 0 0,1 15.5,17A3.5,3.5 0 0,1 19,13.5A3.5,3.5 0 0,1 22.5,17A3.5,3.5 0 0,1 19,20.5M19,12A5,5 0 0,0 14,17A5,5 0 0,0 19,22A5,5 0 0,0 24,17A5,5 0 0,0 19,12M16,4.8C17,4.8 17.8,4 17.8,3C17.8,2 17,1.2 16,1.2C15,1.2 14.2,2 14.2,3C14.2,4 15,4.8 16,4.8Z"/></svg>`;
-const ICON_WHEELCHAIR = `<svg viewBox="0 0 24 24" width="14" height="14"><path fill="currentColor" d="M18.4,11.2L14.3,11.4L16.6,8.8C16.8,8.5 16.9,8 16.8,7.5C16.7,7.2 16.6,6.9 16.3,6.7L10.9,3.5C10.5,3.2 9.9,3.3 9.5,3.6L6.8,6.1C6.3,6.6 6.2,7.3 6.7,7.8C7.1,8.3 7.9,8.3 8.4,7.9L10.4,6.1L12.3,7.2L8.1,11.5C8,11.6 8,11.7 7.9,11.7C7.4,11.9 6.9,12.1 6.5,12.4L8,13.9C8.5,13.7 9,13.5 9.5,13.5C11.4,13.5 13,15.1 13,17C13,17.6 12.9,18.1 12.6,18.5L14.1,20C14.7,19.1 15,18.1 15,17C15,15.8 14.6,14.6 13.9,13.7L17.2,13.4L17,18.2C16.9,18.9 17.4,19.4 18.1,19.5H18.2C18.8,19.5 19.3,19 19.4,18.4L19.6,12.5C19.6,12.2 19.5,11.8 19.3,11.6C19,11.3 18.7,11.2 18.4,11.2M18,5.5A2,2 0 0,0 20,3.5A2,2 0 0,0 18,1.5A2,2 0 0,0 16,3.5A2,2 0 0,0 18,5.5M12.5,21.6C11.6,22.2 10.6,22.5 9.5,22.5C6.5,22.5 4,20 4,17C4,15.9 4.3,14.9 4.9,14L6.4,15.5C6.2,16 6,16.5 6,17C6,18.9 7.6,20.5 9.5,20.5C10.1,20.5 10.6,20.4 11,20.1L12.5,21.6Z"/></svg>`;
-const ICON_AC = `<svg viewBox="0 0 24 24" width="14" height="14"><path fill="currentColor" d="M20.79,13.95L18.46,14.57L16.46,13.44V10.56L18.46,9.43L20.79,10.05L21.31,8.12L19.54,7.65L20,5.88L18.07,5.36L17.45,7.69L15.45,8.82L13,7.38V5.12L14.71,3.41L13.29,2L12,3.29L10.71,2L9.29,3.41L11,5.12V7.38L8.5,8.82L6.5,7.69L5.92,5.36L4,5.88L4.47,7.65L2.7,8.12L3.22,10.05L5.55,9.43L7.55,10.56V13.45L5.55,14.58L3.22,13.96L2.7,15.89L4.47,16.36L4,18.12L5.93,18.64L6.55,16.31L8.55,15.18L11,16.62V18.88L9.29,20.59L10.71,22L12,20.71L13.29,22L14.7,20.59L13,18.88V16.62L15.5,15.17L17.5,16.3L18.12,18.63L20,18.12L19.53,16.35L21.3,15.88L20.79,13.95M9.5,10.56L12,9.11L14.5,10.56V13.44L12,14.89L9.5,13.44V10.56Z"/></svg>`;
-
-/* ── Editor ──────────────────────────────────────────────────────────────── */
-
-class MzkzgTransportCardEditor extends HTMLElement {
-  constructor() {
-    super();
-    this._config = {};
-    this._hass = null;
-    this._rendered = false;
-    this._firing = false;
-    this._fireTimer = null;
-    this.attachShadow({ mode: "open" });
-  }
-
-  set hass(hass) {
-    this._hass = hass;
-    if (!this._rendered) { this._render(); return; }
-    this._refreshEntityOptions();
-  }
-
-  setConfig(config) {
-    if (this._firing) { this._firing = false; return; }
-    this._config = { ...config };
-    if (this._rendered) this._updateValues();
-    else this._render();
-  }
-
-  _selectedEntityIds() {
-    const raw = Array.isArray(this._config.entities) ? this._config.entities : [];
-    const ids = [];
-    for (const item of raw) {
-      if (typeof item === "string") ids.push(item);
-      else if (item && typeof item === "object" && typeof item.entity === "string") ids.push(item.entity);
-    }
-    return ids;
-  }
-
-  _getEntities() {
-    if (!this._hass) return [];
-    return Object.keys(this._hass.states)
-      .filter(e => e.startsWith("sensor.") && this._hass.states[e].attributes?.departures !== undefined)
-      .sort();
-  }
-
-  _getEntityEntryById() {
-    const currentEntities = Array.isArray(this._config.entities) ? this._config.entities : [];
-    return new Map(
-      currentEntities
-        .filter(e => e && typeof e === "object" && typeof e.entity === "string")
-        .map(e => [e.entity, e])
-    );
-  }
-
-  _getActiveOverrideTarget() {
-    const targetEl = this.shadowRoot.getElementById("entity_filter_target");
-    return targetEl?.value || "";
-  }
-
-  _setEntityOverrideFieldsFor(entityId) {
-    const routesEl = this.shadowRoot.getElementById("entity_filter_routes");
-    const destEl = this.shadowRoot.getElementById("entity_destination_filter");
-    const platformEl = this.shadowRoot.getElementById("entity_filter_platform");
-    const trackEl = this.shadowRoot.getElementById("entity_filter_track");
-    const realtimeEl = this.shadowRoot.getElementById("entity_realtime_only");
-    const hideTerminusEl = this.shadowRoot.getElementById("entity_hide_terminus");
-    const highlightEl = this.shadowRoot.getElementById("entity_highlight_mode");
-    if (!routesEl || !destEl || !platformEl || !trackEl || !realtimeEl || !hideTerminusEl || !highlightEl) return;
-
-    const entry = this._getEntityEntryById().get(entityId);
-    routesEl.value = Array.isArray(entry?.filter_routes) ? entry.filter_routes.join(", ") : "";
-    destEl.value = Array.isArray(entry?.destination_filter) ? entry.destination_filter.join(", ") : "";
-    platformEl.value = entry?.filter_platform || "";
-    trackEl.value = entry?.filter_track || "";
-    realtimeEl.checked = entry?.realtime_only === true;
-    hideTerminusEl.checked = entry?.hide_terminus === true;
-    highlightEl.checked = entry?.highlight_mode === true;
-  }
-
-  _readEntityOverrideFields() {
-    const val = id => this.shadowRoot.getElementById(id)?.value ?? "";
-    const checked = id => this.shadowRoot.getElementById(id)?.checked === true;
-    return {
-      filter_routes: normalizeList(val("entity_filter_routes")),
-      max_departures: val("entity_max_departures") ? parseInt(val("entity_max_departures")) || null : null,
-      destination_filter: normalizeList(val("entity_destination_filter")),
-      filter_platform: val("entity_filter_platform").trim(),
-      filter_track: val("entity_filter_track").trim(),
-      realtime_only: checked("entity_realtime_only"),
-      hide_terminus: checked("entity_hide_terminus"),
-      highlight_mode: checked("entity_highlight_mode"),
-    };
-  }
-
-  _refreshEntityFilterTargetOptions() {
-    const targetEl = this.shadowRoot.getElementById("entity_filter_target");
-    const entitiesEl = this.shadowRoot.getElementById("entities");
-    if (!targetEl || !entitiesEl) return;
-    const selectedEntityIds = [...entitiesEl.selectedOptions].map(o => o.value);
-    const previousValue = targetEl.value;
-    targetEl.innerHTML = selectedEntityIds.map(eid =>
-      `<option value="${escapeHtml(eid)}">${escapeHtml(eid.replace("sensor.", ""))}</option>`
-    ).join("");
-    const nextValue = selectedEntityIds.includes(previousValue) ? previousValue : (selectedEntityIds[0] || "");
-    targetEl.value = nextValue;
-    this._setEntityOverrideFieldsFor(nextValue);
-  }
-
-  _buildActionConfig(prefix, fallbackAction) {
-    const action = (this.shadowRoot.getElementById(`${prefix}_action_type`)?.value || fallbackAction).toLowerCase();
-    const value = (this.shadowRoot.getElementById(`${prefix}_action_value`)?.value || "").trim();
-    const configKey = prefix === "double_tap" ? "double_tap_action" : `${prefix}_action`;
-    const cfg = { ...(this._config[configKey] || {}), action };
-    if (action === "navigate" && value) cfg.navigation_path = value;
-    if (action === "url" && value) cfg.url_path = value;
-    if ((action === "perform-action" || action === "call-service") && value) cfg.perform_action = value;
-    return cfg;
-  }
-
-  _fire() {
-    if (this._fireTimer) clearTimeout(this._fireTimer);
-    this._fireTimer = setTimeout(() => this._doFire(), 300);
-  }
-
-  _fireNow(overrideTarget) {
-    if (this._fireTimer) clearTimeout(this._fireTimer);
-    this._doFire(overrideTarget);
-  }
-
-  _doFire(overrideTarget) {
-    const val = id => this.shadowRoot.getElementById(id)?.value ?? "";
-    const checked = id => { const el = this.shadowRoot.getElementById(id); return el ? el.checked : (this._config[id.replace(/-/g,"_")] ?? false); };
-
-    const entitiesEl = this.shadowRoot.getElementById("entities");
-    const selectedEntityIds = entitiesEl ? [...entitiesEl.selectedOptions].map(o => o.value) : [];
-    // Guard: if select exists but nothing selected, keep current config entities
-    if (entitiesEl && !selectedEntityIds.length && this._config.entities?.length) {
-      return; // Don't fire empty config
-    }
-    const entityEntryById = this._getEntityEntryById();
-    const targetEntityId = overrideTarget || this._getActiveOverrideTarget();
-    const targetOverride = this._readEntityOverrideFields();
-    const entities = selectedEntityIds.map(eid => {
-      const existing = entityEntryById.get(eid);
-      const merged = { entity: eid, ...(existing || {}) };
-      if (eid === targetEntityId) Object.assign(merged, targetOverride);
-      const hasLocalOverride = (
-        (Array.isArray(merged.filter_routes) && merged.filter_routes.length > 0) ||
-        (Array.isArray(merged.destination_filter) && merged.destination_filter.length > 0) ||
-        !!merged.filter_platform ||
-        !!merged.filter_track ||
-        merged.realtime_only === true ||
-        merged.hide_terminus === true ||
-        merged.highlight_mode === true
-      );
-      if (!hasLocalOverride) return eid;
-      const clean = { entity: eid };
-      if (Array.isArray(merged.filter_routes) && merged.filter_routes.length) clean.filter_routes = merged.filter_routes;
-      if (merged.max_departures > 0) clean.max_departures = merged.max_departures;
-      if (Array.isArray(merged.destination_filter) && merged.destination_filter.length) clean.destination_filter = merged.destination_filter;
-      if (merged.filter_platform) clean.filter_platform = String(merged.filter_platform);
-      if (merged.filter_track) clean.filter_track = String(merged.filter_track);
-      if (merged.realtime_only === true) clean.realtime_only = true;
-      if (merged.hide_terminus === true) clean.hide_terminus = true;
-      if (merged.highlight_mode === true) clean.highlight_mode = true;
-      return clean;
-    });
-    const filterRoutes = val("filter_routes").split(",").map(r => r.trim()).filter(Boolean);
-    const destFilter = val("destination_filter").split(",").map(s => s.trim()).filter(Boolean);
-
-    // Only include fields that differ from card defaults — keeps YAML minimal
-    const DEFAULTS = { max_departures:10, display_preset:"standard", view_mode:"mixed", highlight_mode:false, show_delays:true, hide_terminus:true, realtime_only:false, show_footer:true, show_bike:true, show_wheelchair:true, show_ac:true, show_ticket_machine:true, refresh_interval:60};
-    const omit = (k, v) => v === DEFAULTS[k] ? undefined : v;
-
-    const maxDep = parseInt(val("max_departures")) || 10;
-    const preset = this.shadowRoot.querySelector('input[name="display_preset"]:checked')?.value || "standard";
-    const viewMode = this.shadowRoot.querySelector('input[name="view_mode"]:checked')?.value || "mixed";
-    const refreshInt = parseInt(val("refresh_interval")) || this._config.refresh_interval || 60;
-    const tapCfg = this._buildActionConfig("tap", "more-info");
-    const holdCfg = this._buildActionConfig("hold", "none");
-    const dblCfg = this._buildActionConfig("double_tap", "none");
-
-    const config = {
-      ...this._config,
-      type: "custom:polish-transport-card",
-      entities: entities.length ? entities : undefined,
-      title: val("title") || undefined,
-      icon: val("icon") || undefined,
-      header_color: this.shadowRoot.getElementById("header_color_auto")
-        ? (checked("header_color_auto") ? undefined : (val("header_color") || undefined))
-        : this._config.header_color,
-      max_departures: omit("max_departures", maxDep),
-      display_preset: omit("display_preset", preset),
-      view_mode: omit("view_mode", viewMode),
-      filter_routes: filterRoutes.length ? filterRoutes : undefined,
-      destination_filter: destFilter.length ? destFilter : undefined,
-      filter_platform: val("filter_platform") || undefined,
-      filter_track: val("filter_track") || undefined,
-      highlight_mode: omit("highlight_mode", checked("highlight_mode")),
-      show_delays: omit("show_delays", checked("show_delays")),
-      hide_terminus: omit("hide_terminus", checked("hide_terminus")),
-      realtime_only: omit("realtime_only", checked("realtime_only")),
-      show_footer: omit("show_footer", checked("show_footer")),
-      show_bike: omit("show_bike", checked("show_bike")),
-      show_wheelchair: omit("show_wheelchair", checked("show_wheelchair")),
-      show_ac: omit("show_ac", checked("show_ac")),
-      show_ticket_machine: omit("show_ticket_machine", checked("show_ticket_machine")),
-      refresh_interval: omit("refresh_interval", refreshInt),
-      tap_action: tapCfg.action === "more-info" && Object.keys(tapCfg).length === 1 ? undefined : tapCfg,
-      hold_action: holdCfg.action === "none" && Object.keys(holdCfg).length === 1 ? undefined : holdCfg,
-      double_tap_action: dblCfg.action === "none" && Object.keys(dblCfg).length === 1 ? undefined : dblCfg,
-    };
-
-    // Remove undefined keys to keep YAML clean
-    Object.keys(config).forEach(k => { if (config[k] === undefined) delete config[k]; });
-
-    this._config = config;
-    this._firing = true;
-    this._updatePreview();
-    this.dispatchEvent(new CustomEvent("config-changed", {
-      detail: { config },
-      bubbles: true,
-      composed: true,
-    }));
-  }
-
-  _refreshEntityOptions() {
-    const el = this.shadowRoot.getElementById("entities");
-    if (!el) return;
-    const entities = this._getEntities();
-    const current = [...el.options].map(o => o.value);
-    if (entities.length === current.length && entities.every((e, i) => e === current[i])) return;
-    const selected = new Set(this._selectedEntityIds());
-    el.innerHTML = entities.map(e =>
-      `<option value="${escapeHtml(e)}" ${selected.has(e) ? "selected" : ""}>${escapeHtml(e.replace("sensor.",""))}</option>`
-    ).join("");
-    this._refreshEntityFilterTargetOptions();
-  }
-
-  _updateValues() {
-    const el = this.shadowRoot.getElementById("entities");
-    if (el) {
-      const selected = new Set(this._selectedEntityIds());
-      for (const opt of el.options) opt.selected = selected.has(opt.value);
-    }
-    this._refreshEntityFilterTargetOptions();
-  }
-
-  _render() {
-    const c = this._config;
-    const entities = this._getEntities();
-    const preset = c.display_preset || "standard";
-    const isEink = preset === "e_ink";
-    const autoColor = !c.header_color;
-
-    const selectedEntities = new Set(this._selectedEntityIds());
-    const entityOptions = entities.map(e =>
-      `<option value="${escapeHtml(e)}" ${selectedEntities.has(e) ? "selected" : ""}>${escapeHtml(e.replace("sensor.",""))}</option>`
-    ).join("");
-    const selectedEntityList = [...selectedEntities];
-    const activeOverrideTarget = selectedEntityList[0] || "";
-    const activeEntry = this._getEntityEntryById().get(activeOverrideTarget);
-    const tapAction = normalizeActionConfig(c.tap_action, "more-info");
-    const holdAction = normalizeActionConfig(c.hold_action, "none");
-    const doubleTapAction = normalizeActionConfig(c.double_tap_action, "none");
-
-    this.shadowRoot.innerHTML = `
-      <style>
-        :host { display: block; }
-        .form { display: flex; flex-direction: column; gap: 16px; }
-        .section { display: flex; flex-direction: column; gap: 8px; }
-        .section-title { font-size: 13px; font-weight: 600; color: var(--primary-text-color, #111); margin: 0; }
-        .field { display: flex; flex-direction: column; gap: 4px; }
-        .field-row { display: flex; gap: 10px; }
-        .field-row .field { flex: 1; min-width: 0; }
-        .muted { font-size: 11px; color: var(--secondary-text-color, #6b7280); }
-        label { font-size: 12px; font-weight: 500; color: var(--secondary-text-color, #6b7280); margin: 0; }
-        input[type="text"], select { width: 100%; height: 40px; padding: 8px 12px; border: 1px solid var(--divider-color, #d1d5db); border-radius: 8px; font-size: 14px; background: var(--card-background-color, #fff); color: var(--primary-text-color); font-family: inherit; box-sizing: border-box; }
-        select[multiple] { height: auto; min-height: 60px; }
-        input[type="text"]:focus, select:focus { border-color: var(--primary-color); outline: none; }
-        .preset-group { display: flex; gap: 8px; }
-        .preset-option { flex: 1; margin: 0; position: relative; }
-        .preset-option input { position: absolute; opacity: 0; width: 0; height: 0; }
-        .preset-card { display: flex; flex-direction: column; align-items: center; gap: 2px; border: 1px solid var(--divider-color, #d1d5db); border-radius: 8px; padding: 10px 4px; text-align: center; cursor: pointer; }
-        .preset-option input:checked + .preset-card { border-color: var(--primary-color); background: rgba(0,94,184,0.06); }
-        .preset-name { font-size: 12px; font-weight: 700; color: var(--primary-text-color); }
-        .preset-desc { font-size: 10px; color: var(--secondary-text-color); }
-        .switch-list { display: flex; flex-direction: column; }
-        .switch-row { display: flex; align-items: center; justify-content: space-between; height: 36px; padding: 0; border-bottom: 1px solid var(--divider-color, #f0f0f0); }
-        .switch-row:last-child { border-bottom: none; }
-        .switch-row label { flex: 1; font-size: 13px; font-weight: 400; color: var(--primary-text-color); cursor: pointer; margin: 0; }
-        .switch-row input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--primary-color, #005eb8); cursor: pointer; flex-shrink: 0; }
-        .color-row { display: flex; gap: 6px; align-items: center; }
-        .color-row input[type="color"] { width: 40px; height: 40px; padding: 2px; border: 1px solid var(--divider-color,#d1d5db); border-radius: 8px; cursor: pointer; background: none; }
-        .color-row input[type="text"] { flex: 1; }
-        .color-row.disabled { opacity: 0.4; pointer-events: none; }
-      </style>
-      <div class="form">
-        <div class="section">
-          <div class="section-title">${t("editor_data")}</div>
-          <div class="field">
-            <select id="entities" multiple size="${Math.min(Math.max(entities.length, 3), 8)}">
-              ${entityOptions}
-            </select>
-          </div>
+`, $ = null, Le = class {
+	constructor(e) {
+		this.card = e;
+	}
+	destroy() {
+		this.mapCtx && this.mapCtx.destroy();
+	}
+	preloadLeaflet() {
+		return window.L ? Promise.resolve(window.L) : $ || ($ = new Promise((e, t) => {
+			if (!document.getElementById("polish-transport-leaflet-css")) {
+				let e = document.createElement("link");
+				e.id = "polish-transport-leaflet-css", e.rel = "stylesheet", e.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css", document.head.appendChild(e);
+			}
+			let n = document.getElementById("polish-transport-leaflet-js");
+			n || (n = document.createElement("script"), n.id = "polish-transport-leaflet-js", n.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js", document.head.appendChild(n));
+			let r = () => {
+				n.removeEventListener("error", i), e(window.L);
+			}, i = () => {
+				n.removeEventListener("load", r), n.remove(), $ = null, t(/* @__PURE__ */ Error("Failed to load Leaflet"));
+			};
+			n.addEventListener("load", r, { once: !0 }), n.addEventListener("error", i, { once: !0 });
+		}), $);
+	}
+	buildVehicleMarker(e, t, n, r, i, a) {
+		let o = a ? 32 : 40, s = a ? 11 : 13, c = o / 2, l = e + 180;
+		return {
+			svg: `<svg xmlns="http://www.w3.org/2000/svg" width="${o}" height="${o + 6}" viewBox="0 0 ${o} ${o + 6}">
+      <circle cx="${c}" cy="${c}" r="${c - 3}" fill="${t}" stroke="#fff" stroke-width="1.5"/>
+      <path d="M${c},${o - 3} Q${c - 14},${o + 1} ${c - 7},${o - 1} L${c},${o + 6} L${c + 7},${o - 1} Q${c + 14},${o + 1} ${c},${o - 3} Z" fill="${t}" stroke="#fff" stroke-width="1.5" stroke-linejoin="round" transform="rotate(${l}, ${c}, ${c})"/>
+      <text x="${c}" y="${c}" text-anchor="middle" dominant-baseline="central" font-weight="700" font-size="${s}" fill="#fff" font-family="system-ui,sans-serif">${J(n)}</text>
+    </svg>`,
+			size: o,
+			arrowH: o + 6
+		};
+	}
+	buildPopupContent(e) {
+		let t = Math.round((e.delay_seconds || 0) / 60), n = t > 0 ? `+${t} min` : t < 0 ? `${t} min` : "o czasie", r = t > 0 ? "zm-popup-delay" : t < 0 ? "zm-popup-delay early" : "zm-popup-delay ontime";
+		return `<div class="zm-popup"><div class="zm-popup-route">${J(e.route)}</div>${e.headsign ? `<div class="zm-popup-headsign">→ ${J(e.headsign)}</div>` : ""}${e.vehicle_code ? `<div class="zm-popup-meta">🚍 ${J(e.vehicle_code)}</div>` : ""}<div class="zm-popup-delay-row"><span class="${r}">${J(n)}</span></div></div>`;
+	}
+	showVehicleMap(e, t, n) {
+		this.mapCtx && this.mapCtx.destroy();
+		let r = window.innerWidth < 480, i = Math.min(window.innerWidth * .92, 520), a = Math.min(window.innerHeight * .65, 420), o = document.createElement("div");
+		o.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:100000;display:flex;align-items:center;justify-content:center;", o.innerHTML = `<div style="position:relative;width:${i}px;height:${a}px;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.3);"><button style="position:absolute;top:8px;right:8px;z-index:1001;background:rgba(0,0,0,0.6);border:none;border-radius:50%;width:32px;height:32px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;color:#fff;">✕</button><div id="vmap" style="width:${i}px;height:${a}px;"></div><div id="vmap-status" style="position:absolute;bottom:6px;left:10px;z-index:1001;font-size:10px;color:#999;background:rgba(255,255,255,0.8);padding:2px 6px;border-radius:4px">🔄 odświeżanie co 30s</div></div>`, document.body.appendChild(o);
+		let s = () => {
+			this.mapCtx && this.mapCtx.destroy();
+		};
+		o.querySelector("button").onclick = s, o.onclick = (e) => {
+			e.target === o && s();
+		}, l.onKeyDown = (e) => {
+			e.key === "Escape" && s();
+		}, document.addEventListener("keydown", l.onKeyDown);
+		let c = o.querySelector("#vmap");
+		if (!document.getElementById("ztm-map-style")) {
+			let e = document.createElement("style");
+			e.id = "ztm-map-style", e.textContent = ".zm-arrow{position:relative;display:inline-block;transition:transform 0.8s ease}.zm-arrow svg{display:block}.zm-popup{font-family:system-ui,sans-serif;font-size:12px;line-height:1.3;min-width:120px}.zm-popup-route{font-size:22px;font-weight:800;line-height:1}.zm-popup-headsign{font-size:13px;color:#555}.zm-popup-meta{font-size:10px;color:#999;margin-top:2px}.zm-popup-delay-row{margin-top:4px;font-size:13px;font-weight:600}.zm-popup-delay{color:#e53935}.zm-popup-delay.ontime{color:#43a047}.zm-popup-delay.early{color:#1e88e5}}", document.head.appendChild(e);
+		}
+		let l = {
+			destroyed: !1,
+			map: null,
+			interval: null,
+			ro: null,
+			markers: [],
+			overlay: o,
+			onKeyDown: null,
+			destroy: () => {
+				l.destroyed = !0, l.interval && clearInterval(l.interval), l.ro && l.ro.disconnect(), l.map &&= (l.map.remove(), null), l.onKeyDown &&= (document.removeEventListener("keydown", l.onKeyDown), null), l.overlay && l.overlay.parentNode && l.overlay.parentNode.removeChild(l.overlay), this.mapCtx === l && (this.mapCtx = null);
+			},
+			entityId: n.entityId,
+			vehicleCode: n.code
+		};
+		this.mapCtx = l;
+		let u = Z(n.route, n.provider || "", n.route_color), d = () => {
+			requestAnimationFrame(() => {
+				if (l.destroyed) return;
+				let i = window.L.map(c, { zoomControl: !0 }).setView([e, t], 16);
+				this.addTileLayer(i, l);
+				let a = i.attributionControl.options.prefix;
+				if (a && i.attributionControl.setPrefix(a.replace(/<a /g, "<a target=\"_blank\" rel=\"noopener\" ")), l.map = i, window.L.circleMarker([e, t], {
+					radius: 5,
+					fillColor: u,
+					fillOpacity: .5,
+					color: "#fff",
+					weight: 2
+				}).addTo(i), this.renderAllVehicleMarkers(l, n, r), n.provider === "ztm_gdansk" && n.route_id_int && n.trip_id) {
+					let e = `https://ckan2.multimediagdansk.pl/shapes?date=${(/* @__PURE__ */ new Date()).toISOString().split("T")[0]}&routeId=${n.route_id_int}&tripId=${n.trip_id}`;
+					fetch(e).then((e) => e.json()).then((e) => {
+						if (!(l.destroyed || !l.map) && e && e.coordinates && Array.isArray(e.coordinates)) {
+							let t = e.coordinates.map((e) => [e[1], e[0]]), r = Z(n.route, n.provider) || "#e53935";
+							window.L.polyline(t, {
+								color: r,
+								weight: 4,
+								opacity: .8
+							}).addTo(l.map);
+						}
+					}).catch((e) => console.warn("Failed to load shape for Gdańsk:", e));
+				}
+				l.ro = new window.ResizeObserver(() => {
+					l.map && l.map.invalidateSize();
+				}), l.ro.observe(c), l.interval = setInterval(() => this.updateAllVehiclePositions(l), 3e4);
+			});
+		};
+		window.L ? d() : this.preloadLeaflet().then(d).catch(() => l.destroy());
+	}
+	async addTileLayer(e, t) {
+		let n = () => this.card.hass.callWS({ type: "map_tiles/access_token" }).then((e) => e?.token || null, () => null), r;
+		try {
+			r = await n();
+		} catch {
+			r = null;
+		}
+		if (t.destroyed) return;
+		let i = (this.card.hass.auth?.data?.hassUrl || location.origin).replace(/\/+$/, ""), a = (e) => `${i}/api/map_tiles/raster/{z}/{x}/{y}.png?token=${encodeURIComponent(e)}`, o = window.L.tileLayer(r ? a(r) : "https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+			maxZoom: 19,
+			attribution: "&copy; <a href=\"https://www.openstreetmap.org/copyright\" target=\"_blank\" rel=\"noopener\">OpenStreetMap</a> contributors",
+			referrerPolicy: r ? void 0 : "strict-origin-when-cross-origin"
+		}).addTo(e);
+		if (!r) return;
+		let s = 0;
+		o.on("tileerror", async () => {
+			if (Date.now() - s < 3e4) return;
+			s = Date.now();
+			let e = await n();
+			e && !t.destroyed && o.setUrl(a(e));
+		});
+	}
+	renderAllVehicleMarkers(e, t, n) {
+		if (!this.card.hass) return;
+		let r = this.card.hass.states[e.entityId];
+		if (!r?.attributes?.departures) return;
+		e.markers.forEach((t) => e.map.removeLayer(t)), e.markers = [];
+		let i = !1, a = r.attributes.departures || [];
+		for (let t of a) {
+			let r = Y(t.vehicle_lat, t.vehicle_lng);
+			if (!r) continue;
+			let a = t.vehicle_code && t.vehicle_code === e.vehicleCode, o = Z(t.route, t._provider || t.provider || "", t.route_color), s = t.vehicle_direction || t.direction || 0;
+			a && (i = !0);
+			let c = t.route || "?", l = s, u = this.buildVehicleMarker(l, o, c, t.vehicle_type || "bus", t, n), d = t.vehicle_code ? `<div style="position:absolute; top:-22px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.75); color:#fff; padding:2px 5px; border-radius:3px; font-size:10px; font-weight:600; font-family:system-ui,sans-serif; white-space:nowrap; pointer-events:none;">${J(t.vehicle_code)}</div>` : "", f = `<div class="zm-arrow" style="opacity:${a ? 1 : .7}">${d}${u.svg}</div>`, p = window.L.divIcon({
+				className: "",
+				html: f,
+				iconSize: [u.size, u.arrowH],
+				iconAnchor: [u.size / 2, u.arrowH]
+			}), m = window.L.marker([r[0], r[1]], { icon: p }).addTo(e.map);
+			e.markers.push(m);
+		}
+		!i && e.markers.length;
+	}
+	updateAllVehiclePositions(e) {
+		if (e.destroyed || !e.entityId || !e.map || !this.card.hass) return;
+		let t = this.card.hass.states[e.entityId];
+		if (!t?.attributes?.departures) return;
+		let n = t.attributes.departures || [];
+		e.markers.forEach((t) => e.map.removeLayer(t)), e.markers = [];
+		let r = window.innerWidth < 480;
+		for (let t of n) {
+			let n = Y(t.vehicle_lat, t.vehicle_lng);
+			if (!n) continue;
+			let i = t.vehicle_code && t.vehicle_code === e.vehicleCode, a = Z(t.route, t._provider || t.provider || "", t.route_color), o = t.vehicle_direction || t.direction || 0, s = t.route || "?", c = this.buildVehicleMarker(o, a, s, t.vehicle_type || "bus", t, r), l = t.vehicle_code ? `<div style="position:absolute; top:-22px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.75); color:#fff; padding:2px 5px; border-radius:3px; font-size:10px; font-weight:600; font-family:system-ui,sans-serif; white-space:nowrap; pointer-events:none;">${J(t.vehicle_code)}</div>` : "", u = `<div class="zm-arrow" style="opacity:${i ? 1 : .7}">${l}${c.svg}</div>`, d = window.L.divIcon({
+				className: "",
+				html: u,
+				iconSize: [c.size, c.arrowH],
+				iconAnchor: [c.size / 2, c.arrowH]
+			});
+			e.markers.push(window.L.marker([n[0], n[1]], { icon: d }).addTo(e.map));
+		}
+	}
+	updateVehiclePosition(e) {
+		if (e.destroyed || !e.entityId || !e.marker || !this.card.hass) return;
+		let t = this.card.hass.states[e.entityId];
+		if (t?.attributes?.departures) {
+			for (let n of t.attributes.departures) if (n.vehicle_code && n.vehicle_code === e.vehicleCode) {
+				let t = Y(n.vehicle_lat, n.vehicle_lng);
+				if (!t) continue;
+				let [r, i] = t, a = e.marker.getLatLng();
+				if (Math.abs(a.lat - r) < 1e-5 && Math.abs(a.lng - i) < 1e-5) return;
+				e.marker.setLatLng([r, i]);
+				let o = n.vehicle_direction || n.direction || 0, s = Z(n.route, n._provider || n.provider || "", n.route_color), c = n.vehicle_type || "bus", l = window.innerWidth < 480, u = this.buildVehicleMarker(o, s, n.route, c, n, l), d = `<div class="zm-arrow">${n.vehicle_code ? `<div style="position:absolute; top:-22px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.75); color:#fff; padding:2px 5px; border-radius:3px; font-size:10px; font-weight:600; font-family:system-ui,sans-serif; white-space:nowrap; pointer-events:none;">${J(n.vehicle_code)}</div>` : ""}${u.svg}</div>`;
+				e.marker.setIcon(window.L.divIcon({
+					className: "",
+					html: d,
+					iconSize: [u.size, u.arrowH],
+					iconAnchor: [u.size / 2, u.arrowH]
+				})), e.map.setView([r, i], e.map.getZoom(), { animate: !0 });
+				break;
+			}
+		}
+	}
+}, Re = P`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 16.01L16.01 15.99"/><path d="M6 16.01L6.01 15.99"/><path d="M20 22V15V8M20 8H18V2H22V8H20Z"/><path d="M4 20V22H6V20H4Z" fill="currentColor"/><path d="M14 20V22H16V20H14Z" fill="currentColor"/><path d="M16 20H2.6A.6.6 0 012 19.4V12.6c0-.33.27-.6.6-.6H16"/><path d="M14 8H6M14 2H6C3.79 2 2 3.79 2 6V8"/></svg>`, ze = P`<svg viewBox="0 0 24 24" width="20" height="20" style="color:#fff"><path fill="currentColor" d="M12,2C8,2 4,2.5 4,6V15.5A3.5,3.5 0 0,0 7.5,19L6,20.5V21H18V20.5L16.5,19A3.5,3.5 0 0,0 20,15.5V6C20,2.5 16,2 12,2M7.5,17A1.5,1.5 0 0,1 6,15.5A1.5,1.5 0 0,1 7.5,14A1.5,1.5 0 0,1 9,15.5A1.5,1.5 0 0,1 7.5,17M11,10H6V7H11V10M13,10V7H18V10H13M16.5,17A1.5,1.5 0 0,1 15,15.5A1.5,1.5 0 0,1 16.5,14A1.5,1.5 0 0,1 18,15.5A1.5,1.5 0 0,1 16.5,17Z"/></svg>`, Be = P`<svg viewBox="0 0 24 24" width="20" height="20" style="color:#fff"><path fill="currentColor" d="M14,14A2,2 0 0,1 12,16A2,2 0 0,1 10,14A2,2 0 0,1 12,12A2,2 0 0,1 14,14M12,19C10.74,19 9.38,18.42 8.44,17.44L10,15.93C10.55,16.29 11.23,16.5 12,16.5C12.77,16.5 13.45,16.29 14,15.93L15.56,17.44C14.62,18.42 13.26,19 12,19M20,6C20,4.89 19.11,4 18,4H6C4.89,4 4,4.89 4,6V18C4,19.11 4.89,20 6,20H18C19.11,20 20,19.11 20,18V6M12,10A4,4 0 0,0 8,14A4,4 0 0,0 12,18A4,4 0 0,0 16,14A4,4 0 0,0 12,10M17.5,7C17.22,7 17,6.78 17,6.5C17,6.22 17.22,6 17.5,6C17.78,6 18,6.22 18,6.5C18,6.78 17.78,7 17.5,7M15,7C14.72,7 14.5,6.78 14.5,6.5C14.5,6.22 14.72,6 15,6C15.28,6 15.5,6.22 15.5,6.5C15.5,6.78 15.28,7 15,7Z"/></svg>`, Ve = "<svg viewBox=\"0 0 24 24\" width=\"14\" height=\"14\"><path fill=\"currentColor\" d=\"M5,20.5A3.5,3.5 0 0,1 1.5,17A3.5,3.5 0 0,1 5,13.5A3.5,3.5 0 0,1 8.5,17A3.5,3.5 0 0,1 5,20.5M5,12A5,5 0 0,0 0,17A5,5 0 0,0 5,22A5,5 0 0,0 10,17A5,5 0 0,0 5,12M14.8,10H19V8.2H15.8L13.86,4.93C13.57,4.43 13,4.1 12.4,4.1C11.93,4.1 11.5,4.29 11.2,4.6L7.5,8.29C7.19,8.6 7,9 7,9.5C7,10.13 7.33,10.66 7.85,10.97L11.2,13V18H13V11.5L10.75,9.85L13.07,7.5M19,20.5A3.5,3.5 0 0,1 15.5,17A3.5,3.5 0 0,1 19,13.5A3.5,3.5 0 0,1 22.5,17A3.5,3.5 0 0,1 19,20.5M19,12A5,5 0 0,0 14,17A5,5 0 0,0 19,22A5,5 0 0,0 24,17A5,5 0 0,0 19,12M16,4.8C17,4.8 17.8,4 17.8,3C17.8,2 17,1.2 16,1.2C15,1.2 14.2,2 14.2,3C14.2,4 15,4.8 16,4.8Z\"/></svg>", He = "<svg viewBox=\"0 0 24 24\" width=\"14\" height=\"14\"><path fill=\"currentColor\" d=\"M18.4,11.2L14.3,11.4L16.6,8.8C16.8,8.5 16.9,8 16.8,7.5C16.7,7.2 16.6,6.9 16.3,6.7L10.9,3.5C10.5,3.2 9.9,3.3 9.5,3.6L6.8,6.1C6.3,6.6 6.2,7.3 6.7,7.8C7.1,8.3 7.9,8.3 8.4,7.9L10.4,6.1L12.3,7.2L8.1,11.5C8,11.6 8,11.7 7.9,11.7C7.4,11.9 6.9,12.1 6.5,12.4L8,13.9C8.5,13.7 9,13.5 9.5,13.5C11.4,13.5 13,15.1 13,17C13,17.6 12.9,18.1 12.6,18.5L14.1,20C14.7,19.1 15,18.1 15,17C15,15.8 14.6,14.6 13.9,13.7L17.2,13.4L17,18.2C16.9,18.9 17.4,19.4 18.1,19.5H18.2C18.8,19.5 19.3,19 19.4,18.4L19.6,12.5C19.6,12.2 19.5,11.8 19.3,11.6C19,11.3 18.7,11.2 18.4,11.2M18,5.5A2,2 0 0,0 20,3.5A2,2 0 0,0 18,1.5A2,2 0 0,0 16,3.5A2,2 0 0,0 18,5.5M12.5,21.6C11.6,22.2 10.6,22.5 9.5,22.5C6.5,22.5 4,20 4,17C4,15.9 4.3,14.9 4.9,14L6.4,15.5C6.2,16 6,16.5 6,17C6,18.9 7.6,20.5 9.5,20.5C10.1,20.5 10.6,20.4 11,20.1L12.5,21.6Z\"/></svg>", Ue = "<svg viewBox=\"0 0 24 24\" width=\"14\" height=\"14\"><path fill=\"currentColor\" d=\"M20.79,13.95L18.46,14.57L16.46,13.44V10.56L18.46,9.43L20.79,10.05L21.31,8.12L19.54,7.65L20,5.88L18.07,5.36L17.45,7.69L15.45,8.82L13,7.38V5.12L14.71,3.41L13.29,2L12,3.29L10.71,2L9.29,3.41L11,5.12V7.38L8.5,8.82L6.5,7.69L5.92,5.36L4,5.88L4.47,7.65L2.7,8.12L3.22,10.05L5.55,9.43L7.55,10.56V13.45L5.55,14.58L3.22,13.96L2.7,15.89L4.47,16.36L4,18.12L5.93,18.64L6.55,16.31L8.55,15.18L11,16.62V18.88L9.29,20.59L10.71,22L12,20.71L13.29,22L14.7,20.59L13,18.88V16.62L15.5,15.17L17.5,16.3L18.12,18.63L20,18.12L19.53,16.35L21.3,15.88L20.79,13.95M9.5,10.56L12,9.11L14.5,10.56V13.44L12,14.89L9.5,13.44V10.56Z\"/></svg>", We = class extends U {
+	static get properties() {
+		return {
+			hass: { type: Object },
+			_config: { state: !0 },
+			_activeTab: { state: !0 }
+		};
+	}
+	static styles = Ie;
+	constructor() {
+		super(), this.vehicleMap = new Le(this), this._config = {}, this._activeTab = 0, this._tickTimer = null;
+	}
+	static getStubConfig() {
+		return {
+			type: "custom:polish-transport-card",
+			entities: [],
+			max_departures: 10,
+			min_departures: 5,
+			show_delays: !0,
+			hide_terminus: !0,
+			show_bike: !0,
+			show_wheelchair: !0,
+			show_footer: !0
+		};
+	}
+	static getConfigElement() {
+		return document.createElement("mzkzg-transport-card-editor");
+	}
+	setConfig(e) {
+		if (!e) throw Error("No configuration provided");
+		if (e.entities && !Array.isArray(e.entities)) throw Error("entities must be an array");
+		this._config = {
+			...e,
+			entities: Array.isArray(e.entities) ? e.entities : [],
+			max_departures: Math.max(1, Math.min(100, parseInt(e.max_departures) || 10)),
+			min_departures: Math.max(0, Math.min(100, parseInt(e.min_departures) || 0)),
+			refresh_interval: Math.max(5, Math.min(600, parseInt(e.refresh_interval) || 60)),
+			display_preset: e.display_preset || "standard",
+			view_mode: e.view_mode || "mixed",
+			show_delays: e.show_delays !== !1,
+			hide_terminus: e.hide_terminus !== !1,
+			realtime_only: e.realtime_only === !0,
+			highlight_mode: e.highlight_mode === !0,
+			show_bike: e.show_bike !== !1,
+			show_wheelchair: e.show_wheelchair !== !1,
+			show_ac: e.show_ac !== !1,
+			show_ticket_machine: e.show_ticket_machine !== !1,
+			show_stop_name: e.show_stop_name === !0,
+			filter_routes: Me(e.filter_routes),
+			destination_filter: Array.isArray(e.destination_filter) ? e.destination_filter : e.destination_filter ? String(e.destination_filter).split(",").map((e) => e.trim()).filter(Boolean) : [],
+			exclude_destinations: Me(e.exclude_destinations),
+			filter_platform: e.filter_platform || "",
+			filter_track: e.filter_track || "",
+			icon: e.icon || "",
+			show_footer: e.show_footer !== !1,
+			tap_action: Q(e.tap_action, "more-info"),
+			hold_action: Q(e.hold_action, "none"),
+			double_tap_action: Q(e.double_tap_action, "none")
+		}, this.vehicleMap.preloadLeaflet();
+	}
+	getCardSize() {
+		return (this._config.max_departures || 10) + 1;
+	}
+	connectedCallback() {
+		super.connectedCallback(), this._startTick();
+	}
+	disconnectedCallback() {
+		super.disconnectedCallback(), this._tickTimer &&= (clearInterval(this._tickTimer), null), this.vehicleMap.destroy();
+	}
+	_startTick() {
+		this._tickTimer && clearInterval(this._tickTimer), this._tickTimer = setInterval(() => {
+			this.requestUpdate();
+		}, 1e4);
+	}
+	_getEntityIds() {
+		return !this.hass || !this._config.entities?.length ? [] : this._config.entities.map((e) => typeof e == "string" ? e : e.entity).filter((e) => this.hass.states[e]);
+	}
+	_getAllDepartures() {
+		if (!this.hass || !this._config.entities?.length) return [];
+		let e = [];
+		for (let t of this._getEntityIds()) {
+			let n = this.hass.states[t];
+			if (n?.attributes?.departures) {
+				let r = this._config.entities.find((e) => (typeof e == "string" ? e : e.entity) === t);
+				for (let i of n.attributes.departures) e.push({
+					...i,
+					_entityId: t,
+					_entityConfig: r,
+					_stopName: n.attributes.stop_name,
+					_provider: n.attributes.provider
+				});
+			}
+		}
+		return e.sort((e, t) => new Date(e.estimated_time || e.theoretical_time) - new Date(t.estimated_time || t.theoretical_time));
+	}
+	_getDepartures() {
+		if (!this.hass || !this._config.entities?.length) return [];
+		let e = this._config, t = [], n = this._getEntityIds();
+		if (e.view_mode === "tabs" && n.length > 1) {
+			let e = n[this._activeTab], r = e ? this.hass.states[e] : null;
+			if (r?.attributes?.departures) {
+				let n = this._config.entities.find((t) => (typeof t == "string" ? t : t.entity) === e);
+				t = r.attributes.departures.map((t) => ({
+					...t,
+					_entityId: e,
+					_entityConfig: n,
+					_stopName: r.attributes.stop_name,
+					_provider: r.attributes.provider
+				}));
+			}
+		} else t = this._getAllDepartures();
+		if (e.realtime_only && (t = t.filter((e) => e.realtime)), e.filter_routes.length && (t = t.filter((t) => e.filter_routes.includes(t.route))), e.destination_filter.length && (t = t.filter((t) => e.destination_filter.some((e) => t.headsign && t.headsign.toLowerCase().includes(e.toLowerCase())))), e.exclude_destinations.length && (t = t.filter((t) => !e.exclude_destinations.some((e) => t.headsign && t.headsign.toLowerCase().includes(e.toLowerCase())))), e.filter_platform && (t = t.filter((t) => String(t.platform || "") === String(e.filter_platform))), e.filter_track && (t = t.filter((t) => String(t.track || "") === String(e.filter_track))), e.hide_terminus && t.length && (t = t.filter((e) => !(e.headsign && e._stopName && e.headsign.toLowerCase() === e._stopName.toLowerCase()))), e.highlight_mode) {
+			let e = {};
+			for (let n of t) {
+				let t = n.route + "|" + n.headsign;
+				e[t] || (e[t] = []), e[t].push(n);
+			}
+			for (let t in e) e[t].sort((e, t) => new Date(e.estimated_time || e.theoretical_time) - new Date(t.estimated_time || t.theoretical_time)), e[t].forEach((e, t) => {
+				t > 0 && (e._dimmed = !0);
+			});
+		}
+		let r = {};
+		return t = t.filter((t) => {
+			let n = t._entityConfig && typeof t._entityConfig == "object" ? t._entityConfig : {}, i = Array.isArray(n.exclude_destinations) ? n.exclude_destinations : [];
+			if (i.length && t.headsign && i.some((e) => t.headsign.toLowerCase().includes(String(e).toLowerCase()))) return !1;
+			let a = parseInt(n.max_departures) || e.max_departures;
+			return r[t._entityId] = (r[t._entityId] || 0) + 1, r[t._entityId] <= a;
+		}), t.slice(0, e.max_departures);
+	}
+	_getAutoIcon() {
+		if (!this.hass || !this._config.entities?.length) return Re;
+		let e = /* @__PURE__ */ new Set();
+		for (let t of this._getEntityIds()) {
+			let n = this.hass.states[t];
+			n?.attributes?.provider && e.add(n.attributes.provider);
+		}
+		return e.size === 1 && e.has("plk_rail") ? ze : Be;
+	}
+	_getHeaderColor() {
+		if (this._config.header_color) {
+			let e = this._config.header_color;
+			return /^(#[0-9a-fA-F]{3,8}|rgba?\([^)]+\)|hsla?\([^)]+\)|linear-gradient\([^;{}]+\)|[a-zA-Z]{3,20})$/.test(e.trim()) ? e.trim() : "#005eb8";
+		}
+		let e = {
+			ztm_gdansk: "#DA2128",
+			zkm_gdynia: "#005eb8",
+			mzk_wejherowo: "#478AC9",
+			plk_rail: "#1a1a2e",
+			...Pe
+		}, t = /* @__PURE__ */ new Set();
+		if (this.hass && this._config.entities?.length) for (let e of this._getEntityIds()) {
+			let n = this.hass.states[e];
+			n?.attributes?.provider && t.add(n.attributes.provider);
+		}
+		let n = [...t];
+		if (n.length === 1) return e[n[0]] || "#005eb8";
+		if (n.length >= 2) {
+			let t = [...new Set(n.map((t) => e[t] || "#005eb8"))];
+			return t.length === 1 ? t[0] : `linear-gradient(135deg, ${t[0]} 0%, ${t[1]} 100%)`;
+		}
+		return "#005eb8";
+	}
+	_getTitle() {
+		if (this._config.title) return this._config.title;
+		if (!this.hass || !this._config.entities?.length) return "MZKZG Transport";
+		let e = this._getEntityIds()[0], t = e ? this.hass.states[e] : null;
+		return t?.attributes?.stop_name || t?.attributes?.friendly_name || "MZKZG Transport";
+	}
+	_getSubtitle() {
+		if (!this.hass || !this._config.entities?.length) return "Wybierz encje";
+		let e = /* @__PURE__ */ new Set();
+		for (let t of this._getEntityIds()) {
+			let n = this.hass.states[t];
+			n?.attributes?.provider && e.add(n.attributes.provider);
+		}
+		return [...e].join(" + ") || "MZKZG";
+	}
+	_getLastUpdate() {
+		if (!this.hass || !this._config.entities?.length) return "";
+		let e = null;
+		for (let t of this._getEntityIds()) {
+			let n = this.hass.states[t]?.attributes?.last_update;
+			n && (!e || n > e) && (e = n);
+		}
+		return e ? `Odświeżono: ${new Date(e).toLocaleTimeString("pl-PL", {
+			hour: "2-digit",
+			minute: "2-digit",
+			second: "2-digit"
+		})}` : "";
+	}
+	_resolveActionConfig(e) {
+		let t = this._config || {};
+		return e === "tap" ? Q(t.tap_action, "more-info") : Q(e === "hold" ? t.hold_action : t.double_tap_action, "none");
+	}
+	async _handleRowAction(e, t) {
+		let n = this._resolveActionConfig(e), r = n.action || "none";
+		if (r === "none") return;
+		let i = t._entityId || this._config.entities[0];
+		if (r === "more-info") {
+			Ne(this, "hass-more-info", { entityId: i });
+			return;
+		}
+		if (r === "navigate") {
+			let e = n.navigation_path || "";
+			if (!e) return;
+			history.pushState(null, "", e), Ne(window, "location-changed", { replace: !1 });
+			return;
+		}
+		if (r === "url") {
+			let e = n.url_path || "";
+			if (!e) return;
+			window.open(e, "_blank", "noopener");
+			return;
+		}
+		if (r === "toggle") {
+			if (!this.hass || !i) return;
+			await this.hass.callService("homeassistant", "toggle", { entity_id: i });
+			return;
+		}
+		if (r === "perform-action" || r === "call-service") {
+			if (!this.hass) return;
+			let [e, t] = (n.perform_action || n.service || "").split(".");
+			if (!e || !t) return;
+			let r = { ...n.data || {} };
+			n.target?.entity_id && (r.entity_id = n.target.entity_id), await this.hass.callService(e, t, r);
+		}
+	}
+	_onRowClick(e, t) {
+		if (Y(t.vehicle_lat, t.vehicle_lng) !== null) {
+			let e = Y(t.vehicle_lat, t.vehicle_lng);
+			this.vehicleMap.showVehicleMap(e[0], e[1], {
+				route: t.route || "",
+				code: t.vehicle_code || "",
+				headsign: t.headsign || "",
+				delay: Math.round((t.delay_seconds || 0) / 60),
+				direction: parseFloat(t.vehicle_direction || t.direction) || null,
+				provider: t._provider || t.provider || "",
+				trip_id: t.trip_id,
+				route_id_int: t.route_id_int,
+				entityId: t._entityId,
+				vehicleType: t.vehicle_type || "bus",
+				lowFloor: t.floor_height && t.floor_height !== "Pojazd wysokopodłogowy",
+				electric: t.drive_type === "elektryczny",
+				articulated: t.articulated,
+				historic: t.historic,
+				vehicle_model: t.vehicle_model || "",
+				vehicle_speed: t.vehicle_speed
+			});
+			return;
+		}
+		this._tapTimer && clearTimeout(this._tapTimer), this._tapTimer = setTimeout(() => this._handleRowAction("tap", t), 220);
+	}
+	_onRowDblClick(e, t) {
+		this._tapTimer && clearTimeout(this._tapTimer), this._handleRowAction("double", t);
+	}
+	_onRowContext(e, t) {
+		e.preventDefault(), this._handleRowAction("hold", t);
+	}
+	_renderTabs() {
+		let e = this._config, t = this._getEntityIds();
+		return e.view_mode !== "tabs" || t.length <= 1 ? I : N`
+      <div class="tabs" role="tablist">
+        ${t.map((e, t) => {
+			let n = (this.hass?.states[e])?.attributes?.stop_name || e.replace("sensor.", "");
+			return N`
+            <span 
+              class="tab ${t === this._activeTab ? "active" : ""}" 
+              role="tab" 
+              tabindex=${t === this._activeTab ? "0" : "-1"}
+              aria-selected=${t === this._activeTab ? "true" : "false"}
+              @click=${() => {
+				this._activeTab = t;
+			}}
+            >${n}</span>
+          `;
+		})}
+      </div>
+    `;
+	}
+	_renderDeps() {
+		let e = this._config;
+		if (!e.entities?.length) return N`<div class="state-msg"><span class="icon">📍</span>${q("no_entities")}</div>`;
+		if (!this.hass) {
+			let t = e.min_departures !== void 0 && e.min_departures > 0 ? e.min_departures : Math.min(5, e.max_departures || 5);
+			return Array.from({ length: t }).map(() => N`
+        <div class="dep-row">
+          <div class="skel" style="height:26px;width:40px;border-radius:6px"></div>
+          <div class="skel" style="height:13px;flex:1"></div>
+          <div class="skel" style="height:13px;width:60px"></div>
         </div>
-
-        <div class="section">
-          <div class="section-title">${t("editor_appearance")}</div>
-          <div class="field">
-            <label for="title">Tytuł</label>
-            <input id="title" type="text" value="${escapeHtml(c.title || "")}" placeholder="Auto z nazwy przystanku" />
-          </div>
-          <div class="field">
-            <label for="icon">Ikona (MDI)</label>
-            <input id="icon" type="text" value="${escapeHtml(c.icon || "")}" placeholder="mdi:tram, mdi:bus, mdi:train" />
-          </div>
-          <div class="preset-group">
-            <label class="preset-option"><input type="radio" name="display_preset" value="standard" ${preset==="standard"?"checked":""}/><span class="preset-card"><span class="preset-name">Standard</span><span class="preset-desc">Codzienny</span></span></label>
-            <label class="preset-option"><input type="radio" name="display_preset" value="compact" ${preset==="compact"?"checked":""}/><span class="preset-card"><span class="preset-name">Kompakt</span><span class="preset-desc">Więcej wierszy</span></span></label>
-            <label class="preset-option"><input type="radio" name="display_preset" value="e_ink" ${preset==="e_ink"?"checked":""}/><span class="preset-card"><span class="preset-name">E-ink</span><span class="preset-desc">Tylko czas</span></span></label>
-          </div>
-          ${!isEink ? `
-          <div class="field">
-            <label>Kolor nagłówka</label>
-            <div class="switch-row" style="margin-bottom:6px">
-              <label for="header_color_auto">Auto z providera</label>
-              <input id="header_color_auto" type="checkbox" ${autoColor ? "checked" : ""}/>
-            </div>
-            <div class="color-row ${autoColor ? "disabled" : ""}" id="color-row">
-              <input id="header_color_picker" type="color" value="${escapeHtml(c.header_color || "#005eb8")}" />
-              <input id="header_color" type="text" value="${escapeHtml(c.header_color || "")}" placeholder="#005eb8" />
-            </div>
-          </div>` : ""}
-          <div class="field">
-            <label>Widok wielu przystanków</label>
-            <div style="display:flex;gap:8px;margin-top:4px">
-              <label style="display:flex;align-items:center;gap:4px;font-size:13px;color:var(--primary-text-color);cursor:pointer"><input type="radio" name="view_mode" value="mixed" ${(c.view_mode||"mixed")==="mixed"?"checked":""} style="width:auto;height:auto"/> Miks</label>
-              <label style="display:flex;align-items:center;gap:4px;font-size:13px;color:var(--primary-text-color);cursor:pointer"><input type="radio" name="view_mode" value="tabs" ${c.view_mode==="tabs"?"checked":""} style="width:auto;height:auto"/> Zakładki</label>
-            </div>
-          </div>
+      `);
+		}
+		let t = this._getDepartures();
+		if (!t.length) {
+			let e = this._getEntityIds().filter((e) => !this.hass.states[e]);
+			if (e.length) {
+				let t = e.map((e) => e.replace("sensor.", "")).join(", ");
+				return N`<div class="state-msg"><span class="icon">⚠️</span>${q("missing_entities")}<br><small>${t}</small></div>`;
+			}
+			let t = this._getEntityIds().filter((e) => {
+				let t = this.hass.states[e];
+				return t && (t.state === "unavailable" || t.state === "unknown");
+			});
+			if (t.length) return N`<div class="state-msg"><span class="icon">⚠️</span>${t.some((e) => this.hass.states[e]?.attributes?.provider === "plk_rail") ? q("plk_rate_limit") : q("unavailable")}</div>`;
+			let n = this._getAllDepartures();
+			if (n.length) {
+				let e = n[0], t = e.estimated_time ? X(e.estimated_time) : "";
+				return N`<div class="state-msg"><span class="icon">🕐</span>${q("no_departures")}<br><small>${t ? (q("min") === "min" ? "Next" : "Następny") + ": " + e.route + " → " + e.headsign + " " + t : ""}</small></div>`;
+			}
+			return N`<div class="state-msg"><span class="icon">⏳</span>${q("no_departures")}</div>`;
+		}
+		let n = ["none"].indexOf(this._config.tap_action?.action || "more-info") === -1 || ["none"].indexOf(this._config.hold_action?.action || "none") === -1 || ["none"].indexOf(this._config.double_tap_action?.action || "none") === -1, r = (t) => {
+			let r = Ae(t.estimated_time), i = t.realtime && r !== null && r <= 2, a = Math.round((t.delay_seconds || 0) / 60), o = e.show_delays && t.realtime && Math.abs(a) >= 1, s = t.cancelled === !0, c;
+			if (s) c = N`<div class="time-main cancelled">${q("cancelled")}</div>`;
+			else if (e.display_preset === "e_ink") c = N`<div class="time-main">${X(t.estimated_time || t.theoretical_time)}</div>`;
+			else if (t.realtime) {
+				let e = o ? N` <span class="delay-badge ${a > 0 ? "late" : "early"}">${a > 0 ? "+" : ""}${a}min</span>` : I;
+				c = N`<div class="time-main">${o ? N`<span class="time-struck">${X(t.theoretical_time || t.estimated_time)}</span> ${X(t.estimated_time)}` : X(t.estimated_time)}</div><div class="time-sub"><span class="dot">●</span> ${r !== null && r <= 0 ? q("departing") : je(r)}${e}</div>`;
+			} else c = N`<div class="time-main">${X(t.theoretical_time || t.estimated_time)}</div>`;
+			let l = I;
+			t._provider === "plk_rail" && (l = N`
+          ${t.platform ? N`<span class="platform">peron ${t.platform}</span>` : I}
+          ${t.track ? N`<span class="platform">${q("track")} ${t.track}</span>` : I}
+        `);
+			let u = [];
+			e.show_bike && t.bike_allowed === !0 && u.push(N`<span title="Rower">${G(Ve)}</span>`), e.show_wheelchair && t.wheelchair_accessible === !0 && u.push(N`<span title="Wózek">${G(He)}</span>`), e.show_ac && t.air_conditioning === !0 && u.push(N`<span title="Klimatyzacja">${G(Ue)}</span>`);
+			let d = t._provider !== "plk_rail" && t.vehicle_code && t.realtime ? N`<span class="platform">${t.vehicle_code}</span>` : I, f = t.platform && t._provider !== "plk_rail" ? N`<span class="platform" title="Stanowisko/peron">${t.platform}</span>` : I, p = u.length > 0 || f !== I || l !== I ? N`<span class="meta-row"><span class="icons">${u}</span>${l}${f}</span>` : I, m = e.show_stop_name && e.entities.length > 1 && e.view_mode !== "tabs" && t._stopName, h = (t._stopName || "").replace(/\s*\(?(bus|tramwaj|tram|train|skm)\)?\s*/gi, " ").trim(), g = I;
+			if (t.train_number && t._provider === "plk_rail") {
+				let e = (t.carrier || "").replace(/^[„""'\s]+/, "").replace(/PKP\s*Szybka\s*Kolej\s*Miejska.*/i, "SKM").replace(/PKP\s*Intercity.*/i, "IC").replace(/POLREGIO.*/i, "Polregio").replace(/\s*sp\.?\s*z\s*o\.?\s*o\.?.*/i, "");
+				g = N`<span class="stop-name">nr ${t.train_number} - ${e}</span>`;
+			}
+			let ee = Y(t.vehicle_lat, t.vehicle_lng) !== null, _ = n || ee;
+			return N`
+        <div class="dep-row ${_ ? "interactive" : ""} ${i ? "imminent" : ""} ${t._dimmed ? "dimmed" : ""} ${s ? "cancelled" : ""}"
+             tabindex=${_ ? "0" : "-1"}
+             @click=${(e) => this._onRowClick(e, t)}
+             @dblclick=${(e) => this._onRowDblClick(e, t)}
+             @contextmenu=${(e) => this._onRowContext(e, t)}
+             @keydown=${(e) => {
+				(e.key === "Enter" || e.key === " ") && (e.preventDefault(), this._onRowClick(e, t));
+			}}>
+          <span class="badge" style="background:${Z(t.route, t._provider || t.provider, t.route_color)}">${t.route}</span>
+          <span class="headsign">
+            <span class="head-main"><span class="headsign-text">${t.headsign}</span>${d}</span>
+            ${p}
+            ${g === I ? m ? N`<span class="stop-name">${h}</span>` : I : g}
+          </span>
+          <div class="time-col">${c}</div>
         </div>
-
-        <div class="section">
-          <div class="section-title">${t("editor_filtering")}</div>
-          <div class="field-row">
-            <div class="field">
-              <label for="max_departures">Max odjazdów</label>
-              <input id="max_departures" type="text" inputmode="numeric" value="${escapeHtml(c.max_departures ?? 10)}" />
-            </div>
-            <div class="field">
-              <label for="filter_routes">Linie</label>
-              <input id="filter_routes" type="text" value="${escapeHtml((c.filter_routes || []).join(", "))}" placeholder="131, 21, S1" />
-            </div>
-          </div>
-          <div class="field">
-            <label for="destination_filter">Kierunki</label>
-            <input id="destination_filter" type="text" value="${escapeHtml((c.destination_filter || []).join(", "))}" placeholder="Wrzeszcz, Oliwa" />
-          </div>
-          <div class="field">
-            <label for="filter_platform">Peron</label>
-            <input id="filter_platform" type="text" value="${escapeHtml(c.filter_platform || "")}" placeholder="np. 1" />
-          </div>
-          <div class="field">
-            <label for="filter_track">Tor</label>
-            <input id="filter_track" type="text" value="${escapeHtml(c.filter_track || "")}" placeholder="np. 502" />
-          </div>
-          <div class="switch-list">
-            <div class="switch-row"><label for="highlight_mode">Podświetlaj zamiast ukrywać</label><input id="highlight_mode" type="checkbox" ${c.highlight_mode ? "checked" : ""}/></div>
-            <div class="switch-row"><label for="hide_terminus">Ukryj kończące bieg/trasę</label><input id="hide_terminus" type="checkbox" ${c.hide_terminus !== false ? "checked" : ""}/></div>
-            <div class="switch-row"><label for="realtime_only">Tylko realtime</label><input id="realtime_only" type="checkbox" ${c.realtime_only ? "checked" : ""}/></div>
-          </div>
-          <div class="field" style="margin-top:10px">
-            <label for="entity_filter_target">Filtry per sensor (nadpisanie)</label>
-            <select id="entity_filter_target">
-              ${selectedEntityList.map(e => `<option value="${escapeHtml(e)}" ${e === activeOverrideTarget ? "selected" : ""}>${escapeHtml(e.replace("sensor.",""))}</option>`).join("")}
-            </select>
-            <div class="muted">Puste wartości użyją filtrów globalnych.</div>
-          </div>
-          <div class="field-row">
-            <div class="field">
-              <label for="entity_filter_routes">Linie (sensor)</label>
-              <input id="entity_filter_routes" type="text" value="${escapeHtml((activeEntry?.filter_routes || []).join(", "))}" placeholder="np. 2, 8, N1" />
-            </div>
-            <div class="field">
-              <label for="entity_max_departures">Max odjazdów (sensor)</label>
-              <input id="entity_max_departures" type="text" inputmode="numeric" value="${activeEntry?.max_departures ?? ""}" placeholder="Globalne" />
-            </div>
-            <div class="field">
-              <label for="entity_destination_filter">Kierunki (sensor)</label>
-              <input id="entity_destination_filter" type="text" value="${escapeHtml((activeEntry?.destination_filter || []).join(", "))}" placeholder="np. Wrzeszcz" />
-            </div>
-          </div>
-          <div class="field-row">
-            <div class="field">
-              <label for="entity_filter_platform">Peron (sensor)</label>
-              <input id="entity_filter_platform" type="text" value="${escapeHtml(activeEntry?.filter_platform || "")}" placeholder="np. 1" />
-            </div>
-            <div class="field">
-              <label for="entity_filter_track">Tor (sensor)</label>
-              <input id="entity_filter_track" type="text" value="${escapeHtml(activeEntry?.filter_track || "")}" placeholder="np. 502" />
-            </div>
-          </div>
-          <div class="switch-list">
-            <div class="switch-row"><label for="entity_highlight_mode">Podświetlaj (sensor)</label><input id="entity_highlight_mode" type="checkbox" ${activeEntry?.highlight_mode ? "checked" : ""}/></div>
-            <div class="switch-row"><label for="entity_hide_terminus">Ukryj kończące (sensor)</label><input id="entity_hide_terminus" type="checkbox" ${activeEntry?.hide_terminus ? "checked" : ""}/></div>
-            <div class="switch-row"><label for="entity_realtime_only">Tylko realtime (sensor)</label><input id="entity_realtime_only" type="checkbox" ${activeEntry?.realtime_only ? "checked" : ""}/></div>
-          </div>
-        </div>
-
-        <div class="section">
-          <div class="section-title">${t("editor_interactions")}</div>
-          <div class="field-row">
-            <div class="field">
-              <label for="tap_action_type">Klik</label>
-              <select id="tap_action_type">
-                <option value="more-info" ${tapAction.action === "more-info" ? "selected" : ""}>Więcej informacji</option>
-                <option value="none" ${tapAction.action === "none" ? "selected" : ""}>Brak</option>
-                <option value="navigate" ${tapAction.action === "navigate" ? "selected" : ""}>Nawigacja</option>
-                <option value="url" ${tapAction.action === "url" ? "selected" : ""}>url</option>
-                <option value="perform-action" ${tapAction.action === "perform-action" ? "selected" : ""}>Wywołaj akcję</option>
-              </select>
-            </div>
-            <div class="field">
-              <label for="tap_action_value">Wartość</label>
-              <input id="tap_action_value" type="text" value="${escapeHtml(tapAction.navigation_path || tapAction.url_path || tapAction.perform_action || tapAction.service || "")}" placeholder="/lovelace/1 lub https://... lub domain.service" />
-            </div>
-          </div>
-          <div class="field-row">
-            <div class="field">
-              <label for="hold_action_type">Przytrzymanie</label>
-              <select id="hold_action_type">
-                <option value="none" ${holdAction.action === "none" ? "selected" : ""}>Brak</option>
-                <option value="more-info" ${holdAction.action === "more-info" ? "selected" : ""}>Więcej informacji</option>
-                <option value="navigate" ${holdAction.action === "navigate" ? "selected" : ""}>Nawigacja</option>
-                <option value="url" ${holdAction.action === "url" ? "selected" : ""}>url</option>
-                <option value="perform-action" ${holdAction.action === "perform-action" ? "selected" : ""}>Wywołaj akcję</option>
-              </select>
-            </div>
-            <div class="field">
-              <label for="hold_action_value">Wartość</label>
-              <input id="hold_action_value" type="text" value="${escapeHtml(holdAction.navigation_path || holdAction.url_path || holdAction.perform_action || holdAction.service || "")}" placeholder="/lovelace/1 lub https://... lub domain.service" />
-            </div>
-          </div>
-          <div class="field-row">
-            <div class="field">
-              <label for="double_tap_action_type">Dwuklik</label>
-              <select id="double_tap_action_type">
-                <option value="none" ${doubleTapAction.action === "none" ? "selected" : ""}>Brak</option>
-                <option value="more-info" ${doubleTapAction.action === "more-info" ? "selected" : ""}>Więcej informacji</option>
-                <option value="navigate" ${doubleTapAction.action === "navigate" ? "selected" : ""}>Nawigacja</option>
-                <option value="url" ${doubleTapAction.action === "url" ? "selected" : ""}>url</option>
-                <option value="perform-action" ${doubleTapAction.action === "perform-action" ? "selected" : ""}>Wywołaj akcję</option>
-              </select>
-            </div>
-            <div class="field">
-              <label for="double_tap_action_value">Wartość</label>
-              <input id="double_tap_action_value" type="text" value="${escapeHtml(doubleTapAction.navigation_path || doubleTapAction.url_path || doubleTapAction.perform_action || doubleTapAction.service || "")}" placeholder="/lovelace/1 lub https://... lub domain.service" />
-            </div>
-          </div>
-        </div>
-
-        ${!isEink ? `
-        <div class="section">
-          <div class="section-title">${t("editor_advanced")}</div>
-          <div class="switch-list">
-            <div class="switch-row"><label for="show_delays">Opóźnienia</label><input id="show_delays" type="checkbox" ${c.show_delays !== false ? "checked" : ""}/></div>
-            <div class="switch-row"><label for="show_footer">Czas aktualizacji</label><input id="show_footer" type="checkbox" ${c.show_footer !== false ? "checked" : ""}/></div>
-            <div class="switch-row"><label for="show_bike">Miejsce na rower</label><input id="show_bike" type="checkbox" ${c.show_bike !== false ? "checked" : ""}/></div>
-            <div class="switch-row"><label for="show_wheelchair">Miejsce na wózek</label><input id="show_wheelchair" type="checkbox" ${c.show_wheelchair !== false ? "checked" : ""}/></div>
-            <div class="switch-row"><label for="show_ac">Klimatyzacja</label><input id="show_ac" type="checkbox" ${c.show_ac !== false ? "checked" : ""}/></div>
-            <div class="switch-row"><label for="show_ticket_machine">Biletomat</label><input id="show_ticket_machine" type="checkbox" ${c.show_ticket_machine !== false ? "checked" : ""}/></div>
-          </div>
-          <div class="field" style="margin-top:8px">
-            <label for="refresh_interval">Odświeżanie (s)</label>
-            <input id="refresh_interval" type="text" inputmode="numeric" value="${escapeHtml(c.refresh_interval ?? 60)}" />
-          </div>
-          <div class="field" style="margin-top:8px">
-            <div class="muted">Półprzezroczysta warstwa na mapie pojazdu. Wymaga klucza API (Mapbox, TomTom, HERE).</div>
-          </div>
-          <div class="field" style="margin-top:8px">
-          </div>
-        </div>` : ""}
-      </div>`;
-
-    this._rendered = true;
-
-    // Stop key events from bubbling out of shadow DOM (HA intercepts them)
-    this.shadowRoot.addEventListener("keydown", e => e.stopPropagation());
-
-    // Text fields: debounced fire on input
-    this.shadowRoot.querySelectorAll("input[type='text']").forEach(el => {
-      el.addEventListener("input", () => this._fire());
-    });
-    // Checkboxes + radios: immediate fire
-    this.shadowRoot.querySelectorAll("input[type='checkbox'], input[type='radio']").forEach(el => {
-      el.addEventListener("change", () => this._fireNow());
-    });
-    // All selects except per-sensor target: immediate fire
-    this.shadowRoot.querySelectorAll("select").forEach(el => {
-      if (el.id === "entity_filter_target") return;
-      el.addEventListener("change", () => this._fireNow());
-    });
-    // Per-sensor target just switches editor fields (save current before switching)
-    const perSensorTarget = this.shadowRoot.getElementById("entity_filter_target");
-    if (perSensorTarget) {
-      let activeOverrideTarget = perSensorTarget.value;
-      perSensorTarget.addEventListener("change", () => {
-        this._fireNow(activeOverrideTarget);
-        activeOverrideTarget = perSensorTarget.value;
-        this._setEntityOverrideFieldsFor(perSensorTarget.value);
-      });
-    }
-    // Auto color toggle
-    // Auto color toggle — visual only, fire already handled above
-    const autoCheck = this.shadowRoot.getElementById("header_color_auto");
-    const colorRow = this.shadowRoot.getElementById("color-row");
-    if (autoCheck && colorRow) {
-      autoCheck.addEventListener("change", () => {
-        colorRow.classList.toggle("disabled", autoCheck.checked);
-      });
-    }
-    // Sync color picker
-    const picker = this.shadowRoot.getElementById("header_color_picker");
-    const colorInput = this.shadowRoot.getElementById("header_color");
-    if (picker && colorInput) {
-      picker.addEventListener("input", () => { colorInput.value = picker.value; this._fire(); });
-      colorInput.addEventListener("input", () => { if (/^#[0-9a-f]{6}$/i.test(colorInput.value)) picker.value = colorInput.value; this._fire(); });
-    }
-    this._refreshEntityFilterTargetOptions();
-  }
-}
-
-if (!customElements.get("mzkzg-transport-card-editor")) {
-  customElements.define("mzkzg-transport-card-editor", MzkzgTransportCardEditor);
-}
-if (!customElements.get("polish-transport-card-editor")) {
-  customElements.define("polish-transport-card-editor", class extends MzkzgTransportCardEditor {});
-}
-
-/* ── Card ────────────────────────────────────────────────────────────────── */
-
-class MzkzgTransportCard extends HTMLElement {
-  constructor() {
-    super();
-    this._config = {};
-    this._hass = null;
-    this._rendered = false;
-    this._activeTab = 0;
-    this._tickTimer = null;
-    this.attachShadow({ mode: "open" });
-  }
-
-  static getConfigElement() { return document.createElement("polish-transport-card-editor"); }
-  static getStubConfig() {
-    return { type: "custom:polish-transport-card", entities: [], max_departures: 10, show_delays: true, hide_terminus: true, show_bike: true, show_wheelchair: true, show_footer: true };
-  }
-
-  setConfig(config) {
-    if (!config) throw new Error("No configuration provided");
-    if (config.entities && !Array.isArray(config.entities)) throw new Error("entities must be an array");
-    this._config = {
-      ...config,
-      entities: Array.isArray(config.entities) ? config.entities : [],
-      max_departures: Math.max(1, Math.min(20, parseInt(config.max_departures) || 10)),
-      refresh_interval: Math.max(5, Math.min(600, parseInt(config.refresh_interval) || 60)),
-      display_preset: config.display_preset || "standard",
-      view_mode: config.view_mode || "mixed",
-      show_delays: config.show_delays !== false,
-      hide_terminus: config.hide_terminus !== false,
-      realtime_only: config.realtime_only === true,
-      highlight_mode: config.highlight_mode === true,
-      show_bike: config.show_bike !== false,
-      show_wheelchair: config.show_wheelchair !== false,
-      show_ac: config.show_ac !== false,
-      show_ticket_machine: config.show_ticket_machine !== false,
-      show_stop_name: config.show_stop_name === true,
-      filter_routes: normalizeList(config.filter_routes),
-      destination_filter: Array.isArray(config.destination_filter) ? config.destination_filter : (config.destination_filter ? String(config.destination_filter).split(",").map(s=>s.trim()).filter(Boolean) : []),
-      filter_platform: config.filter_platform || "",
-      filter_track: config.filter_track || "",
-      icon: config.icon || "",
-      show_footer: config.show_footer !== false,
-      tap_action: normalizeActionConfig(config.tap_action, "more-info"),
-      hold_action: normalizeActionConfig(config.hold_action, "none"),
-      double_tap_action: normalizeActionConfig(config.double_tap_action, "none"),
-    };
-    if (this._rendered) this._fullRender();
-    this._preloadLeaflet();
-  }
-
-  set hass(hass) {
-    this._hass = hass;
-    if (!this._rendered) { this._fullRender(); this._startTick(); }
-    else {
-      // Only update if our entities' states changed
-      const key = this._getEntityIds().map(e => hass.states[e]?.last_updated).join(",");
-      if (key !== this._lastStateKey) { this._lastStateKey = key; this._updateContent(); }
-    }
-  }
-
-  _getEntityEntries() {
-    const raw = Array.isArray(this._config.entities) ? this._config.entities : [];
-    return raw.map(normalizeEntityEntry).filter(e => e?.entity);
-  }
-
-  _getEntityIds() {
-    return this._getEntityEntries().map(e => e.entity);
-  }
-
-  _updatePreview() {
-    const el = this.shadowRoot.getElementById("card-preview");
-    if (!el) return;
-    const section = this.shadowRoot.getElementById("preview-section");
-    if (!section) return;
-    const entities = this._selectedEntityIds();
-    if (!entities.length) { section.style.display = "none"; return; }
-    section.style.display = "";
-    const maxDeps = Math.min(parseInt(this.shadowRoot.getElementById("max_departures")?.value) || 10, 5);
-    let html = "";
-    for (const eid of entities.slice(0, 3)) {
-      const state = this._hass?.states[eid];
-      if (!state) { html += `<div style="color:var(--secondary-text-color);padding:4px 0">${escapeHtml(eid.replace("sensor.",""))}: brak danych</div>`; continue; }
-      const deps = (state.attributes?.departures || []).slice(0, maxDeps);
-      html += `<div style="font-weight:600;padding:4px 0;border-bottom:1px solid var(--divider-color,#f0f0f0)">${escapeHtml(state.attributes?.stop_name || eid.replace("sensor.","").replace(/_odjazdy$/,""))}</div>`;
-      if (!deps.length) html += `<div style="color:var(--secondary-text-color);font-size:11px;padding:2px 0">Brak odjazdów</div>`;
-      for (const d of deps) {
-        const mins = minutesUntil(d.estimated_time);
-        const time = formatTime(d.estimated_time);
-        const delay = d.delay_seconds ? ` <span style="color:${d.delay_seconds>0?'#e53935':'#43a047'}">${d.delay_seconds>0?'+':''}${Math.round(d.delay_seconds/60)}min</span>` : "";
-        html += `<div style="display:flex;align-items:center;gap:8px;padding:2px 0;font-size:12px"><span style="font-weight:700;min-width:30px">${escapeHtml(d.route)}</span><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">→ ${escapeHtml(d.headsign||"")}</span><span>${time}${delay}</span></div>`;
-      }
-    }
-    el.innerHTML = html;
-  }
-
-  getCardSize() { return (this._config.max_departures || 10) + 1; }
-
-  getGridOptions() {
-    return { rows: "auto", min_rows: 3, columns: 12, min_columns: 6 };
-  }
-
-  getLayoutOptions() {
-    return { grid_rows: "auto", grid_min_rows: 3, grid_columns: 4, grid_min_columns: 2 };
-  }
-
-  connectedCallback() { this._startTick(); this._bindVisibility(); }
-  disconnectedCallback() {
-    if (this._tickTimer) { clearInterval(this._tickTimer); this._tickTimer = null; }
-    if (this._visHandler) { document.removeEventListener("visibilitychange", this._visHandler); this._visHandler = null; }
-  }
-
-  _bindVisibility() {
-    this._visHandler = () => {
-      if (document.visibilityState === "visible") this._updateContent();
-    };
-    document.addEventListener("visibilitychange", this._visHandler);
-  }
-
-  _startTick() {
-    if (this._tickTimer) clearInterval(this._tickTimer);
-    if (this._config.display_preset === "e_ink") return;
-    this._tickTimer = setInterval(() => this._updateContent(), (this._config.refresh_interval || 60) * 1000);
-  }
-
-  _getAllDepartures() {
-    // Get all departures without route/destination/platform filters (for "next departure" hint)
-    if (!this._hass || !this._config.entities?.length) return [];
-    let deps = [];
-    const showProviderHeaders = !c.group_by_provider || c.group_by_provider === true;
-    for (const entityCfg of this._getEntityEntries()) {
-      const eid = typeof entityCfg === "string" ? entityCfg : entityCfg.entity;
-      const s = this._hass.states[eid];
-      if (!s || !s.attributes?.departures) continue;
-      for (const d of s.attributes.departures) deps.push(d);
-    }
-    deps.sort((a, b) => (minutesUntil(a.estimated_time) ?? 9999) - (minutesUntil(b.estimated_time) ?? 9999));
-    return deps.slice(0, 5);
-  }
-
-  _getDepartures() {
-    if (!this._hass || !this._config.entities?.length) return [];
-    const c = this._config;
-    let deps = [];
-    const entityEntries = this._getEntityEntries();
-
-    // In tabs mode, only show departures from active tab entity
-    const entities = (c.view_mode === "tabs" && entityEntries.length > 1)
-      ? [entityEntries[this._activeTab] || entityEntries[0]]
-      : entityEntries;
-
-    for (const entityCfg of entities) {
-      const state = this._hass.states[entityCfg.entity];
-      if (!state || !state.attributes?.departures) continue;
-      const provider = state.attributes.provider || "";
-      const stopName = state.attributes.stop_name || "";
-
-      for (const d of (Array.isArray(state.attributes.departures) ? state.attributes.departures : [])) {
-        try {
-          if (!d || typeof d !== "object") continue;
-          if (showProviderHeaders && deps.length > 0 && (deps[deps.length-1]._provider !== (d.provider || provider))) {
-            deps.push({ _header: d.provider || provider, _headerLabel: PROVIDER_LABELS[d.provider] || d.provider, _stopName: stopName, _entityConfig: entityCfg, _entityId: entityCfg.entity });
-          }
-          deps.push({ ...d, _provider: d.provider || provider, _stopName: stopName, _entityConfig: entityCfg, _entityId: entityCfg.entity, _provider_label: providerLabel });
-        } catch (_) { /* skip malformed departure */ }
-      }
-    }
-
-    // Filter already departed
-    deps = deps.filter(d => {
-      const min = minutesUntil(d.estimated_time);
-      return min === null || min >= -1;
-    });
-
-    // Realtime only
-    deps = deps.filter(d => {
-      const ec = d._entityConfig || {};
-      const realtimeOnly = ("realtime_only" in ec) ? ec.realtime_only : c.realtime_only;
-      return !realtimeOnly || d.realtime;
-    });
-
-    // Hide terminus
-    deps = deps.filter(d => {
-      const ec = d._entityConfig || {};
-      const hideTerminus = ("hide_terminus" in ec) ? ec.hide_terminus : c.hide_terminus;
-      if (!hideTerminus || !d._stopName) return true;
-      return normalizeText(d.headsign) !== normalizeText(d._stopName);
-    });
-
-    // Filter routes
-    deps = deps.filter(d => {
-      const ec = d._entityConfig || {};
-      const routeFilters = ("filter_routes" in ec) ? ec.filter_routes : c.filter_routes;
-      if (!routeFilters?.length) return true;
-      const fs = new Set(routeFilters.map(r => String(r).toUpperCase()));
-      const match = fs.has(String(d.route).toUpperCase());
-      const highlightMode = ("highlight_mode" in ec) ? ec.highlight_mode : c.highlight_mode;
-      if (highlightMode) {
-        d._dimmed = !match;
-        return true;
-      }
-      return match;
-    });
-
-    // Destination filter
-    deps = deps.filter(d => {
-      const ec = d._entityConfig || {};
-      const destinationFilters = ("destination_filter" in ec) ? ec.destination_filter : c.destination_filter;
-      if (!destinationFilters?.length) return true;
-      const h = (d.headsign || "").toLowerCase();
-      const df = destinationFilters.map(f => String(f).toLowerCase());
-      return df.some(f => h.includes(f));
-    });
-
-    // Platform/track filter
-    deps = deps.filter(d => {
-      const ec = d._entityConfig || {};
-      const platformFilter = ("filter_platform" in ec) ? ec.filter_platform : c.filter_platform;
-      if (!platformFilter) return true;
-      return String(d.platform || "") === platformFilter;
-    });
-    deps = deps.filter(d => {
-      const ec = d._entityConfig || {};
-      const trackFilter = ("filter_track" in ec) ? ec.filter_track : c.filter_track;
-      if (!trackFilter) return true;
-      return String(d.track || "") === trackFilter;
-    });
-
-    // Sort by departure time
-    deps.sort((a, b) => {
-      const ma = minutesUntil(a.estimated_time) ?? 9999;
-      const mb = minutesUntil(b.estimated_time) ?? 9999;
-      return ma - mb;
-    });
-
-    const cap = d._entityConfig?.max_departures || c.max_departures;
-    return deps.slice(0, cap);
-  }
-
-  _preloadLeaflet() {
-    if (!this._leafletLoading) {
-      this._leafletLoading = new Promise((resolve) => {
-        const l = document.createElement("link");
-        l.rel = "stylesheet";
-        l.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
-        l.onload = () => {
-          const s = document.createElement("script");
-          s.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
-          s.onload = resolve;
-          document.head.appendChild(s);
-        };
-        document.head.appendChild(l);
-      });
-    }
-    return this._leafletLoading;
-  }
-
-  _buildVehicleMarker(bearing, color, route, vehicleType, info, isMobile) {
-    const size = isMobile ? 32 : 40;
-    const fontSize = isMobile ? 11 : 13;
-    const half = size / 2;
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size + 6}" viewBox="0 0 ${size} ${size + 6}">
-      <circle cx="${half}" cy="${half}" r="${half - 3}" fill="${color}" stroke="#fff" stroke-width="1.5"/>
-      <text x="${half}" y="${half}" text-anchor="middle" dominant-baseline="central" font-weight="700" font-size="${fontSize}" fill="#fff" font-family="system-ui,sans-serif">${escapeHtml(route)}</text>
-      <path d="M${half},${size - 3} Q${half - 14},${size + 1} ${half - 7},${size - 1} L${half},${size + 6} L${half + 7},${size - 1} Q${half + 14},${size + 1} ${half},${size - 3} Z" fill="${color}" stroke="#fff" stroke-width="1.5" stroke-linejoin="round"/>
-    </svg>`;
-
-    return { svg, size, arrowH: size + 7 };
-  }
-
-  _buildPopupContent(d) {
-    const delay = Math.round((d.delay_seconds || 0) / 60);
-    const delayTag = delay > 0 ? `+${delay} min` : delay < 0 ? `${delay} min` : "o czasie";
-    const delayClass = delay > 0 ? "zm-popup-delay" : delay < 0 ? "zm-popup-delay early" : "zm-popup-delay ontime";
-    return `<div class="zm-popup"><div class="zm-popup-route">${escapeHtml(d.route)}</div>${d.headsign ? `<div class="zm-popup-headsign">→ ${escapeHtml(d.headsign)}</div>` : ""}${d.vehicle_code ? `<div class="zm-popup-meta">🚍 ${escapeHtml(d.vehicle_code)}</div>` : ""}<div class="zm-popup-delay-row"><span class="${delayClass}">${escapeHtml(delayTag)}</span></div></div>`;
-  }
-
-  _showVehicleMap(lat, lng, info) {
-    if (this._mapCtx) { this._mapCtx.destroy(); }
-
-    const isMobile = window.innerWidth < 480;
-    const w = Math.min(window.innerWidth * 0.92, 520);
-    const h = Math.min(window.innerHeight * 0.65, 420);
-
-    const overlay = document.createElement("div");
-    overlay.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:100000;display:flex;align-items:center;justify-content:center;";
-    overlay.innerHTML = `<div style="position:relative;width:${w}px;height:${h}px;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.3);"><button style="position:absolute;top:8px;right:8px;z-index:1001;background:rgba(0,0,0,0.6);border:none;border-radius:50%;width:32px;height:32px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;color:#fff;">✕</button><div id="vmap" style="width:${w}px;height:${h}px;"></div><div id="vmap-status" style="position:absolute;bottom:6px;left:10px;z-index:1001;font-size:10px;color:#999;background:rgba(255,255,255,0.8);padding:2px 6px;border-radius:4px">🔄 odświeżanie co 30s</div></div>`;
-    document.body.appendChild(overlay);
-    const closeMap = () => { if (this._mapCtx) this._mapCtx.destroy(); };
-    overlay.querySelector("button").onclick = closeMap;
-    overlay.onclick = (e) => { if (e.target === overlay) closeMap(); };
-
-    const container = overlay.querySelector("#vmap");
-
-    if (!document.getElementById("ztm-map-style")) {
-      const s = document.createElement("style");
-      s.id = "ztm-map-style";
-      s.textContent = `.zm-arrow{position:relative;display:inline-block;transition:transform 0.8s ease}.zm-arrow svg{display:block}.zm-popup{font-family:system-ui,sans-serif;font-size:12px;line-height:1.3;min-width:120px}.zm-popup-route{font-size:22px;font-weight:800;line-height:1}.zm-popup-headsign{font-size:13px;color:#555}.zm-popup-meta{font-size:10px;color:#999;margin-top:2px}.zm-popup-delay-row{margin-top:4px;font-size:13px;font-weight:600}.zm-popup-delay{color:#e53935}.zm-popup-delay.ontime{color:#43a047}.zm-popup-delay.early{color:#1e88e5}}`;
-      document.head.appendChild(s);
-    }
-
-
-    const color = routeColor(info.route, info.provider || "");
-
-    const createMap = () => {
-      requestAnimationFrame(() => {
-        if (ctx.destroyed) return;
-        const map = window.L.map(container, { zoomControl: true, attributionControl: false }).setView([lat, lng], 16);
-        window.L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
-          maxZoom: 20, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>, &copy; CARTO', subdomains: "abcd",
-        }).addTo(map);
-        ctx.map = map;
-
-        // Stop location marker
-        window.L.circleMarker([lat, lng], { radius: 5, fillColor: color, fillOpacity: 0.5, color: "#fff", weight: 2 }).addTo(map);
-
-        // Show all vehicles with GPS from this entity
-        this._renderAllVehicleMarkers(ctx, info, isMobile);
-
-        ctx.ro = new window.ResizeObserver(() => { if (ctx.map) ctx.map.invalidateSize(); });
-        ctx.ro.observe(container);
-        ctx.interval = setInterval(() => this._updateAllVehiclePositions(ctx), 30000);
-      });
-    };
-
-    if (window.L) { createMap(); }
-    else { (this._leafletLoading || this._preloadLeaflet()).then(createMap); }
-  }
-
-  _renderAllVehicleMarkers(ctx, info, isMobile) {
-    if (!this._hass) return;
-    const state = this._hass.states[ctx.entityId];
-    if (!state?.attributes?.departures) return;
-
-    // Clear old markers
-    ctx.markers.forEach(m => ctx.map.removeLayer(m));
-    ctx.markers = [];
-
-    let hasMain = false;
-    const allDeps = state.attributes.departures || [];
-    for (const d of allDeps) {
-      const pos = parseVehiclePosition(d.vehicle_lat, d.vehicle_lng);
-      if (!pos) continue;
-
-      const isMain = d.vehicle_code && d.vehicle_code === ctx.vehicleCode;
-      const color = routeColor(d.route, d._provider || d.provider || "");
-      const bearing = d.vehicle_direction || d.direction || 0;
-      const size = isMain ? (isMobile ? 38 : 46) : (isMobile ? 26 : 32);
-      
-      if (isMain) hasMain = true;
-
-      const r = d.route || "?";
-      const b = bearing;
-      const mk = this._buildVehicleMarker(b, color, r, d.vehicle_type || "bus", d, isMobile);
-      const mkHtml = `<div class="zm-arrow" style="transform:rotate(${b}deg);opacity:${isMain ? 1 : 0.7}">${mk.svg}</div>`;
-      const icon = window.L.divIcon({
-        className: "",
-        html: mkHtml,
-        iconSize: [mk.size, mk.arrowH],
-        iconAnchor: [mk.size / 2, mk.arrowH],
-      });
-      const marker = window.L.marker([pos[0], pos[1]], { icon }).addTo(ctx.map);
-      ctx.markers.push(marker);
-    }
-
-    // If no main marker (vehicle_code mismatch), still add a highlight for the closest position
-    if (!hasMain && ctx.markers.length > 0) {
-      // All markers are already shown; we just track them
-    }
-  }
-
-  _updateAllVehiclePositions(ctx) {
-    if (ctx.destroyed || !ctx.entityId || !ctx.map || !this._hass) return;
-    const state = this._hass.states[ctx.entityId];
-    if (!state?.attributes?.departures) return;
-
-    const allDeps = state.attributes.departures || [];
-    // Clear and re-render all markers
-    ctx.markers.forEach(m => ctx.map.removeLayer(m));
-    ctx.markers = [];
-
-    const isMobile = window.innerWidth < 480;
-    for (const d of allDeps) {
-      const pos = parseVehiclePosition(d.vehicle_lat, d.vehicle_lng);
-      if (!pos) continue;
-      const isMain = d.vehicle_code && d.vehicle_code === ctx.vehicleCode;
-      const color = routeColor(d.route, d._provider || d.provider || "");
-      const b = d.vehicle_direction || d.direction || 0;
-      const r = d.route || "?";
-      const mk = this._buildVehicleMarker(b, color, r, d.vehicle_type || "bus", d, isMobile);
-      const mkHtml = `<div class="zm-arrow" style="transform:rotate(${b}deg);opacity:${isMain ? 1 : 0.7}">${mk.svg}</div>`;
-      const icon = window.L.divIcon({
-        className: "", html: mkHtml,
-        iconSize: [mk.size, mk.arrowH], iconAnchor: [mk.size / 2, mk.arrowH],
-      });
-      ctx.markers.push(window.L.marker([pos[0], pos[1]], { icon }).addTo(ctx.map));
-    }
-  }
-
-  _updateVehiclePosition(ctx) {
-    if (ctx.destroyed || !ctx.entityId || !ctx.marker || !this._hass) return;
-    const state = this._hass.states[ctx.entityId];
-    if (!state?.attributes?.departures) return;
-    for (const d of state.attributes.departures) {
-      if (d.vehicle_code && d.vehicle_code === ctx.vehicleCode) {
-        const position = parseVehiclePosition(d.vehicle_lat, d.vehicle_lng);
-        if (!position) continue;
-        const [newLat, newLng] = position;
-        const curPos = ctx.marker.getLatLng();
-        if (Math.abs(curPos.lat - newLat) < 0.00001 && Math.abs(curPos.lng - newLng) < 0.00001) {
-          return;
-        }
-        ctx.marker.setLatLng([newLat, newLng]);
-        const delay = Math.round((d.delay_seconds || 0) / 60);
-        const bearing = d.vehicle_direction || d.direction || 0;
-        const color = routeColor(d.route, d._provider || d.provider || "");
-        const vt = d.vehicle_type || "bus";
-        const isMobile = window.innerWidth < 480;
-        const mk = this._buildVehicleMarker(bearing, color, d.route, vt, d, isMobile);
-        const mkHtml = `<div class="zm-arrow" style="transform:rotate(${bearing}deg)">${mk.svg}</div>`;
-        ctx.marker.setIcon(window.L.divIcon({
-          className: "",
-          html: mkHtml,
-          iconSize: [mk.size, mk.arrowH],
-          iconAnchor: [mk.size / 2, mk.arrowH],
-        }));
-        ctx.map.setView([newLat, newLng], ctx.map.getZoom(), { animate: true });
-        break;
-      }
-    }
-  }
-
-  _getAutoIcon() {
-    if (!this._hass || !this._config.entities?.length) return BUS_ICON;
-    const providers = new Set();
-    for (const eid of this._getEntityIds()) {
-      const s = this._hass.states[eid];
-      if (s?.attributes?.provider) providers.add(s.attributes.provider);
-    }
-    if (providers.size === 1 && providers.has("plk_rail")) return `<ha-icon icon="mdi:train" style="color:#fff;--mdc-icon-size:20px"></ha-icon>`;
-    return `<ha-icon icon="mdi:bus-stop" style="color:#fff;--mdc-icon-size:20px"></ha-icon>`;
-  }
-
-  _getHeaderColor() {
-    if (this._config.header_color) {
-      const c = this._config.header_color;
-      // Validate: only allow hex, rgb/rgba, hsl/hsla, named colors, or linear-gradient
-      if (/^(#[0-9a-fA-F]{3,8}|rgba?\([^)]+\)|hsla?\([^)]+\)|linear-gradient\([^;{}]+\)|[a-zA-Z]{3,20})$/.test(c.trim())) {
-        return c.trim();
-      }
-      return "#005eb8";
-    }
-    const colors = {
-      ztm_gdansk: "#DA2128",
-      zkm_gdynia: "#005eb8",
-      mzk_wejherowo: "#478AC9",
-      plk_rail: "#1a1a2e",
-      ...PROVIDER_HEADER_COLORS,
-    };
-    const providers = new Set();
-    if (this._hass && this._config.entities?.length) {
-      for (const eid of this._getEntityIds()) {
-        const s = this._hass.states[eid];
-        if (s?.attributes?.provider) providers.add(s.attributes.provider);
-      }
-    }
-    const list = [...providers];
-    if (list.length === 1) return colors[list[0]] || "#005eb8";
-    if (list.length >= 2) {
-      // Only gradient if actually different colors
-      const cols = [...new Set(list.map(p => colors[p] || "#005eb8"))];
-      if (cols.length === 1) return cols[0];
-      return `linear-gradient(135deg, ${cols[0]} 0%, ${cols[1]} 100%)`;
-    }
-    return "#005eb8";
-  }
-
-  _getTitle() {
-    if (this._config.title) return this._config.title;
-    if (!this._hass || !this._config.entities?.length) return "MZKZG Transport";
-    const firstId = this._getEntityIds()[0];
-    const first = firstId ? this._hass.states[firstId] : null;
-    return first?.attributes?.stop_name || first?.attributes?.friendly_name || "MZKZG Transport";
-  }
-
-  _getSubtitle() {
-    if (!this._hass || !this._config.entities?.length) return "Wybierz encje";
-    const providers = new Set();
-    for (const eid of this._getEntityIds()) {
-      const s = this._hass.states[eid];
-      if (s?.attributes?.provider) {
-        providers.add(PROVIDER_DISPLAY_NAMES[s.attributes.provider] || s.attributes.provider);
-      }
-    }
-    return [...providers].join(" + ") || "MZKZG";
-  }
-
-  _fullRender() {
-    const c = this._config;
-    const cardClass = c.display_preset === "e_ink" ? "e-ink" : c.display_preset === "compact" ? "compact" : "";
-
-    this.shadowRoot.innerHTML = `
-      <style>${CARD_CSS}</style>
-      <ha-card class="${cardClass}">
+      `;
+		}, i = [];
+		if (e.group_by_provider) {
+			let e = {};
+			t.forEach((t) => {
+				let n = t._provider || "Inne";
+				e[n] || (e[n] = []), e[n].push(t);
+			});
+			for (let t in e) {
+				let n;
+				n = t === "ztm_gdansk" ? "ZTM Gdańsk" : t === "zkm_gdynia" ? "ZKM Gdynia" : t === "mzk_wejherowo" ? "MZK Wejherowo" : t === "plk_rail" ? "Pociągi (SKM/IC/PR)" : t.charAt(0).toUpperCase() + t.slice(1), i.push(N`<div class="provider-header">${n}</div>`), e[t].forEach((e) => i.push(r(e)));
+			}
+		} else t.forEach((e) => i.push(r(e)));
+		let a = this._config.min_departures === void 0 ? 0 : parseInt(this._config.min_departures), o = t.length;
+		if (o > 0 && o < a) {
+			let e = a - o;
+			for (let t = 0; t < e; t++) i.push(N`<div class="dep-row" style="visibility:hidden">&nbsp;</div>`);
+		}
+		return i;
+	}
+	render() {
+		if (!this._config) return I;
+		let e = this._config;
+		return N`
+      <ha-card class="${e.display_preset === "e_ink" ? "e-ink" : e.display_preset === "compact" ? "compact" : ""}">
         <div class="header" style="background:${this._getHeaderColor()}">
-          <span class="header-icon">${c.icon ? `<ha-icon icon="${escapeHtml(c.icon)}" style="color:#fff;--mdc-icon-size:20px"></ha-icon>` : this._getAutoIcon()}</span>
+          <span class="header-icon">${e.icon ? N`<ha-icon icon="${e.icon}" style="color:#fff;--mdc-icon-size:20px"></ha-icon>` : this._getAutoIcon()}</span>
           <div class="header-body">
-            <div class="header-title">${escapeHtml(this._getTitle())}</div>
-            <div class="header-sub">${escapeHtml(this._getSubtitle())}</div>
+            <div class="header-title">${this._getTitle()}</div>
+            <div class="header-sub">${this._getSubtitle()}</div>
           </div>
         </div>
         ${this._renderTabs()}
-        <div class="dep-list" aria-live="polite" aria-atomic="true">${this._renderDeps()}</div>
-        ${c.show_footer ? `<div class="footer">${this._getLastUpdate()}</div>` : ""}
-      </ha-card>`;
-    this._rendered = true;
-    this._bindTapActions();
-  }
-
-  _getLastUpdate() {
-    if (!this._hass || !this._config.entities?.length) return "";
-    let latest = null;
-    for (const eid of this._getEntityIds()) {
-      const s = this._hass.states[eid];
-      const lu = s?.attributes?.last_update;
-      if (lu && (!latest || lu > latest)) latest = lu;
-    }
-    if (!latest) return "";
-    const d = new Date(latest);
-    const time = d.toLocaleTimeString("pl-PL", {hour:"2-digit", minute:"2-digit", second:"2-digit"});
-    return `Odświeżono: ${time}`;
-  }
-
-  _renderTabs() {
-    const c = this._config;
-    const entities = this._getEntityIds();
-    if (c.view_mode !== "tabs" || entities.length <= 1) return "";
-    const tabs = entities.map((eid, i) => {
-      const s = this._hass?.states[eid];
-      const name = s?.attributes?.stop_name || eid.replace("sensor.", "");
-      return `<span class="tab${i === this._activeTab ? " active" : ""}" role="tab" tabindex="${i === this._activeTab ? "0" : "-1"}" aria-selected="${i === this._activeTab}" data-tab="${i}">${escapeHtml(name)}</span>`;
-    });
-    return `<div class="tabs" role="tablist">${tabs.join("")}</div>`;
-  }
-
-  _bindTabs() {
-    this.shadowRoot?.querySelectorAll(".tab").forEach(tab => {
-      tab.addEventListener("click", () => {
-        this._activeTab = parseInt(tab.dataset.tab);
-        this._updateContent();
-        // Update active tab style
-        this.shadowRoot.querySelectorAll(".tab").forEach((t, i) => t.classList.toggle("active", i === this._activeTab));
-      });
-    });
-  }
-
-  _resolveActionConfig(kind) {
-    const c = this._config || {};
-    if (kind === "tap") return normalizeActionConfig(c.tap_action, "more-info");
-    if (kind === "hold") return normalizeActionConfig(c.hold_action, "none");
-    return normalizeActionConfig(c.double_tap_action, "none");
-  }
-
-  async _handleRowAction(kind, entityId) {
-    const actionCfg = this._resolveActionConfig(kind);
-    const action = actionCfg.action || "none";
-    if (action === "none") return;
-
-    if (action === "more-info") {
-      fireHassEvent(this, "hass-more-info", { entityId });
-      return;
-    }
-    if (action === "navigate") {
-      const path = actionCfg.navigation_path || "";
-      if (!path) return;
-      history.pushState(null, "", path);
-      fireHassEvent(window, "location-changed", { replace: false });
-      return;
-    }
-    if (action === "url") {
-      const url = actionCfg.url_path || "";
-      if (!url) return;
-      window.open(url, "_blank", "noopener");
-      return;
-    }
-    if (action === "toggle") {
-      if (!this._hass || !entityId) return;
-      await this._hass.callService("homeassistant", "toggle", { entity_id: entityId });
-      return;
-    }
-    if (action === "perform-action" || action === "call-service") {
-      if (!this._hass) return;
-      const ref = actionCfg.perform_action || actionCfg.service || "";
-      const [domain, service] = ref.split(".");
-      if (!domain || !service) return;
-      const data = { ...(actionCfg.data || {}) };
-      if (actionCfg.target?.entity_id) data.entity_id = actionCfg.target.entity_id;
-      await this._hass.callService(domain, service, data);
-    }
-  }
-
-  _bindDepartureActions() {
-    const rows = this.shadowRoot?.querySelectorAll(".dep-row[data-entity-id]") || [];
-    rows.forEach(row => {
-      const entityId = row.getAttribute("data-entity-id") || "";
-      if (!entityId) return;
-      let holdTimer = null;
-      let held = false;
-      let tapTimer = null;
-      const showMap = () => {
-        const position = parseVehiclePosition(
-          row.getAttribute("data-vehicle-lat"),
-          row.getAttribute("data-vehicle-lng")
-        );
-        if (!position) return false;
-        const showEntityId = row.getAttribute("data-entity-id") || this._config.entities?.[0]?.entity || "";
-        const showState = this._hass?.states?.[showEntityId];
-        this._showVehicleMap(position[0], position[1], {
-          route: row.getAttribute("data-vehicle-route") || "",
-          code: row.getAttribute("data-vehicle-code") || "",
-          headsign: row.getAttribute("data-vehicle-headsign") || "",
-          delay: parseInt(row.getAttribute("data-vehicle-delay")) || 0,
-          direction: parseFloat(row.getAttribute("data-vehicle-direction")) || null,
-          provider: showState?.attributes?.provider || "",
-          entityId: showEntityId,
-          vehicleType: row.getAttribute("data-vehicle-type") || "bus",
-          lowFloor: row.getAttribute("data-vehicle-lowfloor") === "1",
-          electric: row.getAttribute("data-vehicle-electric") === "1",
-          articulated: row.getAttribute("data-vehicle-articulated") === "1",
-          historic: row.getAttribute("data-vehicle-historic") === "1",
-          vehicle_model: row.getAttribute("data-vehicle-model") || "",
-          vehicle_speed: parseFloat(row.getAttribute("data-vehicle-speed")) || null,
-        });
-        return true;
-      };
-
-      row.addEventListener("pointerdown", () => {
-        held = false;
-        holdTimer = setTimeout(() => {
-          held = true;
-          this._handleRowAction("hold", entityId);
-        }, 500);
-      });
-      const clearHold = () => { if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; } };
-      row.addEventListener("pointerup", clearHold);
-      row.addEventListener("pointerleave", clearHold);
-      row.addEventListener("pointercancel", clearHold);
-
-      row.addEventListener("click", () => {
-        if (held) return;
-        if (showMap()) return;
-        const dblAction = this._resolveActionConfig("double");
-        if (dblAction.action === "none") {
-          this._handleRowAction("tap", entityId);
-        } else {
-          if (tapTimer) clearTimeout(tapTimer);
-          tapTimer = setTimeout(() => this._handleRowAction("tap", entityId), 220);
-        }
-      });
-      row.addEventListener("dblclick", () => {
-        if (tapTimer) clearTimeout(tapTimer);
-        this._handleRowAction("double", entityId);
-      });
-      row.addEventListener("keydown", e => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          if (!showMap()) this._handleRowAction("tap", entityId);
-        }
-      });
-      row.addEventListener("contextmenu", e => {
-        e.preventDefault();
-        this._handleRowAction("hold", entityId);
-      });
-    });
-  }
-
-  _bindTapActions() {
-    this._bindTabs();
-    this._bindDepartureActions();
-  }
-
-  _updateContent() {
-    const el = this.shadowRoot?.querySelector(".dep-list");
-    if (el) {
-      const html = this._renderDeps();
-      const hash = html;
-      if (hash !== this._lastDepsHash) {
-        this._lastDepsHash = hash;
-        el.innerHTML = html;
-        this._bindTapActions();
-      }
-    }
-    // Re-render tabs
-    const tabsEl = this.shadowRoot?.querySelector(".tabs");
-    const newTabs = this._renderTabs();
-    if (tabsEl && !newTabs) tabsEl.remove();
-    else if (!tabsEl && newTabs) {
-      const depList = this.shadowRoot?.querySelector(".dep-list");
-      if (depList) depList.insertAdjacentHTML("beforebegin", newTabs);
-      this._bindTabs();
-    }
-    // Update header color dynamically
-    const header = this.shadowRoot?.querySelector(".header");
-    if (header) header.style.background = this._getHeaderColor();
-    const title = this.shadowRoot?.querySelector(".header-title");
-    if (title) title.textContent = this._getTitle();
-    const sub = this.shadowRoot?.querySelector(".header-sub");
-    if (sub) sub.textContent = this._getSubtitle();
-    const footer = this.shadowRoot?.querySelector(".footer");
-    if (footer) footer.textContent = this._getLastUpdate();
-  }
-
-  _renderDeps() {
-    const c = this._config;
-    if (!c.entities?.length) return `<div class="state-msg"><span class="icon">📍</span>${t("no_entities")}</div>`;
-
-    if (!this._hass) {
-      return Array.from({ length: c.max_departures }, (_, i) =>
-        `<div class="dep-row"><div class="skel" style="height:26px;width:40px;border-radius:6px"></div><div class="skel" style="height:13px;flex:1"></div><div class="skel" style="height:13px;width:60px"></div></div>`
-      ).join("");
-    }
-
-    const deps = this._getDepartures();
-    if (!deps.length) {
-      const missing = this._getEntityIds().filter(eid => !this._hass.states[eid]);
-      if (missing.length) {
-        const names = missing.map(e => e.replace("sensor.", "")).join(", ");
-        return `<div class="state-msg"><span class="icon">⚠️</span>${t("missing_entities")}<br><small>${escapeHtml(names)}</small></div>`;
-      }
-      // Check if any entity is unavailable (e.g. rate limit)
-      const unavailable = this._getEntityIds().filter(eid => {
-        const s = this._hass.states[eid];
-        return s && (s.state === "unavailable" || s.state === "unknown");
-      });
-      if (unavailable.length) {
-        const hasPlk = unavailable.some(eid => this._hass.states[eid]?.attributes?.provider === "plk_rail");
-        const msg = hasPlk ? t("plk_rate_limit") : t("unavailable");
-        return `<div class="state-msg"><span class="icon">⚠️</span>${msg}</div>`;
-      }
-      // Try to get unfiltered departures (ignore route/destination filters)
-      const allDeps = this._getAllDepartures();
-      if (allDeps.length) {
-        const next = allDeps[0];
-        const nextTime = next.estimated_time ? formatTime(next.estimated_time) : "";
-        return `<div class="state-msg"><span class="icon">🕐</span>${t("no_departures")}<br><small>${nextTime ? (t("min") === "min" ? "Next" : "Następny") + ": " + next.route + " → " + next.headsign + " " + nextTime : ""}</small></div>`;
-      }
-      return `<div class="state-msg"><span class="icon">⏳</span>${t("no_departures")}</div>`;
-    }
-
-    const hasRowActions = ["none"].indexOf((this._config.tap_action?.action || "more-info")) === -1
-      || ["none"].indexOf((this._config.hold_action?.action || "none")) === -1
-      || ["none"].indexOf((this._config.double_tap_action?.action || "none")) === -1;
-
-    const result = deps.map(d => {
-      try {
-      const mins = minutesUntil(d.estimated_time);
-      const imminent = d.realtime && mins !== null && mins <= 2;
-      const delayMin = Math.round((d.delay_seconds || 0) / 60);
-      const showDelay = c.show_delays && d.realtime && Math.abs(delayMin) >= 1;
-      const cancelled = d.cancelled === true;
-
-      let timeHTML;
-      if (cancelled) {
-        timeHTML = `<div class="time-main cancelled">${t("cancelled")}</div>`;
-      } else if (c.display_preset === "e_ink") {
-        // E-ink: only static departure time, no countdown
-        timeHTML = `<div class="time-main">${formatTime(d.estimated_time || d.theoretical_time)}</div>`;
-      } else if (d.realtime) {
-        const delayPart = showDelay
-          ? ` <span class="delay-badge ${delayMin > 0 ? "late" : "early"}">${delayMin > 0 ? "+" : ""}${delayMin}min</span>`
-          : "";
-        const mainTime = showDelay
-          ? `<span class="time-struck">${formatTime(d.theoretical_time || d.estimated_time)}</span> ${formatTime(d.estimated_time)}`
-          : formatTime(d.estimated_time);
-        const countdown = mins !== null && mins <= 0 ? t("departing") : formatMins(mins);
-        timeHTML = `<div class="time-main">${mainTime}</div><div class="time-sub"><span class="dot">●</span> ${countdown}${delayPart}</div>`;
-      } else {
-        timeHTML = `<div class="time-main">${formatTime(d.theoretical_time || d.estimated_time)}</div>`;
-      }
-
-      // Platform
-      const platformHTML = (() => {
-        if (d._provider !== "plk_rail") return "";
-        let chips = "";
-        if (d.platform) chips += `<span class="platform">peron ${escapeHtml(d.platform)}</span>`;
-        if (d.track) chips += `<span class="platform">${t("track")} ${escapeHtml(d.track)}</span>`;
-        return chips;
-      })();
-
-      // Vehicle info + feature icons
-      let iconsHTML = "";
-      const icons = [];
-      if (c.show_bike && d.bike_allowed === true) icons.push(`<span title="Rower">${ICON_BIKE}</span>`);
-      if (c.show_wheelchair && d.wheelchair_accessible === true) icons.push(`<span title="Wózek">${ICON_WHEELCHAIR}</span>`);
-      if (c.show_ac && d.air_conditioning === true) icons.push(`<span title="Klimatyzacja">${ICON_AC}</span>`);
-      if (d.usb === true) icons.push(`<span title="USB"><svg viewBox="0 0 24 24" width="14" height="14"><path fill="currentColor" d="M15,7V11H16V13H13V5H15L12,1L9,5H11V13H8V10.93C8.7,10.56 9.2,9.85 9.2,9C9.2,7.9 8.3,7 7.2,7C6.1,7 5.2,7.9 5.2,9C5.2,9.85 5.7,10.56 6.4,10.93V13C6.4,14.1 7.3,15 8.4,15H11V18.05C10.3,18.42 9.8,19.15 9.8,20C9.8,21.1 10.7,22 11.8,22C12.9,22 13.8,21.1 13.8,20C13.8,19.15 13.3,18.42 12.6,18.05V15H15.6C16.7,15 17.6,14.1 17.6,13V11H18.6V7H15Z"/></svg></span>`);
-      if (d.ticket_machine === true && c.show_ticket_machine) icons.push(`<span title="Biletomat"><svg viewBox="0 0 24 24" width="14" height="14"><path fill="currentColor" d="M15.58,16.8L12,14.5L8.42,16.8L9.5,12.68L6.21,10L10.46,9.74L12,5.84L13.54,9.74L17.79,10L14.5,12.68M20,2H4A2,2 0 0,0 2,4V22L7,20L12,22L17,20L22,22V4A2,2 0 0,0 20,2Z"/></svg></span>`);
-      if (icons.length) iconsHTML = `<span class="icons">${icons.join("")}</span>`;
-      const vehicleChip = (d._provider !== "plk_rail" && d.vehicle_code && d.realtime)
-        ? `<span class="platform">${escapeHtml(d.vehicle_code)}</span>`
-        : "";
-      const platformText = d.platform ? `<span class="platform" title="Stanowisko/peron">${escapeHtml(String(d.platform))}</span>` : "";
-    const metaRow = (iconsHTML || platformText || platformHTML)
-        ? `<span class="meta-row">${iconsHTML}${platformHTML}</span>`
-        : "";
-
-      // Auto show_stop_name when multiple entities
-      const showStop = c.show_stop_name && c.entities.length > 1 && c.view_mode !== "tabs" && d._stopName;
-      const cleanStopName = (d._stopName || "").replace(/\s*\(?(bus|tramwaj|tram|train|skm)\)?\s*/gi, " ").trim();
-      // Train details for PLK
-      let trainInfo = "";
-      if (d.train_number && d._provider === "plk_rail") {
-        const shortCarrier = (d.carrier || "").replace(/^[„""'\s]+/, "").replace(/PKP\s*Szybka\s*Kolej\s*Miejska.*/i, "SKM").replace(/PKP\s*Intercity.*/i, "IC").replace(/POLREGIO.*/i, "Polregio").replace(/\s*sp\.?\s*z\s*o\.?\s*o\.?.*/i, "");
-        trainInfo = `<span class="stop-name">nr ${escapeHtml(d.train_number)} - ${escapeHtml(shortCarrier)}</span>`;
-      }
-
-      const rowLabel = `${d.route} → ${d.headsign}, ${formatTime(d.estimated_time || d.theoretical_time)}${mins !== null && mins >= 0 ? ` (${mins} ${t("min")})` : ""}`;
-      const hasPos = parseVehiclePosition(d.vehicle_lat, d.vehicle_lng) !== null;
-      const isInteractive = hasRowActions || hasPos;
-      const dir = d.vehicle_direction || d.direction || "";
-      const isLowFloor = d.floor_height && d.floor_height !== "Pojazd wysokopodłogowy";
-      const isElectric = d.drive_type === "elektryczny";
-      const extras = hasPos
-        ? ` data-vehicle-lat="${escapeHtml(String(d.vehicle_lat))}" data-vehicle-lng="${escapeHtml(String(d.vehicle_lng))}" data-vehicle-code="${escapeHtml(d.vehicle_code || "")}" data-vehicle-route="${escapeHtml(d.route)}" data-vehicle-headsign="${escapeHtml(d.headsign)}" data-vehicle-delay="${delayMin}" data-vehicle-direction="${escapeHtml(String(dir))}" data-vehicle-type="${escapeHtml(d.vehicle_type || "bus")}" data-vehicle-lowfloor="${isLowFloor ? "1" : "0"}" data-vehicle-electric="${isElectric ? "1" : "0"}" data-vehicle-articulated="${d.articulated ? "1" : "0"}" data-vehicle-historic="${d.historic ? "1" : "0"}" data-vehicle-model="${escapeHtml(d.vehicle_model || "")}" data-vehicle-speed="${d.vehicle_speed != null ? escapeHtml(String(Math.round(d.vehicle_speed))) : "0"}"`
-        : "";
-      const rowAttrs = `data-entity-id="${escapeHtml(d._entityId || "")}"`;
-      return `<div class="dep-row${isInteractive ? " interactive" : ""}${imminent ? " imminent" : ""}${d._dimmed ? " dimmed" : ""}${cancelled ? " cancelled" : ""}" ${isInteractive ? `tabindex="0" role="button" aria-label="${escapeHtml(rowLabel)}"` : ""}${rowAttrs}${extras}>
-        <span class="badge" style="background:${routeColor(d.route, d._provider || d.provider)}">${escapeHtml(d.route)}</span>
-        <span class="headsign"><span class="head-main"><span class="headsign-text">${escapeHtml(d.headsign)}</span>${vehicleChip}</span>${metaRow}${trainInfo || (showStop ? `<span class="stop-name">${escapeHtml(cleanStopName)}</span>` : "")}</span>
-        <div class="time-col">${timeHTML}</div>
-      </div>`;
-      } catch (_) { return ""; }
-    }).join("");
-
-    // Pad with empty rows to maintain consistent card height
-    const maxDep = this._config.max_departures || 10;
-    const rendered = deps.length;
-    if (rendered > 0 && rendered < maxDep) {
-      const padCount = maxDep - rendered;
-      const emptyRow = `<div class="dep-row" style="visibility:hidden">&nbsp;</div>`;
-      return result + emptyRow.repeat(padCount);
-    }
-    return result;
-  }
-}
-
-if (!customElements.get("mzkzg-transport-card")) {
-  customElements.define("mzkzg-transport-card", MzkzgTransportCard);
-}
-if (!customElements.get("polish-transport-card")) {
-  customElements.define("polish-transport-card", class extends MzkzgTransportCard {});
-}
-
-window.customCards = window.customCards || [];
-window.customCards.push({
-  type: "polish-transport-card",
-  name: "Polish Transport Card",
-  description: "Tablica odjazdów polskiej komunikacji miejskiej (dane z integracji mzkzg_transport)",
-  preview: true,
-  documentationURL: "https://github.com/toczke/polish-public-transport-card",
-});
-
-console.info(
-  `%c MZKZG-TRANSPORT %c v${MZKZG_VERSION} `,
-  "background:#005eb8;color:#fff;padding:2px 6px;border-radius:4px 0 0 4px;font-weight:bold",
-  "background:#1f2937;color:#fff;padding:2px 6px;border-radius:0 4px 4px 0"
-);
+        <div class="dep-list" aria-live="polite" aria-atomic="true">
+          ${this._renderDeps()}
+        </div>
+        ${e.show_footer ? N`<div class="footer">${this._getLastUpdate()}</div>` : I}
+      </ha-card>
+    `;
+	}
+};
+customElements.get("mzkzg-transport-card") || customElements.define("mzkzg-transport-card", We), customElements.get("polish-transport-card") || customElements.define("polish-transport-card", class extends We {}), window.customCards = window.customCards || [], window.customCards.push({
+	type: "polish-transport-card",
+	name: "Polish Transport Card",
+	description: "Tablica odjazdów polskiej komunikacji miejskiej (dane z integracji mzkzg_transport)",
+	preview: !0,
+	documentationURL: "https://github.com/toczke/polish-public-transport-card"
+}), console.info(`%c MZKZG-TRANSPORT %c v${ke} `, "background:#005eb8;color:#fff;padding:2px 6px;border-radius:4px 0 0 4px;font-weight:bold", "background:#1f2937;color:#fff;padding:2px 6px;border-radius:0 4px 4px 0");
+//#endregion

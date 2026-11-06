@@ -10,7 +10,8 @@ from aioresponses import aioresponses
 
 from mzkzg_transport.const import (
     KIEDYPRZYJEDZIE_BASE_URLS,
-    KIEDYPRZYJEDZIE_BYTOW_URL,
+    KIEDYPRZYJEDZIE_BIELSKO_URL,
+    TIME4BUS_BASE_URLS,
     KIEDYPRZYJEDZIE_CZLUCHOW_URL,
     KIEDYPRZYJEDZIE_GRYF_URL,
     KIEDYPRZYJEDZIE_MZK_MALBORK_URL,
@@ -19,6 +20,7 @@ from mzkzg_transport.const import (
     KIEDYPRZYJEDZIE_PKS_GDYNIA_URL,
     KIEDYPRZYJEDZIE_PKS_SLUPSK_URL,
     KIEDYPRZYJEDZIE_PKS_STAROGARD_URL,
+    PROVIDER_BIELSKO,
     PROVIDER_BYTOW,
     PROVIDER_CZLUCHOW,
     PROVIDER_GRYF,
@@ -30,6 +32,7 @@ from mzkzg_transport.const import (
     PROVIDER_PKS_STAROGARD,
 )
 from mzkzg_transport.coordinator import MzkzgTransportCoordinator
+from mzkzg_transport.provider_kiedyprzyjedzie import _parse_timetable
 
 
 @pytest.fixture(autouse=True)
@@ -207,6 +210,28 @@ async def test_kiedyprzyjedzie_cases(mock_hass, case):
 
 
 @pytest.mark.kiedyprzyjedzie
+def test_kiedyprzyjedzie_timetable_parser():
+    """Timetable seconds since midnight become ISO departures (issue #28)."""
+    target = datetime(2026, 11, 6)
+    rows = _parse_timetable(
+        {"departures": [
+            {"departure": 19200, "line": "854", "symbols": "A", "trip_id": 1},
+            {"departure": 21600, "line": "854", "symbols": "", "trip_id": 2},
+            {"departure": "bad"},
+        ]},
+        target,
+        "854",
+    )
+
+    assert [row["departure"] for row in rows] == [
+        "2026-11-06T05:20:00",
+        "2026-11-06T06:00:00",
+    ]
+    assert rows[0]["route"] == "854"
+    assert rows[0]["symbols"] == "A"
+    assert rows[0]["trip_id"] == 1
+
+
 def test_kiedyprzyjedzie_extra_urls():
     """All extra kiedyPrzyjedzie base URLs should be registered."""
     expected_hosts = {
@@ -217,9 +242,13 @@ def test_kiedyprzyjedzie_extra_urls():
         KIEDYPRZYJEDZIE_PKS_SLUPSK_URL: "pksslupsk.kiedyprzyjedzie.pl",
         KIEDYPRZYJEDZIE_MZK_STAROGARD_URL: "starogard.kiedyprzyjedzie.pl",
         KIEDYPRZYJEDZIE_PKS_STAROGARD_URL: "pksstarogard.kiedyprzyjedzie.pl",
-        KIEDYPRZYJEDZIE_BYTOW_URL: "bytow.kiedyprzyjedzie.pl",
+        KIEDYPRZYJEDZIE_BIELSKO_URL: "bielsko.kiedyprzyjedzie.pl",
         KIEDYPRZYJEDZIE_CZLUCHOW_URL: "czluchow.kiedyprzyjedzie.pl",
     }
     for url, host in expected_hosts.items():
         assert url.endswith(host)
     assert set(expected_hosts) <= set(KIEDYPRZYJEDZIE_BASE_URLS.values())
+    # Bytów moved to Time4BUS; its provider id is unchanged for existing entries.
+    assert PROVIDER_BYTOW in TIME4BUS_BASE_URLS
+    assert PROVIDER_BYTOW not in KIEDYPRZYJEDZIE_BASE_URLS
+    assert KIEDYPRZYJEDZIE_BASE_URLS[PROVIDER_BIELSKO] == "https://bielsko.kiedyprzyjedzie.pl"

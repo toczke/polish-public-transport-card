@@ -45,9 +45,11 @@ class GtfsData:
             self._parse_stop_times(zf)
         self._loaded = True
 
-    def _read_csv(self, zf: zipfile.ZipFile, name: str) -> list[dict]:
+    def _read_csv(self, zf: zipfile.ZipFile, name: str):
+        """Stream rows of a GTFS CSV member without materialising the whole file."""
         with zf.open(name) as f:
-            return list(csv.DictReader(io.TextIOWrapper(f, encoding="utf-8-sig")))
+            with io.TextIOWrapper(f, encoding="utf-8-sig", newline="") as stream:
+                yield from csv.DictReader(stream)
 
     def _parse_stops(self, zf: zipfile.ZipFile) -> None:
         for row in self._read_csv(zf, "stops.txt"):

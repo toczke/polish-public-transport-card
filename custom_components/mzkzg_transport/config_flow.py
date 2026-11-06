@@ -24,6 +24,7 @@ from homeassistant import config_entries
 from homeassistant.core import callback
 
 
+from .config_flow_stops import _load_stops
 from .const import (
 
 
@@ -32,6 +33,7 @@ from .const import (
 
     CONF_NAME,
     CONF_FALLBACK_MIN,
+    CONF_TIMETABLE_LINES,
 
 
     CONF_PLK_TIER,
@@ -99,6 +101,9 @@ from .const import (
 
 
     PROVIDER_PKS_STAROGARD,
+
+
+    PROVIDER_BIELSKO,
 
 
     PROVIDER_PLK,
@@ -194,6 +199,7 @@ PROVIDER_OPTIONS = {
     PROVIDER_PKS_SLUPSK: "PKS S\u0142upsk S.A.",
     PROVIDER_MZK_STAROGARD: "MZK Starogard Gda\u0144ski",
     PROVIDER_PKS_STAROGARD: "PKS Starogard Gda\u0144ski S.A.",
+    PROVIDER_BIELSKO: "MZK Bielsko-Bia\u0142a",
     PROVIDER_BYTOW: "Byt\u00f3w",
     PROVIDER_CZLUCHOW: "Powiat Cz\u0142uchowski",
     PROVIDER_TCZEW: "Tczew (Time4BUS)",
@@ -322,7 +328,7 @@ class MzkzgTransportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     self._api_key = stored_key
 
 
-                    self._stops = await self._load_stops(self._provider)
+                    self._stops = await _load_stops(self, self._provider)
 
 
                     return await self.async_step_stop()
@@ -331,7 +337,7 @@ class MzkzgTransportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 return await self.async_step_api_key()
 
 
-            self._stops = await self._load_stops(self._provider)
+            self._stops = await _load_stops(self, self._provider)
 
 
             return await self.async_step_stop()
@@ -391,7 +397,7 @@ class MzkzgTransportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 self.hass.data[DOMAIN]["_global"][CONF_PLK_TIER] = self._plk_tier
 
 
-                self._stops = await self._load_stops(self._provider)
+                self._stops = await _load_stops(self, self._provider)
 
 
                 return await self.async_step_stop()
@@ -431,7 +437,7 @@ class MzkzgTransportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
 
             errors=errors,
-
+            description_placeholders={"url": "https://dane.plk-sa.pl"},
 
         )
 
@@ -443,7 +449,7 @@ class MzkzgTransportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 self._lodz_stops = await self._load_lodz_groups()
                 return await self.async_step_lodz_group()
             # Single stop
-            self._stops = await self._load_stops(self._provider)
+            self._stops = await _load_stops(self, self._provider)
             return await self.async_step_stop()
 
         return self.async_show_form(
@@ -632,83 +638,33 @@ class MzkzgTransportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
 
         # Build stop options as dict for selector
-
-
-        if self._stops:
-
-
+        if self._stops and len(self._stops) <= 3000:
             from homeassistant.helpers.selector import (
-
-
                 SelectOptionDict,
-
-
                 SelectSelector,
-
-
                 SelectSelectorConfig,
-
-
                 SelectSelectorMode,
-
-
             )
-
 
             options = [
-
-
                 SelectOptionDict(value=str(s["id"]), label=f"{s['name']} ({s['id']})")
-
-
                 for s in self._stops
-
-
             ]
 
-
             schema = vol.Schema(
-
-
                 {
-
-
                     vol.Required(CONF_STOP_ID): SelectSelector(
-
-
                         SelectSelectorConfig(
-
-
                             options=options,
-
-
                             mode=SelectSelectorMode.DROPDOWN,
-
-
                             custom_value=True,
-
-
                             sort=False,
-
-
                         )
-
-
                     ),
-
-
                     vol.Optional(CONF_NAME, default=""): str,
-
-
                 }
-
-
             )
-
-
         else:
-
-
             schema = vol.Schema(
 
 
@@ -745,419 +701,6 @@ class MzkzgTransportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         )
 
 
-    async def _load_stops(self, provider: str) -> list[dict]:
-
-
-        """Load stop list for the selected provider."""
-
-
-        try:
-
-
-            if provider == PROVIDER_ZTM:
-
-
-                return await self._load_ztm_stops()
-
-
-            if provider == PROVIDER_ZKM:
-
-
-                return await self._load_zkm_stops()
-
-
-            if provider == PROVIDER_MZK:
-
-
-                return await self._load_mzk_stops()
-
-
-            if provider == PROVIDER_PLK:
-
-
-                return await self._load_plk_stations()
-
-
-            if provider == PROVIDER_TCZEW:
-
-
-                return await self._load_time4bus_tczew_stops()
-
-
-            if provider in KIEDYPRZYJEDZIE_PROVIDERS:
-
-
-                return await self._load_kiedyprzyjedzie_stops(provider)
-
-            if provider in GTFSRT_PROVIDERS:
-                return await self._load_gtfsrt_stops(provider)
-
-            if provider == PROVIDER_KRAKOW:
-                return await self._load_krakow_stops()
-
-            if provider == PROVIDER_LODZ:
-                return await self._load_gtfs_stops(
-                    "https://cdn.zbiorkom.live/gtfs/lodz.zip",
-                    id_column="stop_code",
-                )
-
-        except Exception as err:
-
-
-            _LOGGER.warning("Could not load stops for %s: %s", provider, err)
-
-
-        return []
-
-
-    async def _load_kiedyprzyjedzie_stops(self, provider: str) -> list[dict]:
-
-
-        """Load stops from kiedyPrzyjedzie for bus carriers."""
-
-
-        session = async_get_clientsession(self.hass)
-
-
-        base_url = KIEDYPRZYJEDZIE_BASE_URLS[provider]
-
-
-        async with session.get(
-
-
-            f"{base_url}/stops", timeout=aiohttp.ClientTimeout(total=20)
-
-
-        ) as resp:
-
-
-            resp.raise_for_status()
-
-
-            data = await resp.json()
-
-
-        stops_raw = data.get("stops", []) if isinstance(data, dict) else []
-
-
-        stops = []
-
-
-        for stop in stops_raw:
-
-
-            if not isinstance(stop, (list, tuple)) or len(stop) < 3:
-
-
-                continue
-
-
-            stop_id = stop[0]
-
-
-            stop_name = stop[2]
-
-
-            stops.append({"id": stop_id, "name": stop_name})
-
-
-        stops.sort(key=lambda x: x["name"])
-
-
-        return stops
-
-
-    async def _load_time4bus_tczew_stops(self) -> list[dict]:
-
-
-        """Load Tczew stops from Time4BUS."""
-
-
-        session = async_get_clientsession(self.hass)
-
-
-        async with session.get(
-
-
-            TIME4BUS_TCZEW_STOPS_URL,
-
-
-            params={"limit": "1000", "offset": "0"},
-
-
-            timeout=aiohttp.ClientTimeout(total=20),
-
-
-        ) as resp:
-
-
-            resp.raise_for_status()
-
-
-            data = await resp.json()
-
-
-        stops_raw = data.get("items", []) if isinstance(data, dict) else []
-
-
-        stops = []
-
-
-        for stop in stops_raw:
-
-
-            if not isinstance(stop, dict):
-
-
-                continue
-
-
-            stop_id = stop.get("fullcode") or stop.get("id")
-
-
-            stop_name = stop.get("name") or stop.get("groupName") or stop.get("fullcode")
-
-
-            stop_code = stop.get("code")
-
-
-            if stop_id is None or not stop_name:
-
-
-                continue
-
-
-            label = f"{stop_name} ({stop_code})" if stop_code else str(stop_name)
-
-
-            stops.append({"id": str(stop_id), "name": label})
-
-
-        stops.sort(key=lambda x: x["name"])
-
-
-        return stops
-
-
-    async def _load_ztm_stops(self) -> list[dict]:
-
-
-        """Load ZTM Gdańsk stops."""
-
-
-        from datetime import date as dt_date
-
-
-        session = async_get_clientsession(self.hass)
-
-
-        async with session.get(
-
-
-            ZTM_GDANSK_STOPS_URL, timeout=aiohttp.ClientTimeout(total=20)
-
-
-        ) as resp:
-
-
-            resp.raise_for_status()
-
-
-            data = await resp.json()
-
-
-        # Use today's key, fallback to first available
-
-
-        today_str = dt_date.today().strftime("%Y-%m-%d")
-
-
-        stops_data = data.get(today_str) or data.get(sorted(data.keys())[0], {})
-
-
-        stops_raw = stops_data.get("stops", [])
-
-
-        stops = []
-
-
-        for s in stops_raw:
-
-
-            if s.get("nonpassenger"):
-
-
-                continue
-
-
-            name = str(s.get("stopDesc") or s.get("stopName") or "")
-
-
-            sub = str(s.get("subName") or s.get("stopCode") or "")
-
-
-            label = f"{name} {sub}".strip() if sub else name
-
-
-            stops.append({"id": s["stopId"], "name": label})
-
-
-        stops.sort(key=lambda x: x["name"])
-
-
-        return stops
-
-
-    async def _load_zkm_stops(self) -> list[dict]:
-
-
-        """Load ZKM Gdynia stops."""
-
-
-        session = async_get_clientsession(self.hass)
-
-
-        async with session.get(
-
-
-            ZKM_GDYNIA_STOPS_URL, timeout=aiohttp.ClientTimeout(total=20)
-
-
-        ) as resp:
-
-
-            resp.raise_for_status()
-
-
-            data = await resp.json()
-
-
-        stops_raw = data if isinstance(data, list) else data.get("stops", [])
-
-
-        stops = []
-
-
-        for s in stops_raw:
-
-
-            name = s.get("stopName", s.get("stopDesc", ""))
-
-
-            stops.append({"id": s["stopId"], "name": name})
-
-
-        stops.sort(key=lambda x: x["name"])
-
-
-        return stops
-
-
-    async def _load_mzk_stops(self) -> list[dict]:
-
-
-        """Load MZK Wejherowo stops from GTFS."""
-
-
-        from .gtfs_provider import get_gtfs_data
-
-
-        gtfs = await get_gtfs_data()
-
-
-        stops = [
-
-
-            {"id": sid, "name": info["name"]}
-
-
-            for sid, info in gtfs.stops.items()
-
-
-        ]
-
-
-        stops.sort(key=lambda x: x["name"])
-
-
-        return stops
-
-
-    async def _load_plk_stations(self) -> list[dict]:
-
-
-        """Load PLK stations from API (paginated, requires key)."""
-
-
-        all_stations = []
-
-
-        page = 1
-
-
-        headers = {"Content-Type": "application/json"}
-
-
-        if self._api_key:
-
-
-            headers["X-API-Key"] = self._api_key
-
-
-        session = async_get_clientsession(self.hass)
-
-
-        while True:
-
-
-            async with session.get(
-
-
-                f"{PLK_API_BASE}/dictionaries/stations",
-
-
-                params={"page": str(page), "pageSize": "1000"},
-
-
-                headers=headers,
-
-
-                timeout=aiohttp.ClientTimeout(total=30),
-
-
-            ) as resp:
-
-
-                resp.raise_for_status()
-
-
-                data = await resp.json()
-
-
-            stations_list = data.get("stations", [])
-
-
-            all_stations.extend(stations_list)
-
-
-            if page >= data.get("totalPages", 1) or page >= 20:
-
-
-                break
-
-
-            page += 1
-
-
-        stops = [{"id": str(s["id"]), "name": s["name"]} for s in all_stations if s.get("id") and s.get("name")]
-
-
-        stops.sort(key=lambda x: x["name"])
-
-
-        return stops
-
-
     @staticmethod
 
 
@@ -1172,149 +715,49 @@ class MzkzgTransportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         return MzkzgTransportOptionsFlow()
 
-    async def _load_gtfsrt_stops(self, provider: str) -> list[dict]:
-        """Load stops from GTFS-RT provider's static GTFS zip."""
-        from .provider_gtfsrt import GTFSRT_CITIES, _get_gzm_gtfs_url
-
-        city_cfg = GTFSRT_CITIES.get(provider)
-        if not city_cfg:
-            return []
-
-        # Kraków: use lightweight ttss.pl API instead of 25MB GTFS download
-        if provider == "zbiorkom_krakow":
-            return await self._load_krakow_stops()
-
-        gtfs_url = city_cfg.get("gtfs_url")
-        # GZM: dynamic URL from CKAN
-        if not gtfs_url and city_cfg.get("gtfs_package_id"):
-            session = async_get_clientsession(self.hass)
-            gtfs_url = await _get_gzm_gtfs_url(session, city_cfg["gtfs_package_id"])
-            if not gtfs_url:
-                return []
-
-        stops = await self._load_gtfs_stops(gtfs_url)
-        # Merge tram stops if separate zip exists
-        if city_cfg.get("gtfs_url_tram"):
-            tram_stops = await self._load_gtfs_stops(city_cfg["gtfs_url_tram"])
-            seen = {s["id"] for s in stops}
-            for s in tram_stops:
-                if s["id"] not in seen:
-                    stops.append(s)
-            stops.sort(key=lambda x: x["name"])
-        return stops
-
-    async def _load_krakow_stops(self) -> list[dict]:
-        """Load Kraków stops from ZTP GTFS data."""
-        import csv
-        import re
-        import unicodedata
-        import zipfile
-        from io import BytesIO, TextIOWrapper
-
-        POLISH_MAP = str.maketrans("ąćęłńóśźżĄĆĘŁŃÓŚŹŻ", "acelnoszzACELNOSZZ")
-
-        def slugify(name):
-            s = name.lower().translate(POLISH_MAP)
-            s = unicodedata.normalize('NFD', s)
-            s = ''.join(c for c in s if unicodedata.category(c) != 'Mn')
-            s = re.sub(r'[^a-z0-9]+', '-', s)
-            return s.strip('-')
-
-        try:
-            session = async_get_clientsession(self.hass)
-            seen = set()
-            stops = []
-
-            for suffix in ("A", "T"):
-                url = f"https://gtfs.ztp.krakow.pl/GTFS_KRK_{suffix}.zip"
-                try:
-                    async with session.get(url, timeout=aiohttp.ClientTimeout(total=30)) as resp:
-                        if resp.status != 200:
-                            continue
-                        data = await resp.read()
-                except Exception:
-                    continue
-
-                with zipfile.ZipFile(BytesIO(data)) as zf:
-                    with zf.open("stops.txt") as f:
-                        reader = csv.DictReader(TextIOWrapper(f, encoding="utf-8-sig"))
-                        for row in reader:
-                            if row.get("location_type", "0") != "0":
-                                continue
-                            desc = row.get("stop_desc", "")
-                            if not desc:
-                                continue
-                            zbiorkom_id = f"{slugify(row['stop_name'])}{desc}"
-                            if zbiorkom_id in seen:
-                                continue
-                            seen.add(zbiorkom_id)
-                            stops.append({"id": zbiorkom_id, "name": f"{row['stop_name']} {desc}"})
-
-            stops.sort(key=lambda x: x["name"])
-            _LOGGER.debug("Loaded %d Kraków stops from ZTP GTFS", len(stops))
-            return stops
-        except Exception as e:
-            _LOGGER.warning("Failed to load Kraków stops: %s", e)
-            return []
-
-    async def _load_gtfs_stops(self, gtfs_url: str, id_column: str = "stop_id") -> list[dict]:
-        """Download a GTFS zip and parse stops.txt."""
-        import csv
-        import zipfile
-        from io import BytesIO, StringIO
-
-        try:
-            _LOGGER.debug("GTFS stops: downloading %s", gtfs_url)
-            session = async_get_clientsession(self.hass)
-            async with session.get(
-                gtfs_url, timeout=aiohttp.ClientTimeout(total=120)
-            ) as resp:
-                resp.raise_for_status()
-                data = await resp.read()
-            _LOGGER.debug("GTFS stops: downloaded %d bytes from %s", len(data), gtfs_url)
-        except Exception as e:
-            _LOGGER.warning("Failed to download GTFS from %s: %s", gtfs_url, e)
-            return []
-
-        try:
-            stops = []
-            with zipfile.ZipFile(BytesIO(data)) as zf:
-                if "stops.txt" not in zf.namelist():
-                    return []
-                text = zf.read("stops.txt").decode("utf-8-sig")
-                reader = csv.reader(StringIO(text))
-                header = next(reader)
-                id_idx = header.index(id_column)
-                name_idx = header.index("stop_name")
-                stops_by_id = {}
-                for parts in reader:
-                    if len(parts) > max(id_idx, name_idx):
-                        sid = parts[id_idx]
-                        name = parts[name_idx]
-                        if sid and name:
-                            stops_by_id.setdefault(sid, {"id": sid, "name": name})
-
-                stops = list(stops_by_id.values())
-
-            stops.sort(key=lambda x: x["name"])
-            _LOGGER.debug("GTFS stops: parsed %d stops from %s", len(stops), gtfs_url)
-            return stops
-        except Exception as e:
-            _LOGGER.warning("Failed to parse GTFS zip from %s: %s", gtfs_url, e)
-            return []
-
-
 class MzkzgTransportOptionsFlow(config_entries.OptionsFlow):
     """Handle options for a stop entry."""
 
     async def async_step_init(self, user_input=None):
         """Manage the options."""
         if user_input is not None:
-            return self.async_create_entry(title="", data=user_input)
+            current_opts = self.config_entry.options
+            merged = {**current_opts, **user_input}
+            return self.async_create_entry(title="", data=merged)
 
         current_opts = self.config_entry.options
-        provider = self.config_entry.data.get(CONF_PROVIDER, "")
+        current_data = self.config_entry.data
+        provider = current_data.get(CONF_PROVIDER, "")
+        stop_id = current_data.get(CONF_STOP_ID, "")
+
+        def _opt(key, default=""):
+            return current_opts.get(key, current_data.get(key, default))
+
         schema = {
+            vol.Optional(
+                CONF_NAME,
+                default=_opt(CONF_NAME, ""),
+            ): str,
+            vol.Optional(
+                "destination_filter",
+                default=_opt("destination_filter", ""),
+            ): str,
+            vol.Optional(
+                "filter_routes",
+                default=_opt("filter_routes", ""),
+            ): str,
+            vol.Optional(
+                "highlight_mode",
+                default=bool(_opt("highlight_mode", False)),
+            ): bool,
+            vol.Optional(
+                "hide_terminus",
+                default=bool(_opt("hide_terminus", False)),
+            ): bool,
+            vol.Optional(
+                "realtime_only",
+                default=bool(_opt("realtime_only", False)),
+            ): bool,
             vol.Optional(
                 CONF_SLEEP_ENABLED,
                 default=current_opts.get(CONF_SLEEP_ENABLED, True),
@@ -1333,8 +776,17 @@ class MzkzgTransportOptionsFlow(config_entries.OptionsFlow):
                 CONF_FALLBACK_MIN,
                 default=current_opts.get(CONF_FALLBACK_MIN, DEFAULT_FALLBACK_MIN),
             )] = vol.All(vol.Coerce(int), vol.Range(min=1, max=30))
+        if provider in KIEDYPRZYJEDZIE_PROVIDERS:
+            schema[vol.Optional(
+                CONF_TIMETABLE_LINES,
+                default=_opt(CONF_TIMETABLE_LINES, ""),
+            )] = str
 
         return self.async_show_form(
             step_id="init",
             data_schema=vol.Schema(schema),
+            description_placeholders={
+                "stop_id": stop_id,
+                "provider": provider,
+            },
         )

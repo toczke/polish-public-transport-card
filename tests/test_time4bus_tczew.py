@@ -9,7 +9,9 @@ import pytest
 from aioresponses import aioresponses
 
 from mzkzg_transport.const import (
+    PROVIDER_BYTOW,
     PROVIDER_TCZEW,
+    TIME4BUS_BYTOW_LIVE_DEPARTURES_URL,
     TIME4BUS_TCZEW_LIVE_DEPARTURES_URL,
     TIME4BUS_TCZEW_SCHEDULE_DEPARTURES_URL,
 )
@@ -99,6 +101,40 @@ async def test_time4bus_tczew_live_departures(mock_hass):
     assert departure["air_conditioning"] is True
     assert departure["platform"] == "1"
     assert departure["track"] is None
+
+
+@pytest.mark.tczew
+@pytest.mark.asyncio
+async def test_time4bus_bytow_live_departures(mock_hass):
+    """Bytów uses the Time4BUS operator, with its fullcode as the stop id."""
+    now = datetime.now()
+    coordinator = MzkzgTransportCoordinator(mock_hass, "03101", PROVIDER_BYTOW, "1-go Maja")
+
+    live_payload = {
+        "stops": [47],
+        "departures": [
+            {
+                "stop": 47,
+                "stopFullcode": "03101",
+                "tid": 7939,
+                "line": "3B",
+                "direction": "Wybickiego - Baza PKS",
+                "leaveTime": int((now + timedelta(minutes=5)).timestamp() * 1000),
+                "planTime": int((now + timedelta(minutes=4)).timestamp() * 1000),
+                "isReal": True,
+            }
+        ],
+    }
+
+    with aioresponses() as mocked:
+        mocked.get(f"{TIME4BUS_BYTOW_LIVE_DEPARTURES_URL}/03101/departures", payload=live_payload)
+        result = await coordinator._fetch_time4bus_tczew()
+
+    assert result["provider"] == PROVIDER_BYTOW
+    assert result["stop_id"] == "03101"
+    assert len(result["departures"]) == 1
+    assert result["departures"][0]["route"] == "3B"
+    assert result["departures"][0]["realtime"] is True
 
 
 @pytest.mark.tczew
