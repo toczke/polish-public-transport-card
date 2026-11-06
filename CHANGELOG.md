@@ -42,6 +42,16 @@
   of racing to parse it in parallel (#20, #21)
 - **GTFS-RT log spam** — malformed/retired realtime feeds are logged at debug level instead
   of warning on every poll (#44)
+- **PLK 429 backoff** — after a rate-limit response the integration stops polling PLK for
+  15 minutes and serves the last schedule/operations snapshot instead of retrying every cycle
+- **TLS verification** — removed the remaining `ssl=False` overrides from the Gdańsk and
+  Łódź providers; certificate verification is now enabled for all integrations
+- **Config-flow translations** — fixed the English `stop` title placeholder and added the
+  timetable-lines option label, removing the translation placeholder error on startup
+- **PLK station labels** — rail stations now end with `PKP` (e.g. `Zabierzów PKP`), so a
+  rail search doesn't pick a nearby bus stop from another provider (#40)
+- **GTFS parsing off the event loop** — Gdańsk and Łódź archives are parsed in the executor
+  as well, not just GTFS-RT providers (#20, #21)
 
 ## [1.6.0] â€” unreleased
 

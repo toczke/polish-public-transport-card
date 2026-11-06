@@ -181,6 +181,10 @@ Restart Home Assistant.
 4. **Łódź only**: choose between "Single Stop" or "Bus Stop Group" (transfer hub) — the latter expands into one aggregated sensor covering all platforms
 5. For PKP/PLK: enter your API key from [dane.plk-sa.pl](https://dane.plk-sa.pl)
 
+**Rail vs bus:** for train departures choose the **Polskie Linie Kolejowe** provider.
+PLK station labels end with `PKP` (e.g. `Zabierzów PKP`), so they are not confused with
+nearby bus stops from ZTP/KiedyPrzyjedzie.
+
 **Multiple stops:** add the integration once per stop. Entries of the same provider share
 the operator device, the GTFS cache, the PLK request budget and the live-vehicle snapshot,
 so adding several stops does not multiply upstream requests. A single entry can also hold

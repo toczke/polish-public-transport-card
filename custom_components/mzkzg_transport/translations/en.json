@@ -17,7 +17,7 @@
         }
       },
       "stop": {
-        "title": "Select stop",
+        "title": "Select stop - {provider}",
         "description": "Choose a stop from the list or type the ID manually.",
         "data": {
           "stop_id": "Stop",
@@ -58,7 +58,8 @@
           "sleep_enabled": "Enable sleep mode",
           "sleep_start": "Sleep start (HH:MM)",
           "sleep_end": "Sleep end (HH:MM)",
-          "fallback_min": "Minimum scheduled departures for Łódź fallback"
+          "fallback_min": "Minimum scheduled departures for Łódź fallback",
+          "timetable_lines": "Timetable lines (comma-separated)"
         }
       }
     }

@@ -1158,7 +1158,16 @@ class MzkzgTransportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             page += 1
 
 
-        stops = [{"id": str(s["id"]), "name": s["name"]} for s in all_stations if s.get("id") and s.get("name")]
+        # Mark rail stations so a search for e.g. "Zabierzów PKP" picks the train
+        # station instead of a nearby bus stop from another provider (issue #40).
+        stops = [
+            {
+                "id": str(s["id"]),
+                "name": s["name"] if "PKP" in s["name"].upper() else f"{s['name']} PKP",
+            }
+            for s in all_stations
+            if s.get("id") and s.get("name")
+        ]
 
 
         stops.sort(key=lambda x: x["name"])

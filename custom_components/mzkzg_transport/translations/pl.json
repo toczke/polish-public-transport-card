@@ -58,7 +58,8 @@
           "sleep_enabled": "Włącz tryb uśpienia",
           "sleep_start": "Początek uśpienia (GG:MM)",
           "sleep_end": "Koniec uśpienia (GG:MM)",
-          "fallback_min": "Minimalna liczba odjazdów do uzupełnienia rozkładem (Łódź)"
+          "fallback_min": "Minimalna liczba odjazdów do uzupełnienia rozkładem (Łódź)",
+          "timetable_lines": "Linie do pe?nego rozk?adu (oddzielone przecinkami)"
         }
       }
     }
