@@ -37,7 +37,8 @@
   vehicle/trip fields are kept
 - **Vehicle marker** - replaced the old clipped arrow shape with a circular puck
   centred on the vehicle and a small direction pointer; the selected vehicle stays
-  centred at zoom 16 and the popup no longer uses emoji
+  centred at zoom 16. The map now has one compact detail popup opened by clicking a
+  marker (no auto-opened giant bubble and no tiny hover tooltip), without emoji
 - **Live vehicle marker** - removed the black vehicle-code badge that overlapped the
   route circle. Markers now show only the route number and direction arrow, with a
   white ring around the selected vehicle. The map also always waits for Leaflet CSS,

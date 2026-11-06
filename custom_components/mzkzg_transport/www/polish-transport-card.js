@@ -536,6 +536,7 @@ var De = "1.7.0", V = {
 		train_no: "nr",
 		trains: "Pociągi (SKM/IC/PR)",
 		map_refresh: "Odświeżanie co 30 s",
+		on_time: "o czasie",
 		no_route: "?",
 		editor_data: "Dane",
 		editor_appearance: "Wygląd",
@@ -568,6 +569,7 @@ var De = "1.7.0", V = {
 		train_no: "No.",
 		trains: "Trains (SKM/IC/PR)",
 		map_refresh: "Refreshing every 30 s",
+		on_time: "on time",
 		no_route: "?",
 		editor_data: "Data",
 		editor_appearance: "Appearance",
@@ -1903,7 +1905,7 @@ ha-card { container-type: inline-size; }
 		};
 	}
 	buildPopupContent(e) {
-		let t = Math.round((e.delay_seconds || 0) / 60), n = t > 0 ? `+${t} min` : t < 0 ? `${t} min` : "o czasie", r = t > 0 ? "zm-popup-delay" : t < 0 ? "zm-popup-delay early" : "zm-popup-delay ontime";
+		let t = Math.round((e.delay_seconds || 0) / 60), n = t > 0 ? `+${t} min` : t < 0 ? `${t} min` : H("on_time"), r = t > 0 ? "zm-popup-delay" : t < 0 ? "zm-popup-delay early" : "zm-popup-delay ontime";
 		return `<div class="zm-popup"><div class="zm-popup-route">${U(e.route)}</div>${e.headsign ? `<div class="zm-popup-headsign">→ ${U(e.headsign)}</div>` : ""}${e.vehicle_code ? `<div class="zm-popup-meta">#${U(e.vehicle_code)}</div>` : ""}<div class="zm-popup-delay-row"><span class="${r}">${U(n)}</span></div></div>`;
 	}
 	showVehicleMap(e, t, n) {
@@ -1919,7 +1921,7 @@ ha-card { container-type: inline-size; }
 		let c = o.querySelector("#vmap");
 		if (!document.getElementById("ztm-map-style")) {
 			let e = document.createElement("style");
-			e.id = "ztm-map-style", e.textContent = ".zm-arrow{position:relative;display:inline-block;transition:transform 0.8s ease}.zm-arrow svg{display:block}.zm-popup{font-family:system-ui,sans-serif;font-size:12px;line-height:1.3;min-width:120px}.zm-popup-route{font-size:22px;font-weight:800;line-height:1}.zm-popup-headsign{font-size:13px;color:#555}.zm-popup-meta{font-size:10px;color:#999;margin-top:2px}.zm-popup-delay-row{margin-top:4px;font-size:13px;font-weight:600}.zm-popup-delay{color:#e53935}.zm-popup-delay.ontime{color:#43a047}.zm-popup-delay.early{color:#1e88e5}.zm-dark-map .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(0.9) contrast(0.9)}.zm-dark-map .leaflet-popup-content-wrapper,.zm-dark-map .leaflet-popup-tip{background:#1c1c1e;color:#eee}.zm-dark-map .zm-popup-headsign{color:#bbb}.zm-dark-map .zm-popup-meta{color:#888}", document.head.appendChild(e);
+			e.id = "ztm-map-style", e.textContent = ".zm-arrow{position:relative;display:inline-block;transition:transform 0.8s ease}.zm-arrow svg{display:block}.zm-popup{font-family:system-ui,sans-serif;font-size:11px;line-height:1.25;min-width:0;max-width:180px}.zm-popup-route{font-size:17px;font-weight:800;line-height:1}.zm-popup-headsign{font-size:12px;color:#555;margin-top:2px}.zm-popup-meta{font-size:10px;color:#999;margin-top:1px}.zm-popup-delay-row{margin-top:3px;font-size:12px;font-weight:600}.zm-popup-delay{color:#e53935}.zm-popup-delay.ontime{color:#43a047}.zm-popup-delay.early{color:#1e88e5}.zm-dark-map .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(0.9) contrast(0.9)}.zm-dark-map .leaflet-popup-content-wrapper,.zm-dark-map .leaflet-popup-tip{background:#1c1c1e;color:#eee}.zm-dark-map .zm-popup-headsign{color:#bbb}.zm-dark-map .zm-popup-meta{color:#888}", document.head.appendChild(e);
 		}
 		let l = {
 			destroyed: !1,
@@ -2010,53 +2012,49 @@ ha-card { container-type: inline-size; }
 		let i = r * 137.5 * Math.PI / 180, a = 13e-5 * Math.ceil(r / 4);
 		return [e[0] + Math.sin(i) * a, e[1] + Math.cos(i) * a];
 	}
-	_createVehicleMarker(e, t, n, r, i = !1) {
-		let a = !!(t.vehicle_code && t.vehicle_code === e.vehicleCode), o = K(t.route, t._provider || t.provider || "", t.route_color), s = t.vehicle_direction || t.direction || 0, c = this.buildVehicleMarker(s, o, t.route || "?", t.vehicle_type || "bus", t, r), l = `<div class="zm-arrow" style="opacity:${a ? 1 : .72}">${c.svg}</div>`, u = window.L.divIcon({
+	_createVehicleMarker(e, t, n, r) {
+		let i = !!(t.vehicle_code && t.vehicle_code === e.vehicleCode), a = K(t.route, t._provider || t.provider || "", t.route_color), o = t.vehicle_direction || t.direction || 0, s = this.buildVehicleMarker(o, a, t.route || "?", t.vehicle_type || "bus", t, r), c = `<div class="zm-arrow" style="opacity:${i ? 1 : .72}">${s.svg}</div>`, l = window.L.divIcon({
 			className: "",
-			html: l,
-			iconSize: [c.size, c.size],
-			iconAnchor: [c.size / 2, c.size / 2]
-		}), d = window.L.marker(n, {
-			icon: u,
+			html: c,
+			iconSize: [s.size, s.size],
+			iconAnchor: [s.size / 2, s.size / 2]
+		}), u = window.L.marker(n, {
+			icon: l,
 			title: `${t.route || "?"} ${t.headsign || ""}`.trim(),
-			zIndexOffset: a ? 1e3 : 0
+			zIndexOffset: i ? 1e3 : 0
 		}).addTo(e.map);
-		return d.bindTooltip(`<strong>${U(t.route || "?")}</strong> → ${U(t.headsign || "")}`, {
-			direction: "top",
-			offset: [0, -c.size / 2],
-			opacity: .95
-		}), d.bindPopup(this.buildPopupContent(t), {
+		return u.bindPopup(this.buildPopupContent(t), {
 			closeButton: !0,
 			autoPan: !0,
-			maxWidth: 220
-		}), a && (e.marker = d, i && setTimeout(() => {
-			e.destroyed || d.openPopup();
-		}, 350)), d;
+			maxWidth: 200
+		}), u.off("click"), u.on("click", (e) => {
+			e.originalEvent && window.L.DomEvent.stopPropagation(e.originalEvent), u.openPopup();
+		}), i && (e.marker = u), u;
 	}
-	_addAllMarkers(e, t, n) {
-		let r = this.card.hass?.states[e.entityId];
-		if (!r?.attributes?.departures) return;
-		let i = r.attributes.departures || [], a = {}, o = i.find((t) => t.vehicle_code && t.vehicle_code === e.vehicleCode && W(t.vehicle_lat, t.vehicle_lng));
-		if (o) {
-			let r = W(o.vehicle_lat, o.vehicle_lng);
-			a[`${r[0].toFixed(4)}|${r[1].toFixed(4)}`] = 1, e.markers.push(this._createVehicleMarker(e, o, r, t, n));
+	_addAllMarkers(e, t) {
+		let n = this.card.hass?.states[e.entityId];
+		if (!n?.attributes?.departures) return;
+		let r = n.attributes.departures || [], i = {}, a = r.find((t) => t.vehicle_code && t.vehicle_code === e.vehicleCode && W(t.vehicle_lat, t.vehicle_lng));
+		if (a) {
+			let n = W(a.vehicle_lat, a.vehicle_lng);
+			i[`${n[0].toFixed(4)}|${n[1].toFixed(4)}`] = 1, e.markers.push(this._createVehicleMarker(e, a, n, t));
 		}
-		for (let n of i) {
-			if (n === o) continue;
+		for (let n of r) {
+			if (n === a) continue;
 			let r = W(n.vehicle_lat, n.vehicle_lng);
 			if (!r) continue;
-			let i = this._spreadPosition(r, a);
-			e.markers.push(this._createVehicleMarker(e, n, i, t));
+			let o = this._spreadPosition(r, i);
+			e.markers.push(this._createVehicleMarker(e, n, o, t));
 		}
 		e.marker?.bringToFront?.();
 	}
 	renderAllVehicleMarkers(e, t, n) {
-		this.card.hass && (e.markers.forEach((t) => e.map.removeLayer(t)), e.markers = [], e.marker = null, this._addAllMarkers(e, n, !0));
+		this.card.hass && (e.markers.forEach((t) => e.map.removeLayer(t)), e.markers = [], e.marker = null, this._addAllMarkers(e, n));
 	}
 	updateAllVehiclePositions(e) {
 		if (e.destroyed || !e.entityId || !e.map || !this.card.hass) return;
 		let t = !!e.marker?.isPopupOpen?.();
-		e.markers.forEach((t) => e.map.removeLayer(t)), e.markers = [], e.marker = null, this._addAllMarkers(e, window.innerWidth < 480, !1), t && e.marker && e.marker.openPopup();
+		e.markers.forEach((t) => e.map.removeLayer(t)), e.markers = [], e.marker = null, this._addAllMarkers(e, window.innerWidth < 480), t && e.marker && e.marker.openPopup();
 	}
 	updateVehiclePosition(e) {
 		if (e.destroyed || !e.entityId || !e.marker || !this.card.hass) return;

@@ -93,7 +93,7 @@ export class VehicleMap {
 
   buildPopupContent(d) {
     const delay = Math.round((d.delay_seconds || 0) / 60);
-    const delayTag = delay > 0 ? `+${delay} min` : delay < 0 ? `${delay} min` : "o czasie";
+    const delayTag = delay > 0 ? `+${delay} min` : delay < 0 ? `${delay} min` : t("on_time");
     const delayClass = delay > 0 ? "zm-popup-delay" : delay < 0 ? "zm-popup-delay early" : "zm-popup-delay ontime";
     return `<div class="zm-popup"><div class="zm-popup-route">${escapeHtml(d.route)}</div>${d.headsign ? `<div class="zm-popup-headsign">→ ${escapeHtml(d.headsign)}</div>` : ""}${d.vehicle_code ? `<div class="zm-popup-meta">#${escapeHtml(d.vehicle_code)}</div>` : ""}<div class="zm-popup-delay-row"><span class="${delayClass}">${escapeHtml(delayTag)}</span></div></div>`;
   }
@@ -118,7 +118,7 @@ export class VehicleMap {
     if (!document.getElementById("ztm-map-style")) {
       const s = document.createElement("style");
       s.id = "ztm-map-style";
-      s.textContent = `.zm-arrow{position:relative;display:inline-block;transition:transform 0.8s ease}.zm-arrow svg{display:block}.zm-popup{font-family:system-ui,sans-serif;font-size:12px;line-height:1.3;min-width:120px}.zm-popup-route{font-size:22px;font-weight:800;line-height:1}.zm-popup-headsign{font-size:13px;color:#555}.zm-popup-meta{font-size:10px;color:#999;margin-top:2px}.zm-popup-delay-row{margin-top:4px;font-size:13px;font-weight:600}.zm-popup-delay{color:#e53935}.zm-popup-delay.ontime{color:#43a047}.zm-popup-delay.early{color:#1e88e5}.zm-dark-map .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(0.9) contrast(0.9)}.zm-dark-map .leaflet-popup-content-wrapper,.zm-dark-map .leaflet-popup-tip{background:#1c1c1e;color:#eee}.zm-dark-map .zm-popup-headsign{color:#bbb}.zm-dark-map .zm-popup-meta{color:#888}`;
+      s.textContent = `.zm-arrow{position:relative;display:inline-block;transition:transform 0.8s ease}.zm-arrow svg{display:block}.zm-popup{font-family:system-ui,sans-serif;font-size:11px;line-height:1.25;min-width:0;max-width:180px}.zm-popup-route{font-size:17px;font-weight:800;line-height:1}.zm-popup-headsign{font-size:12px;color:#555;margin-top:2px}.zm-popup-meta{font-size:10px;color:#999;margin-top:1px}.zm-popup-delay-row{margin-top:3px;font-size:12px;font-weight:600}.zm-popup-delay{color:#e53935}.zm-popup-delay.ontime{color:#43a047}.zm-popup-delay.early{color:#1e88e5}.zm-dark-map .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(0.9) contrast(0.9)}.zm-dark-map .leaflet-popup-content-wrapper,.zm-dark-map .leaflet-popup-tip{background:#1c1c1e;color:#eee}.zm-dark-map .zm-popup-headsign{color:#bbb}.zm-dark-map .zm-popup-meta{color:#888}`;
       document.head.appendChild(s);
     }
 
@@ -247,7 +247,7 @@ export class VehicleMap {
     return [pos[0] + Math.sin(angle) * radius, pos[1] + Math.cos(angle) * radius];
   }
 
-  _createVehicleMarker(ctx, d, pos, isMobile, autoOpen = false) {
+  _createVehicleMarker(ctx, d, pos, isMobile) {
     const isMain = Boolean(d.vehicle_code && d.vehicle_code === ctx.vehicleCode);
     const color = routeColor(d.route, d._provider || d.provider || "", d.route_color);
     const bearing = d.vehicle_direction || d.direction || 0;
@@ -264,23 +264,22 @@ export class VehicleMap {
       title: `${d.route || "?"} ${d.headsign || ""}`.trim(),
       zIndexOffset: isMain ? 1000 : 0,
     }).addTo(ctx.map);
-    marker.bindTooltip(
-      `<strong>${escapeHtml(d.route || "?")}</strong> → ${escapeHtml(d.headsign || "")}`,
-      { direction: "top", offset: [0, -mk.size / 2], opacity: 0.95 }
-    );
-    marker.bindPopup(this.buildPopupContent(d), { closeButton: true, autoPan: true, maxWidth: 220 });
+    marker.bindPopup(this.buildPopupContent(d), { closeButton: true, autoPan: true, maxWidth: 200 });
+    // Leaflet's default click toggles the popup off, which used to leave only
+    // the tiny hover tooltip. Rebind the click so it always opens the same
+    // compact popup, and drop the separate tooltip entirely.
+    marker.off("click");
+    marker.on("click", (e) => {
+      if (e.originalEvent) window.L.DomEvent.stopPropagation(e.originalEvent);
+      marker.openPopup();
+    });
     if (isMain) {
       ctx.marker = marker;
-      if (autoOpen) {
-        setTimeout(() => {
-          if (!ctx.destroyed) marker.openPopup();
-        }, 350);
-      }
     }
     return marker;
   }
 
-  _addAllMarkers(ctx, isMobile, autoOpen) {
+  _addAllMarkers(ctx, isMobile) {
     const state = this.card.hass?.states[ctx.entityId];
     if (!state?.attributes?.departures) return;
     const allDeps = state.attributes.departures || [];
@@ -291,7 +290,7 @@ export class VehicleMap {
     if (main) {
       const mainPos = parseVehiclePosition(main.vehicle_lat, main.vehicle_lng);
       groups[`${mainPos[0].toFixed(4)}|${mainPos[1].toFixed(4)}`] = 1;
-      ctx.markers.push(this._createVehicleMarker(ctx, main, mainPos, isMobile, autoOpen));
+      ctx.markers.push(this._createVehicleMarker(ctx, main, mainPos, isMobile));
     }
     for (const d of allDeps) {
       if (d === main) continue;
@@ -308,7 +307,7 @@ export class VehicleMap {
     ctx.markers.forEach(m => ctx.map.removeLayer(m));
     ctx.markers = [];
     ctx.marker = null;
-    this._addAllMarkers(ctx, isMobile, true);
+    this._addAllMarkers(ctx, isMobile);
   }
 
   updateAllVehiclePositions(ctx) {
@@ -317,7 +316,7 @@ export class VehicleMap {
     ctx.markers.forEach(m => ctx.map.removeLayer(m));
     ctx.markers = [];
     ctx.marker = null;
-    this._addAllMarkers(ctx, window.innerWidth < 480, false);
+    this._addAllMarkers(ctx, window.innerWidth < 480);
     if (wasOpen && ctx.marker) ctx.marker.openPopup();
   }
 
