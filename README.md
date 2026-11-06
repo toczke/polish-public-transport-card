@@ -222,11 +222,13 @@ The card registers itself automatically. In the Lovelace UI: **Add Card → Poli
 |--------|------|---------|-------------|
 | `entities` | list | required | Sensor entity IDs (string or object with per-sensor overrides) |
 | `display_preset` | string | `standard` | `standard` / `compact` / `minimal` / `native` (HA look) / `e_ink` |
-| `view_mode` | string | `mixed` | `mixed` (merged timeline) / `tabs` (per-stop) |
+| `view_mode` | string | `mixed` | `mixed` (merged timeline) / `tabs` (per-stop) / `grouped` (grouped by line) |
+| `columns` | int | `1` | Row columns: `1`, `2` or `3` (good for tablets) |
 | `header_style` | string | `provider` | `provider`, `theme` (HA primary), `custom` |
 | `header_color` | string | — | Custom header color (when `header_style: custom`) |
 | `show_header` | bool | `true` | Show the card header |
 | `show_clock` | bool | `false` | Show current time in the header |
+| `show_refresh` | bool | `false` | Show a manual refresh button in the header |
 | `max_departures` | int | `10` | Max rows per stop (1–100) |
 | `min_departures` | int | `0` | Minimum rows; shorter lists are padded with empty rows |
 | `time_format` | string | `auto` | `auto` / `24h` / `12h` |
@@ -250,12 +252,19 @@ The card registers itself automatically. In the Lovelace UI: **Add Card → Poli
 | `hide_terminus` | bool | `true` | Hide departures ending at this stop |
 | `hide_cancelled` | bool | `false` | Hide cancelled departures |
 | `realtime_only` | bool | `false` | Show only realtime departures |
+| `max_minutes` | int | `0` | Show only departures within this many minutes (`0` = no limit) |
+| `only_low_floor` | bool | `false` | Show only low-floor vehicles |
+| `only_bike` | bool | `false` | Show only vehicles with bike space |
+| `only_ac` | bool | `false` | Show only air-conditioned vehicles |
+| `only_ticket_machine` | bool | `false` | Show only vehicles with a ticket machine |
 | `tap_action` | object | `more-info` | Row tap action |
 | `hold_action` | object | `none` | Row hold action |
 | `double_tap_action` | object | `none` | Row double-tap action |
 
 All filters and `max_departures` can be overridden per sensor. The visual editor exposes
-both a global form and a **per-sensor override** form; the same structure is accepted in YAML.
+both a global form and a **per-sensor override** form (including stop-name labels,
+override reset and row ordering); the same structure is accepted in YAML. Tap, hold and
+double-tap actions are editable with Home Assistant's native action picker.
 
 ### Card presets
 
@@ -284,11 +293,20 @@ entities:
   - entity: sensor.gdynia_central_odjazdy
     filter_routes: ["147"]
     realtime_only: true
+    max_minutes: 30
+    only_low_floor: true
 filter_routes: ["N1"]
 min_departures: 5
 header_style: provider
 time_format: 24h
 show_clock: true
+show_refresh: true
+columns: 2
+tap_action:
+  action: more-info
+hold_action:
+  action: navigate
+  navigation_path: /lovelace/transport
 ```
 
 ---

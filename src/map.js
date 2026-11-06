@@ -111,7 +111,7 @@ export class VehicleMap {
     if (!document.getElementById("ztm-map-style")) {
       const s = document.createElement("style");
       s.id = "ztm-map-style";
-      s.textContent = `.zm-arrow{position:relative;display:inline-block;transition:transform 0.8s ease}.zm-arrow svg{display:block}.zm-popup{font-family:system-ui,sans-serif;font-size:12px;line-height:1.3;min-width:120px}.zm-popup-route{font-size:22px;font-weight:800;line-height:1}.zm-popup-headsign{font-size:13px;color:#555}.zm-popup-meta{font-size:10px;color:#999;margin-top:2px}.zm-popup-delay-row{margin-top:4px;font-size:13px;font-weight:600}.zm-popup-delay{color:#e53935}.zm-popup-delay.ontime{color:#43a047}.zm-popup-delay.early{color:#1e88e5}}`;
+      s.textContent = `.zm-arrow{position:relative;display:inline-block;transition:transform 0.8s ease}.zm-arrow svg{display:block}.zm-popup{font-family:system-ui,sans-serif;font-size:12px;line-height:1.3;min-width:120px}.zm-popup-route{font-size:22px;font-weight:800;line-height:1}.zm-popup-headsign{font-size:13px;color:#555}.zm-popup-meta{font-size:10px;color:#999;margin-top:2px}.zm-popup-delay-row{margin-top:4px;font-size:13px;font-weight:600}.zm-popup-delay{color:#e53935}.zm-popup-delay.ontime{color:#43a047}.zm-popup-delay.early{color:#1e88e5}.zm-dark-map .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(0.9) contrast(0.9)}.zm-dark-map .leaflet-popup-content-wrapper,.zm-dark-map .leaflet-popup-tip{background:#1c1c1e;color:#eee}.zm-dark-map .zm-popup-headsign{color:#bbb}.zm-dark-map .zm-popup-meta{color:#888}`;
       document.head.appendChild(s);
     }
 
@@ -148,6 +148,7 @@ export class VehicleMap {
       requestAnimationFrame(() => {
         if (ctx.destroyed) return;
         const map = window.L.map(container, { zoomControl: true }).setView([lat, lng], 16);
+        if (this._isDarkTheme()) container.classList.add("zm-dark-map");
         this.addTileLayer(map, ctx);
         const attributionPrefix = map.attributionControl.options.prefix;
         if (attributionPrefix) map.attributionControl.setPrefix(attributionPrefix.replace(/<a /g, '<a target="_blank" rel="noopener" '));
@@ -213,6 +214,57 @@ export class VehicleMap {
     });
   }
 
+  _isDarkTheme() {
+    const probe = document.createElement("div");
+    probe.style.color = "var(--card-background-color, #fff)";
+    document.body.appendChild(probe);
+    const color = getComputedStyle(probe).color;
+    probe.remove();
+    const parts = color.match(/\d+/g);
+    if (!parts) return false;
+    const [r, g, b] = parts.map(Number);
+    return (0.2126 * r + 0.7152 * g + 0.0722 * b) < 128;
+  }
+
+  _spreadPosition(pos, groups) {
+    const key = `${pos[0].toFixed(4)}|${pos[1].toFixed(4)}`;
+    const index = groups[key] || 0;
+    groups[key] = index + 1;
+    if (index === 0) return pos;
+    const angle = (index * 137.5) * Math.PI / 180;
+    const radius = 0.00013 * Math.ceil(index / 4);
+    return [pos[0] + Math.sin(angle) * radius, pos[1] + Math.cos(angle) * radius];
+  }
+
+  _createVehicleMarker(ctx, d, pos, isMobile, autoOpen = false) {
+    const isMain = Boolean(d.vehicle_code && d.vehicle_code === ctx.vehicleCode);
+    const color = routeColor(d.route, d._provider || d.provider || "", d.route_color);
+    const bearing = d.vehicle_direction || d.direction || 0;
+    const mk = this.buildVehicleMarker(bearing, color, d.route || "?", d.vehicle_type || "bus", d, isMobile);
+    const mkHtml = `<div class="zm-arrow" style="opacity:${isMain ? 1 : 0.72}">${mk.svg}</div>`;
+    const icon = window.L.divIcon({
+      className: "",
+      html: mkHtml,
+      iconSize: [mk.size, mk.arrowH],
+      iconAnchor: [mk.size / 2, mk.arrowH],
+    });
+    const marker = window.L.marker(pos, { icon, title: `${d.route || "?"} ${d.headsign || ""}`.trim() }).addTo(ctx.map);
+    marker.bindTooltip(
+      `<strong>${escapeHtml(d.route || "?")}</strong> → ${escapeHtml(d.headsign || "")}`,
+      { direction: "top", offset: [0, -mk.arrowH], opacity: 0.95 }
+    );
+    marker.bindPopup(this.buildPopupContent(d), { closeButton: true, autoPan: true, maxWidth: 220 });
+    if (isMain) {
+      ctx.marker = marker;
+      if (autoOpen) {
+        setTimeout(() => {
+          if (!ctx.destroyed) marker.openPopup();
+        }, 350);
+      }
+    }
+    return marker;
+  }
+
   renderAllVehicleMarkers(ctx, info, isMobile) {
     if (!this.card.hass) return;
     const state = this.card.hass.states[ctx.entityId];
@@ -221,37 +273,19 @@ export class VehicleMap {
     // Clear old markers
     ctx.markers.forEach(m => ctx.map.removeLayer(m));
     ctx.markers = [];
+    ctx.marker = null;
 
-    let hasMain = false;
     const allDeps = state.attributes.departures || [];
+    const groups = {};
     for (const d of allDeps) {
       const pos = parseVehiclePosition(d.vehicle_lat, d.vehicle_lng);
       if (!pos) continue;
-
-      const isMain = d.vehicle_code && d.vehicle_code === ctx.vehicleCode;
-      const color = routeColor(d.route, d._provider || d.provider || "", d.route_color);
-      const bearing = d.vehicle_direction || d.direction || 0;
-      
-      
-      if (isMain) hasMain = true;
-
-      const r = d.route || "?";
-      const b = bearing;
-      const mk = this.buildVehicleMarker(b, color, r, d.vehicle_type || "bus", d, isMobile);
-      const mkHtml = `<div class="zm-arrow" style="opacity:${isMain ? 1 : 0.7}">${mk.svg}</div>`;
-      const icon = window.L.divIcon({
-        className: "",
-        html: mkHtml,
-        iconSize: [mk.size, mk.arrowH],
-        iconAnchor: [mk.size / 2, mk.arrowH],
-      });
-      const marker = window.L.marker([pos[0], pos[1]], { icon }).addTo(ctx.map);
-      ctx.markers.push(marker);
+      const spread = this._spreadPosition(pos, groups);
+      ctx.markers.push(this._createVehicleMarker(ctx, d, spread, isMobile, true));
     }
-
-    // If no main marker (vehicle_code mismatch), still add a highlight for the closest position
-    if (!hasMain && ctx.markers.length > 0) {
-      // All markers are already shown; we just track them
+    if (ctx.markers.length > 1) {
+      const bounds = window.L.latLngBounds(ctx.markers.map(m => m.getLatLng()));
+      ctx.map.fitBounds(bounds, { padding: [30, 30], maxZoom: 16 });
     }
   }
 
@@ -264,22 +298,15 @@ export class VehicleMap {
     // Clear and re-render all markers
     ctx.markers.forEach(m => ctx.map.removeLayer(m));
     ctx.markers = [];
+    ctx.marker = null;
 
     const isMobile = window.innerWidth < 480;
+    const groups = {};
     for (const d of allDeps) {
       const pos = parseVehiclePosition(d.vehicle_lat, d.vehicle_lng);
       if (!pos) continue;
-      const isMain = d.vehicle_code && d.vehicle_code === ctx.vehicleCode;
-      const color = routeColor(d.route, d._provider || d.provider || "", d.route_color);
-      const b = d.vehicle_direction || d.direction || 0;
-      const r = d.route || "?";
-      const mk = this.buildVehicleMarker(b, color, r, d.vehicle_type || "bus", d, isMobile);
-      const mkHtml = `<div class="zm-arrow" style="opacity:${isMain ? 1 : 0.7}">${mk.svg}</div>`;
-      const icon = window.L.divIcon({
-        className: "", html: mkHtml,
-        iconSize: [mk.size, mk.arrowH], iconAnchor: [mk.size / 2, mk.arrowH],
-      });
-      ctx.markers.push(window.L.marker([pos[0], pos[1]], { icon }).addTo(ctx.map));
+      const spread = this._spreadPosition(pos, groups);
+      ctx.markers.push(this._createVehicleMarker(ctx, d, spread, isMobile));
     }
   }
 

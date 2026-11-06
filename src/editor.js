@@ -27,7 +27,9 @@ const SCHEMA = [
       { name: "view_mode", selector: SELECT([
         { value: "mixed", label: "Mixed" },
         { value: "tabs", label: "Tabs" },
+        { value: "grouped", label: "Group by line" },
       ]) },
+      { name: "columns", selector: { number: { min: 1, max: 3, mode: "box" } } },
     ],
   },
   {
@@ -42,6 +44,7 @@ const SCHEMA = [
       { name: "header_color", selector: { text: { type: "color" } } },
       { name: "show_header", selector: { boolean: {} } },
       { name: "show_clock", selector: { boolean: {} } },
+      { name: "show_refresh", selector: { boolean: {} } },
     ],
   },
   {
@@ -92,6 +95,20 @@ const SCHEMA = [
       { name: "hide_terminus", selector: { boolean: {} } },
       { name: "hide_cancelled", selector: { boolean: {} } },
       { name: "realtime_only", selector: { boolean: {} } },
+      { name: "max_minutes", selector: { number: { min: 0, max: 1440, mode: "box", unit_of_measurement: "min" } } },
+      { name: "only_low_floor", selector: { boolean: {} } },
+      { name: "only_bike", selector: { boolean: {} } },
+      { name: "only_ac", selector: { boolean: {} } },
+      { name: "only_ticket_machine", selector: { boolean: {} } },
+    ],
+  },
+  {
+    type: "expandable",
+    title: "Interactions",
+    schema: [
+      { name: "tap_action", selector: { ui_action: {} } },
+      { name: "hold_action", selector: { ui_action: {} } },
+      { name: "double_tap_action", selector: { ui_action: {} } },
     ],
   },
 ];
@@ -120,6 +137,11 @@ const OVERRIDE_SCHEMA = [
       { name: "hide_terminus", selector: { boolean: {} } },
       { name: "hide_cancelled", selector: { boolean: {} } },
       { name: "realtime_only", selector: { boolean: {} } },
+      { name: "max_minutes", selector: { number: { min: 0, max: 1440, mode: "box", unit_of_measurement: "min" } } },
+      { name: "only_low_floor", selector: { boolean: {} } },
+      { name: "only_bike", selector: { boolean: {} } },
+      { name: "only_ac", selector: { boolean: {} } },
+      { name: "only_ticket_machine", selector: { boolean: {} } },
     ],
   },
 ];
@@ -164,6 +186,26 @@ export class MzkzgTransportCardEditor extends LitElement {
       background: var(--card-background-color, #fff);
       color: var(--primary-text-color, #111);
     }
+    .override-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+    .override-actions button {
+      padding: 4px 10px;
+      border: 1px solid var(--divider-color, #ccc);
+      border-radius: 6px;
+      background: var(--card-background-color, #fff);
+      color: var(--primary-text-color, #111);
+      cursor: pointer;
+      font-size: 12px;
+    }
+    .override-actions button:disabled { opacity: 0.4; cursor: default; }
+    .validation {
+      padding: 8px 10px;
+      border-radius: 8px;
+      border: 1px solid var(--error-color, #db4437);
+      color: var(--error-color, #db4437);
+      background: color-mix(in srgb, var(--error-color, #db4437) 8%, transparent);
+      font-size: 12px;
+    }
+    .validation ul { margin: 0; padding-left: 16px; }
   `;
 
   setConfig(config) {
@@ -214,6 +256,47 @@ export class MzkzgTransportCardEditor extends LitElement {
     this._targetEntity = ev.target.value;
   }
 
+  _clearOverrides() {
+    if (!this._config || !this._targetEntity) return;
+    const entries = this._entries().map(entry =>
+      entry.entity === this._targetEntity ? entry.entity : entry
+    );
+    this._config = { ...this._config, entities: entries };
+    this._dispatch();
+  }
+
+  _moveEntry(delta) {
+    const entries = this._entries();
+    const idx = entries.findIndex(e => e.entity === this._targetEntity);
+    const next = idx + delta;
+    if (idx < 0 || next < 0 || next >= entries.length) return;
+    const copy = [...entries];
+    [copy[idx], copy[next]] = [copy[next], copy[idx]];
+    this._config = { ...this._config, entities: copy };
+    this._dispatch();
+  }
+
+  _entryLabel(entry) {
+    const state = this.hass?.states?.[entry.entity];
+    const stop = state?.attributes?.stop_name;
+    const shortId = entry.entity.replace("sensor.", "");
+    return stop ? `${stop} — ${shortId}` : shortId;
+  }
+
+  _validation() {
+    const errors = [];
+    const config = this._config || {};
+    const max = parseInt(config.max_departures, 10) || 10;
+    const min = parseInt(config.min_departures, 10) || 0;
+    if (min > max) errors.push(this._label("validation_departures"));
+    const color = config.header_color;
+    if (config.header_style === "custom" && color) {
+      const valid = /^(#[0-9a-fA-F]{3,8}|rgba?\([^)]+\)|hsla?\([^)]+\)|linear-gradient\([^;{}]+\)|[a-zA-Z]{3,20})$/.test(String(color).trim());
+      if (!valid) errors.push(this._label("validation_color"));
+    }
+    return errors;
+  }
+
   _overrideChanged(ev) {
     if (!this._config || !this._targetEntity) return;
     const value = { ...ev.detail.value };
@@ -240,8 +323,15 @@ export class MzkzgTransportCardEditor extends LitElement {
   render() {
     if (!this.hass || !this._config) return nothing;
     const entries = this._entries();
+    const errors = this._validation();
+    const targetIndex = entries.findIndex(e => e.entity === this._targetEntity);
     return html`
       <div class="editor">
+        ${errors.length ? html`
+          <div class="validation">
+            <ul>${errors.map(e => html`<li>${e}</li>`)}</ul>
+          </div>
+        ` : nothing}
         <ha-form
           .hass=${this.hass}
           .data=${this._formData()}
@@ -254,8 +344,13 @@ export class MzkzgTransportCardEditor extends LitElement {
             <div class="override-title">${this._label("override_title")}</div>
             <div class="override-label">${this._label("override_hint")}</div>
             <select @change=${this._targetChanged} .value=${this._targetEntity}>
-              ${entries.map(e => html`<option value=${e.entity} ?selected=${e.entity === this._targetEntity}>${e.entity.replace("sensor.", "")}</option>`)}
+              ${entries.map(e => html`<option value=${e.entity} ?selected=${e.entity === this._targetEntity}>${this._entryLabel(e)}</option>`)}
             </select>
+            <div class="override-actions">
+              <button ?disabled=${targetIndex <= 0} @click=${() => this._moveEntry(-1)}>↑ ${this._label("move_up")}</button>
+              <button ?disabled=${targetIndex < 0 || targetIndex >= entries.length - 1} @click=${() => this._moveEntry(1)}>↓ ${this._label("move_down")}</button>
+              <button @click=${this._clearOverrides}>${this._label("clear_overrides")}</button>
+            </div>
             <ha-form
               .hass=${this.hass}
               .data=${this._selectedEntry() || {}}
@@ -280,6 +375,8 @@ export class MzkzgTransportCardEditor extends LitElement {
       icon: "Ikona",
       display_preset: "Motyw karty",
       view_mode: "Widok",
+      columns: "Kolumny",
+      show_refresh: "Pokaż przycisk odświeżania",
       header_style: "Styl nagłówka",
       header_color: "Kolor nagłówka",
       show_header: "Pokaż nagłówek",
@@ -312,8 +409,21 @@ export class MzkzgTransportCardEditor extends LitElement {
       hide_terminus: "Ukryj kończące trasę",
       hide_cancelled: "Ukryj odwołane",
       realtime_only: "Tylko realtime",
+      max_minutes: "Maks. minut do odjazdu",
+      only_low_floor: "Tylko niskopodłogowe",
+      only_bike: "Tylko z rowerem",
+      only_ac: "Tylko klimatyzowane",
+      only_ticket_machine: "Tylko z biletomatem",
+      tap_action: "Kliknięcie",
+      hold_action: "Przytrzymanie",
+      double_tap_action: "Podwójne kliknięcie",
       override_title: "Nadpisania per sensor",
       override_hint: "Puste pola dziedziczą ustawienia globalne.",
+      move_up: "W górę",
+      move_down: "W dół",
+      clear_overrides: "Wyczyść nadpisania",
+      validation_departures: "Min. odjazdów nie może być większe niż maks. odjazdów.",
+      validation_color: "Kolor nagłówka musi być poprawnym kolorem CSS.",
     };
     const en = {
       entities: "Entities (sensors)",
@@ -321,6 +431,8 @@ export class MzkzgTransportCardEditor extends LitElement {
       icon: "Icon",
       display_preset: "Card theme",
       view_mode: "View mode",
+      columns: "Columns",
+      show_refresh: "Show refresh button",
       header_style: "Header style",
       header_color: "Header color",
       show_header: "Show header",
@@ -353,8 +465,21 @@ export class MzkzgTransportCardEditor extends LitElement {
       hide_terminus: "Hide terminus",
       hide_cancelled: "Hide cancelled",
       realtime_only: "Real-time only",
+      max_minutes: "Max minutes to departure",
+      only_low_floor: "Low-floor only",
+      only_bike: "Bike space only",
+      only_ac: "Air-conditioned only",
+      only_ticket_machine: "Ticket machine only",
+      tap_action: "Tap",
+      hold_action: "Hold",
+      double_tap_action: "Double tap",
       override_title: "Per-sensor overrides",
       override_hint: "Empty fields inherit the global settings.",
+      move_up: "Move up",
+      move_down: "Move down",
+      clear_overrides: "Clear overrides",
+      validation_departures: "Min departures cannot exceed max departures.",
+      validation_color: "Header color must be a valid CSS color.",
     };
     const lang = (this.hass?.language || document.documentElement.lang || "en").slice(0, 2);
     return (lang === "pl" ? pl : en)[name] || name;

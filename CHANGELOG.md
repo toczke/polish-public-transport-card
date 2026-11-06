@@ -10,7 +10,19 @@
   `e_ink`, plus row-level switches for countdown, vehicle number, platform/stand,
   accessibility icons, stop name, footer and last-update time
 - **Filters** - `exclude_routes`, `filter_vehicle_types`, `filter_providers` and
-  `hide_cancelled`, alongside the existing route/destination/platform/track filters
+  `hide_cancelled`, alongside the existing route/destination/platform/track filters;
+  added `max_minutes`, `only_low_floor`, `only_bike`, `only_ac` and
+  `only_ticket_machine`
+- **Views and layout** - `view_mode: grouped` groups rows by line, `columns: 1|2|3`
+  renders a multi-column board, the optional header refresh button re-queries sensors,
+  and provider subtitles use friendly operator names
+- **Interactions** - tap / hold / double-tap actions are now editable in the GUI with
+  Home Assistant's native action picker, including navigation, URL and service calls
+- **Live map** - vehicle markers show hover tooltips and detail popups, overlapping
+  markers are spread apart, the selected vehicle opens its popup automatically, and
+  the map follows a dark HA theme
+- **Per-sensor editor** - stop-name labels, override reset, row reordering and
+  validation for departure limits and header colour
 - **Per-sensor editor** - the GUI editor now has a second form for per-sensor overrides
   (routes, destinations, vehicle type, provider, platform/track, max rows, realtime,
   highlight mode)

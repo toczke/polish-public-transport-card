@@ -53,6 +53,25 @@ ha-card {
 .header-title { color: var(--mzkzg-header-text); font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .header-sub { color: var(--mzkzg-header-muted); font-size: 10px; margin-top: 1px; }
 .header-clock { color: var(--mzkzg-header-text); font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; opacity: 0.9; white-space: nowrap; }
+.header-refresh {
+  display: inline-flex; align-items: center; justify-content: center;
+  flex-shrink: 0; padding: 4px; border: none; border-radius: 50%;
+  background: transparent; color: var(--mzkzg-header-text);
+  cursor: pointer; opacity: 0.85; transition: background 0.2s, opacity 0.2s;
+}
+.header-refresh:hover { background: rgba(255, 255, 255, 0.16); opacity: 1; }
+.header-refresh:focus-visible { outline: 2px solid var(--mzkzg-focus); outline-offset: 1px; }
+.header-refresh.spinning ha-icon { animation: mzkzg-spin 1s linear infinite; }
+@keyframes mzkzg-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+.dep-list.columns-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.dep-list.columns-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.dep-list.columns-2 > .provider-header,
+.dep-list.columns-3 > .provider-header { grid-column: 1 / -1; }
+.dep-list.columns-2 > .dep-row,
+.dep-list.columns-3 > .dep-row { border-right: 1px solid var(--mzkzg-divider); }
+.dep-list.columns-2 > .dep-row:nth-child(even),
+.dep-list.columns-3 > .dep-row:nth-child(3n) { border-right: none; }
+.provider-header.line-header { text-transform: none; letter-spacing: 0; font-size: 12px; font-weight: 600; }
 .dep-list { list-style: none; }
 .dep-row { transition: opacity 0.4s, max-height 0.4s, padding 0.4s; max-height: 80px; overflow: hidden; }
 .dep-row.departing { opacity: 0; max-height: 0; padding-top: 0; padding-bottom: 0; }
@@ -180,6 +199,11 @@ ha-card.native .platform { background: var(--secondary-background-color); color:
 ha-card.native .tabs { border-bottom: 1px solid var(--divider-color); }
 ha-card.native .tab.active { color: var(--primary-color); border-bottom-color: var(--primary-color); }
 ha-card.native .footer { border-top: 1px solid var(--divider-color); }
+ha-card.native .header-refresh { color: var(--secondary-text-color); }
+ha-card.native .header-refresh:hover { background: var(--secondary-background-color); }
+ha-card.native .state-msg { color: var(--secondary-text-color); }
+ha-card.native .delay-badge.late { color: var(--error-color, #db4437); }
+ha-card.native .delay-badge.early { color: var(--info-color, #039be5); }
 
 /* e-ink */
 ha-card.e-ink { background: #fff; color: #000; border: 0; border-radius: 0; box-shadow: none; }

@@ -1,6 +1,6 @@
 import { LitElement, html, svg, nothing } from 'lit';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
-import { t, minutesUntil, formatTime, formatMins, routeColor, parseVehiclePosition, normalizeList, normalizeEntityEntry, normalizeActionConfig, fireHassEvent, PROVIDER_HEADER_COLORS } from "./utils.js";
+import { t, minutesUntil, formatTime, formatMins, routeColor, parseVehiclePosition, normalizeList, normalizeEntityEntry, normalizeActionConfig, fireHassEvent, providerLabel, PROVIDER_HEADER_COLORS } from "./utils.js";
 import { styles } from "./styles.js";
 import { VehicleMap } from "./map.js";
 
@@ -52,10 +52,13 @@ export class MzkzgTransportCard extends LitElement {
       ...config,
       entities: (Array.isArray(config.entities) ? config.entities : []).map(normalizeEntityEntry).filter(Boolean),
       max_departures: Math.max(1, Math.min(100, parseInt(config.max_departures) || 10)),
-      min_departures: Math.max(0, Math.min(100, parseInt(config.min_departures) || 0)),
+      min_departures: Math.min(
+        Math.max(1, Math.min(100, parseInt(config.max_departures) || 10)),
+        Math.max(0, Math.min(100, parseInt(config.min_departures) || 0))
+      ),
       refresh_interval: Math.max(5, Math.min(600, parseInt(config.refresh_interval) || 60)),
       display_preset: preset,
-      view_mode: config.view_mode === "tabs" ? "tabs" : "mixed",
+      view_mode: ["mixed", "tabs", "grouped"].includes(config.view_mode) ? config.view_mode : "mixed",
       theme_mode: themeMode,
       header_style: headerStyle,
       show_header: config.show_header !== false,
@@ -75,6 +78,13 @@ export class MzkzgTransportCard extends LitElement {
       show_ticket_machine: config.show_ticket_machine !== false,
       show_stop_name: config.show_stop_name === true,
       show_last_update: config.show_last_update !== false,
+      show_refresh: config.show_refresh === true,
+      columns: Math.max(1, Math.min(3, parseInt(config.columns) || 1)),
+      max_minutes: Math.max(0, Math.min(1440, parseInt(config.max_minutes) || 0)),
+      only_low_floor: config.only_low_floor === true,
+      only_bike: config.only_bike === true,
+      only_ac: config.only_ac === true,
+      only_ticket_machine: config.only_ticket_machine === true,
       filter_routes: normalizeList(config.filter_routes),
       exclude_routes: normalizeList(config.exclude_routes),
       destination_filter: normalizeList(config.destination_filter),
@@ -90,6 +100,7 @@ export class MzkzgTransportCard extends LitElement {
       hold_action: normalizeActionConfig(config.hold_action, "none"),
       double_tap_action: normalizeActionConfig(config.double_tap_action, "none"),
     };
+    this._depCache = null;
     this.vehicleMap.preloadLeaflet();
   }
 
@@ -136,8 +147,20 @@ export class MzkzgTransportCard extends LitElement {
     return all.sort((a, b) => new Date(a.estimated_time || a.theoretical_time) - new Date(b.estimated_time || b.theoretical_time));
   }
 
+  _departuresCacheKey() {
+    const ids = this._getEntityIds();
+    const states = ids.map(eid => {
+      const s = this.hass.states[eid];
+      return `${eid}:${s?.state || ""}:${s?.last_updated || ""}`;
+    }).join("|");
+    const bucket = Math.floor(Date.now() / 15000);
+    return `${states}|tab:${this._activeTab}|t:${bucket}`;
+  }
+
   _getDepartures() {
     if (!this.hass || !this._config.entities?.length) return [];
+    const cacheKey = this._departuresCacheKey();
+    if (this._depCache?.key === cacheKey) return this._depCache.value;
     const c = this._config;
     let all = [];
     const entities = this._getEntityIds();
@@ -193,6 +216,17 @@ export class MzkzgTransportCard extends LitElement {
           d.headsign.toLowerCase() === d._stopName.toLowerCase()) return false;
       if (cfg(d, "hide_cancelled", c.hide_cancelled) && d.cancelled) return false;
 
+      const maxMinutes = parseInt(cfg(d, "max_minutes", c.max_minutes), 10) || 0;
+      if (maxMinutes > 0) {
+        const mins = minutesUntil(d.estimated_time || d.theoretical_time);
+        if (mins === null || mins > maxMinutes) return false;
+      }
+      if (cfg(d, "only_low_floor", c.only_low_floor) &&
+          !(d.wheelchair_accessible === true || (d.floor_height && d.floor_height !== "Pojazd wysokopodłogowy"))) return false;
+      if (cfg(d, "only_bike", c.only_bike) && d.bike_allowed !== true) return false;
+      if (cfg(d, "only_ac", c.only_ac) && d.air_conditioning !== true) return false;
+      if (cfg(d, "only_ticket_machine", c.only_ticket_machine) && d.ticket_machine !== true) return false;
+
       return true;
     });
 
@@ -218,7 +252,9 @@ export class MzkzgTransportCard extends LitElement {
       return perEntityCounts[d._entityId] <= cap;
     });
 
-    return all.slice(0, c.max_departures);
+    const result = all.slice(0, c.max_departures);
+    this._depCache = { key: cacheKey, value: result };
+    return result;
   }
 
   _getAutoIcon() {
@@ -281,7 +317,7 @@ export class MzkzgTransportCard extends LitElement {
   }
 
   _getSubtitle() {
-    if (!this.hass || !this._config.entities?.length) return "Wybierz encje";
+    if (!this.hass || !this._config.entities?.length) return t("select_entities");
     const providers = new Set();
     for (const eid of this._getEntityIds()) {
       const s = this.hass.states[eid];
@@ -289,7 +325,7 @@ export class MzkzgTransportCard extends LitElement {
         providers.add(s.attributes.provider);
       }
     }
-    return [...providers].join(" + ") || "MZKZG";
+    return [...providers].map(providerLabel).join(" • ") || "MZKZG";
   }
 
   _getClock() {
@@ -313,7 +349,22 @@ export class MzkzgTransportCard extends LitElement {
     }
     if (!latest) return "";
     const d = new Date(latest);
-    return `Odświeżono: ${d.toLocaleTimeString("pl-PL", {hour:"2-digit", minute:"2-digit", second:"2-digit"})}`;
+    const locale = this.hass?.locale?.language || document.documentElement.lang || "pl-PL";
+    return `${t("last_update")}: ${d.toLocaleTimeString(locale, {hour:"2-digit", minute:"2-digit", second:"2-digit"})}`;
+  }
+
+  async _refresh(ev) {
+    ev?.stopPropagation?.();
+    if (!this.hass) return;
+    const ids = this._getEntityIds();
+    if (!ids.length) return;
+    this._refreshing = true;
+    this.requestUpdate();
+    try {
+      await this.hass.callService("homeassistant", "update_entity", { entity_id: ids });
+    } finally {
+      setTimeout(() => { this._refreshing = false; this.requestUpdate(); }, 1200);
+    }
   }
 
   _resolveActionConfig(kind) {
@@ -460,7 +511,7 @@ export class MzkzgTransportCard extends LitElement {
       if (allDeps.length) {
         const next = allDeps[0];
         const nextTime = next.estimated_time ? formatTime(next.estimated_time) : "";
-        return html`<div class="state-msg"><span class="icon">🕐</span>${t("no_departures")}<br><small>${nextTime ? (t("min") === "min" ? "Next" : "Następny") + ": " + next.route + " → " + next.headsign + " " + nextTime : ""}</small></div>`;
+        return html`<div class="state-msg"><span class="icon">🕐</span>${t("no_departures")}<br><small>${nextTime ? `${t("next")}: ${next.route} → ${next.headsign} ${nextTime}` : ""}</small></div>`;
       }
       return html`<div class="state-msg"><span class="icon">⏳</span>${t("no_departures")}</div>`;
     }
@@ -498,23 +549,23 @@ export class MzkzgTransportCard extends LitElement {
       let platformHTML = nothing;
       if (c.show_platform && d._provider === "plk_rail") {
         platformHTML = html`
-          ${d.platform ? html`<span class="platform">peron ${d.platform}</span>` : nothing}
+          ${d.platform ? html`<span class="platform">${t("platform")} ${d.platform}</span>` : nothing}
           ${d.track ? html`<span class="platform">${t("track")} ${d.track}</span>` : nothing}
         `;
       }
 
       const iconsHTML = [];
       if (c.show_accessibility) {
-        if (c.show_bike && d.bike_allowed === true) iconsHTML.push(html`<span title="Rower">${unsafeHTML(ICON_BIKE)}</span>`);
-        if (c.show_wheelchair && d.wheelchair_accessible === true) iconsHTML.push(html`<span title="Wózek">${unsafeHTML(ICON_WHEELCHAIR)}</span>`);
-        if (c.show_ac && d.air_conditioning === true) iconsHTML.push(html`<span title="Klimatyzacja">${unsafeHTML(ICON_AC)}</span>`);
+        if (c.show_bike && d.bike_allowed === true) iconsHTML.push(html`<span title=${t("bike")}>${unsafeHTML(ICON_BIKE)}</span>`);
+        if (c.show_wheelchair && d.wheelchair_accessible === true) iconsHTML.push(html`<span title=${t("wheelchair")}>${unsafeHTML(ICON_WHEELCHAIR)}</span>`);
+        if (c.show_ac && d.air_conditioning === true) iconsHTML.push(html`<span title=${t("ac")}>${unsafeHTML(ICON_AC)}</span>`);
       }
 
       const vehicleChip = (c.show_vehicle && d._provider !== "plk_rail" && d.vehicle_code && d.realtime)
         ? html`<span class="platform">${d.vehicle_code}</span>`
         : nothing;
       const platformText = (c.show_platform && d.platform && d._provider !== "plk_rail")
-        ? html`<span class="platform" title="Stanowisko/peron">${d.platform}</span>`
+        ? html`<span class="platform" title=${t("platform")}>${d.platform}</span>`
         : nothing;
       const hasPos = parseVehiclePosition(d.vehicle_lat, d.vehicle_lng) !== null;
 
@@ -531,7 +582,7 @@ export class MzkzgTransportCard extends LitElement {
       let trainInfo = nothing;
       if (d.train_number && d._provider === "plk_rail") {
         const shortCarrier = (d.carrier || "").replace(/^[„""'\s]+/, "").replace(/PKP\s*Szybka\s*Kolej\s*Miejska.*/i, "SKM").replace(/PKP\s*Intercity.*/i, "IC").replace(/POLREGIO.*/i, "Polregio").replace(/\s*sp\.?\s*z\s*o\.?\s*o\.?.*/i, "");
-        trainInfo = html`<span class="stop-name">nr ${d.train_number} - ${shortCarrier}</span>`;
+        trainInfo = html`<span class="stop-name">${t("train_no")} ${d.train_number} - ${shortCarrier}</span>`;
       }
 
       const isInteractive = hasRowActions || hasPos;
@@ -564,14 +615,24 @@ export class MzkzgTransportCard extends LitElement {
       });
       for (const p in grouped) {
         let pName;
-        if (p === "ztm_gdansk") pName = "ZTM Gdańsk";
-        else if (p === "zkm_gdynia") pName = "ZKM Gdynia";
-        else if (p === "mzk_wejherowo") pName = "MZK Wejherowo";
-        else if (p === "plk_rail") pName = "Pociągi (SKM/IC/PR)";
-        else pName = p.charAt(0).toUpperCase() + p.slice(1);
+        if (p === "plk_rail") pName = t("trains");
+        else if (p === "Inne") pName = t("other");
+        else pName = providerLabel(p);
         
         rows.push(html`<div class="provider-header">${pName}</div>`);
         grouped[p].forEach(d => rows.push(renderRow(d)));
+      }
+    } else if (c.view_mode === "grouped") {
+      const groups = new Map();
+      for (const d of deps) {
+        const key = `${d.route}|${d.headsign || ""}`;
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key).push(d);
+      }
+      for (const [, group] of groups) {
+        const first = group[0];
+        rows.push(html`<div class="provider-header line-header">${first.route} → ${first.headsign || "—"}</div>`);
+        group.forEach(d => rows.push(renderRow(d)));
       }
     } else {
       deps.forEach(d => rows.push(renderRow(d)));
@@ -606,10 +667,11 @@ export class MzkzgTransportCard extends LitElement {
               <div class="header-sub">${this._getSubtitle()}</div>
             </div>
             ${c.show_clock ? html`<div class="header-clock">${this._getClock()}</div>` : nothing}
+            ${c.show_refresh ? html`<button class="header-refresh ${this._refreshing ? "spinning" : ""}" title=${t("refresh")} @click=${this._refresh}><ha-icon icon="mdi:refresh"></ha-icon></button>` : nothing}
           </div>
         ` : nothing}
         ${this._renderTabs()}
-        <div class="dep-list" aria-live="polite" aria-atomic="true">
+        <div class="dep-list ${c.columns > 1 ? `columns-${c.columns}` : ""}" aria-live="polite" aria-atomic="true">
           ${this._renderDeps()}
         </div>
         ${c.show_footer && c.show_last_update ? html`<div class="footer">${this._getLastUpdate()}</div>` : nothing}

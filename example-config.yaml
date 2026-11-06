@@ -88,6 +88,24 @@ entities:
   - sensor.katowice_dworzec_pkp_odjazdy
 
 ---
+# ── Grouped by line + two columns (tablet / wide card) ───────────────────
+type: custom:polish-transport-card
+view_mode: grouped
+columns: 2
+show_refresh: true
+entities:
+  - sensor.brama_wyzynna_03_odjazdy
+  - sensor.dworzec_pks_02_odjazdy
+
+---
+# ── Only the next 30 minutes, low-floor vehicles ─────────────────────────
+type: custom:polish-transport-card
+entities:
+  - entity: sensor.centrum_01_odjazdy
+    max_minutes: 30
+    only_low_floor: true
+
+---
 # ── E-ink preset (black & white, no animations) ──────────────────────────
 type: custom:polish-transport-card
 display_preset: e_ink

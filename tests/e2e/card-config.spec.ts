@@ -59,3 +59,86 @@ test('global and per-sensor filters are applied', async ({ page }) => {
   expect(result.routes).toEqual(['6', '6', '7']);
   expect(result.mapPins).toBe(2);
 });
+
+test('grouped view adds a line header per route and headsign', async ({ page }) => {
+  await page.goto('about:blank');
+  await page.addScriptTag({ path: SCRIPT });
+  const now = new Date(Date.now() + 300000).toISOString();
+  const later = new Date(Date.now() + 900000).toISOString();
+  const result = await page.evaluate(async ({ now, later }) => {
+    const card: any = document.createElement('polish-transport-card');
+    card.setConfig({ entities: ['sensor.test'], view_mode: 'grouped' });
+    document.body.appendChild(card);
+    card.hass = {
+      locale: { language: 'pl' },
+      states: { 'sensor.test': { attributes: { provider: 'ztm_gdansk', stop_name: 'Test', departures: [
+        { route: '6', headsign: 'Jelitkowo', estimated_time: now, theoretical_time: now, realtime: true },
+        { route: '6', headsign: 'Jelitkowo', estimated_time: later, theoretical_time: later, realtime: true },
+        { route: '7', headsign: 'Nowy Port', estimated_time: later, theoretical_time: later, realtime: true },
+      ] } } },
+    };
+    await card.updateComplete;
+    return {
+      headers: [...card.shadowRoot.querySelectorAll('.line-header')].map((e: any) => e.textContent.trim()),
+      rows: card.shadowRoot.querySelectorAll('.dep-row').length,
+    };
+  }, { now, later });
+  expect(result.headers).toEqual(['6 → Jelitkowo', '7 → Nowy Port']);
+  expect(result.rows).toBe(3);
+});
+
+test('columns and refresh button are rendered from config', async ({ page }) => {
+  await page.goto('about:blank');
+  await page.addScriptTag({ path: SCRIPT });
+  const now = new Date(Date.now() + 300000).toISOString();
+  const result = await page.evaluate(async (now) => {
+    const card: any = document.createElement('polish-transport-card');
+    let serviceCall = null;
+    card.setConfig({ entities: ['sensor.test'], columns: 3, show_refresh: true });
+    document.body.appendChild(card);
+    card.hass = {
+      locale: { language: 'pl' },
+      states: { 'sensor.test': { state: 'ok', attributes: { provider: 'ztm_gdansk', stop_name: 'Test', departures: [
+        { route: '6', headsign: 'Jelitkowo', estimated_time: now, theoretical_time: now, realtime: true },
+      ] } } },
+      callService: (domain: string, service: string, data: any) => { serviceCall = { domain, service, data }; return Promise.resolve(); },
+    };
+    await card.updateComplete;
+    const list = card.shadowRoot.querySelector('.dep-list');
+    const button = card.shadowRoot.querySelector('.header-refresh');
+    button?.click();
+    await new Promise((r) => setTimeout(r, 50));
+    return {
+      columns: list?.className,
+      hasButton: Boolean(button),
+      serviceCall,
+    };
+  }, now);
+  expect(result.columns).toContain('columns-3');
+  expect(result.hasButton).toBe(true);
+  expect(result.serviceCall).toEqual({ domain: 'homeassistant', service: 'update_entity', data: { entity_id: ['sensor.test'] } });
+});
+
+test('time and vehicle feature filters are applied', async ({ page }) => {
+  await page.goto('about:blank');
+  await page.addScriptTag({ path: SCRIPT });
+  const soon = new Date(Date.now() + 300000).toISOString();
+  const late = new Date(Date.now() + 3600000).toISOString();
+  const departures = [
+    { route: '6', headsign: 'A', estimated_time: soon, theoretical_time: soon, realtime: true, wheelchair_accessible: true },
+    { route: '7', headsign: 'B', estimated_time: late, theoretical_time: late, realtime: true, wheelchair_accessible: true },
+    { route: '8', headsign: 'C', estimated_time: soon, theoretical_time: soon, realtime: true, wheelchair_accessible: false, floor_height: 'Pojazd wysokopodłogowy' },
+  ];
+  const result = await page.evaluate(async ({ departures }) => {
+    const card: any = document.createElement('polish-transport-card');
+    card.setConfig({ entities: ['sensor.test'], max_minutes: 30, only_low_floor: true });
+    document.body.appendChild(card);
+    card.hass = {
+      locale: { language: 'pl' },
+      states: { 'sensor.test': { attributes: { provider: 'ztm_gdansk', stop_name: 'Test', departures } } },
+    };
+    await card.updateComplete;
+    return [...card.shadowRoot.querySelectorAll('.badge')].map((e: any) => e.textContent.trim());
+  }, { departures });
+  expect(result).toEqual(['6']);
+});

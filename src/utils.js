@@ -18,6 +18,20 @@ export const LOCALE = {
     min: "min",
     departing: "Odjeżdża",
     show_on_map: "Pokaż pojazd na mapie",
+    bike: "Rower",
+    wheelchair: "Wózek",
+    ac: "Klimatyzacja",
+    platform: "peron",
+    last_update: "Odświeżono",
+    refresh: "Odśwież",
+    refreshing: "Odświeżanie…",
+    grouped: "Grupuj po linii",
+    next: "Następny",
+    select_entities: "Wybierz encje",
+    other: "Inne",
+    train_no: "nr",
+    trains: "Pociągi (SKM/IC/PR)",
+    no_route: "?",
     editor_data: "Dane",
     editor_appearance: "Wygląd",
     editor_filtering: "Filtrowanie",
@@ -35,6 +49,20 @@ export const LOCALE = {
     min: "min",
     departing: "Departing",
     show_on_map: "Show vehicle on map",
+    bike: "Bike",
+    wheelchair: "Wheelchair",
+    ac: "A/C",
+    platform: "platform",
+    last_update: "Updated",
+    refresh: "Refresh",
+    refreshing: "Refreshing…",
+    grouped: "Group by line",
+    next: "Next",
+    select_entities: "Select entities",
+    other: "Other",
+    train_no: "No.",
+    trains: "Trains (SKM/IC/PR)",
+    no_route: "?",
     editor_data: "Data",
     editor_appearance: "Appearance",
     editor_filtering: "Filtering",
@@ -78,10 +106,13 @@ export function minutesUntil(isoStr) {
   return Math.round((dep - Date.now()) / 60000);
 }
 
-export function formatTime(isoStr) {
+export function formatTime(isoStr, locale = null) {
   if (!isoStr) return "—";
   if (/^\d{1,2}:\d{2}/.test(isoStr)) return isoStr.slice(0, 5);
-  return new Date(isoStr).toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
+  return new Date(isoStr).toLocaleTimeString(
+    locale || document.documentElement.lang || "pl-PL",
+    { hour: "2-digit", minute: "2-digit" }
+  );
 }
 
 export function formatMins(min) {
@@ -197,6 +228,11 @@ export function normalizeEntityEntry(item) {
   if ("realtime_only" in item) entry.realtime_only = item.realtime_only === true;
   if ("hide_terminus" in item) entry.hide_terminus = item.hide_terminus === true;
   if ("hide_cancelled" in item) entry.hide_cancelled = item.hide_cancelled === true;
+  if ("max_minutes" in item) entry.max_minutes = Math.max(0, Math.min(1440, parseInt(item.max_minutes) || 0));
+  if ("only_low_floor" in item) entry.only_low_floor = item.only_low_floor === true;
+  if ("only_bike" in item) entry.only_bike = item.only_bike === true;
+  if ("only_ac" in item) entry.only_ac = item.only_ac === true;
+  if ("only_ticket_machine" in item) entry.only_ticket_machine = item.only_ticket_machine === true;
   if ("highlight_mode" in item) entry.highlight_mode = item.highlight_mode === true;
   return entry;
 }
@@ -339,3 +375,73 @@ export const PROVIDER_BADGE_COLORS = {
   mpk_lodz: "#fb7185",
 };
 
+
+
+export const PROVIDER_LABELS = {
+  ztm_gdansk: "ZTM Gdańsk",
+  zkm_gdynia: "ZKM Gdynia",
+  mzk_wejherowo: "MZK Wejherowo",
+  plk_rail: "Polskie Linie Kolejowe",
+  kiedyprzyjedzie_pks_gdansk: "PKS Gdańsk",
+  kiedyprzyjedzie_albatros: "Albatros",
+  kiedyprzyjedzie_gryf: "GRYF",
+  kiedyprzyjedzie_nord_express: "Nord Express",
+  kiedyprzyjedzie_pks_gdynia: "PKS Gdynia",
+  kiedyprzyjedzie_mzk_malbork: "MZK Malbork",
+  kiedyprzyjedzie_pks_slupsk: "PKS Słupsk",
+  kiedyprzyjedzie_mzk_starogard: "MZK Starogard",
+  kiedyprzyjedzie_pks_starogard: "PKS Starogard",
+  kiedyprzyjedzie_bielsko: "MZK Bielsko-Biała",
+  kiedyprzyjedzie_bytow: "Bytów",
+  kiedyprzyjedzie_czluchow: "Powiat Człuchowski",
+  time4bus_tczew: "Time4BUS Tczew",
+  gtfsrt_poznan: "ZTM Poznań",
+  gtfsrt_lublin: "ZTM Lublin",
+  gtfsrt_kielce: "MPK Kielce",
+  gtfsrt_radom: "MZDiK Radom",
+  gtfsrt_czestochowa: "MPK Częstochowa",
+  gtfsrt_elblag: "ZKM Elbląg",
+  gtfsrt_gorzow: "MZK Gorzów",
+  gtfsrt_suwalki: "PGK Suwałki",
+  gtfsrt_przemysl: "MZK Przemyśl",
+  gtfsrt_rybnik: "ZTZ Rybnik",
+  gtfsrt_kutno: "MZK Kutno",
+  gtfsrt_legnica: "MPK Legnica",
+  gtfsrt_gzm: "ZTM GZM",
+  gtfsrt_szczecin: "ZDiTM Szczecin",
+  gtfsrt_warszawa: "ZTM Warszawa",
+  gtfsrt_elk: "MZK Ełk",
+  gtfsrt_wkd: "WKD",
+  gtfs_bialystok: "BKM Białystok",
+  gtfs_olsztyn: "ZDZiT Olsztyn",
+  gtfs_opole: "MZK Opole",
+  gtfs_rzeszow: "ZTM Rzeszów",
+  gtfs_bydgoszcz: "ZDMiKP Bydgoszcz",
+  gtfs_mielec: "MKS Mielec",
+  gtfs_oswiecim: "MZK Oświęcim",
+  gtfs_radomsko: "MPK Radomsko",
+  gtfs_debica: "MKS Dębica",
+  gtfs_kolobrzeg: "KM Kołobrzeg",
+  gtfs_sanok: "SPGK Sanok",
+  gtfs_ostroleka: "MZK Ostrołęka",
+  gtfs_leszno: "MZK Leszno",
+  gtfs_swinoujscie: "KA Świnoujście",
+  gtfs_walbrzych: "ZKM Wałbrzych",
+  gtfs_tarnow: "MPK Tarnów",
+  gtfs_starachowice: "MZK Starachowice",
+  gtfs_siedlce: "MPK Siedlce",
+  gtfs_plock: "KM Płock",
+  gtfs_pila: "MZK Piła",
+  gtfs_krosno: "MKS Krosno",
+  gtfs_koszalin: "MZK Koszalin",
+  gtfs_konin: "MZK Konin",
+  gtfs_kalisz: "MZK Kalisz",
+  gtfsrt_wroclaw: "MPK Wrocław",
+  gtfsrt_torun: "MZK Toruń",
+  zbiorkom_krakow: "ZTP Kraków",
+  mpk_lodz: "MPK Łódź",
+};
+
+export function providerLabel(key) {
+  return PROVIDER_LABELS[key] || String(key || "").replaceAll("_", " ");
+}
