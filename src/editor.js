@@ -250,7 +250,7 @@ export class MzkzgTransportCardEditor extends LitElement {
           .hass=${this.hass}
           .data=${this._formData()}
           .schema=${SCHEMA}
-          .computeLabel=${this._computeLabel}
+          .computeLabel=${(schema) => this._computeLabel(schema)}
           @value-changed=${this._valueChanged}
         ></ha-form>
         ${entries.length ? html`
@@ -264,7 +264,7 @@ export class MzkzgTransportCardEditor extends LitElement {
               .hass=${this.hass}
               .data=${this._selectedEntry() || {}}
               .schema=${OVERRIDE_SCHEMA}
-              .computeLabel=${this._computeLabel}
+              .computeLabel=${(schema) => this._computeLabel(schema)}
               @value-changed=${this._overrideChanged}
             ></ha-form>
           </div>

@@ -1176,7 +1176,7 @@ var Me = {
           .hass=${this.hass}
           .data=${this._formData()}
           .schema=${Pe}
-          .computeLabel=${this._computeLabel}
+          .computeLabel=${(e) => this._computeLabel(e)}
           @value-changed=${this._valueChanged}
         ></ha-form>
         ${e.length ? A`
@@ -1190,7 +1190,7 @@ var Me = {
               .hass=${this.hass}
               .data=${this._selectedEntry() || {}}
               .schema=${Fe}
-              .computeLabel=${this._computeLabel}
+              .computeLabel=${(e) => this._computeLabel(e)}
               @value-changed=${this._overrideChanged}
             ></ha-form>
           </div>
