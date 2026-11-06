@@ -1,7 +1,7 @@
 # Polish Public Transport Card
 
 [![HACS](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
-[![Version](https://img.shields.io/badge/version-1.6.7--hotfix-blue.svg)](https://github.com/toczke/polish-public-transport-card/releases)
+[![Version](https://img.shields.io/badge/version-1.6.7--hotfix2-blue.svg)](https://github.com/toczke/polish-public-transport-card/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Tests](https://img.shields.io/badge/tests-90%20passed-success.svg)]()
 
@@ -136,9 +136,9 @@ When a departure includes GPS coordinates, clicking the row opens a Leaflet map 
 
 ---
 
-## What's New in 1.6.7-hotfix
+## What's New in 1.6.7-hotfix2
 
-- **Live vehicle map fixed** — rows with GPS open the map again, and the close button, backdrop and Escape key work
+- **Live vehicle map fixed** — Leaflet CSS is now always loaded (fixes checkerboard tiles), rows with GPS show markers, and close/backdrop/Escape work
 - **Kraków on zbiorkom.live api6-open** — new stop picker (all tram platforms and agglomeration stops), brigade/next-stop GPS matching and automatic legacy stop-id migration
 - **Wrocław and 11 api6 feeds fixed** — Lublin, Kielce, Radom, Elbląg, Gorzów, Suwałki, Przemyśl, Rybnik, Kutno, Legnica and Leszno now use static + realtime api6 endpoints
 - **Correct service-day filtering** — feeds with only `calendar_dates.txt` no longer show departures from other weekdays

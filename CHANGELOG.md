@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.6.7-hotfix2] - 2026-11-06
+
+### Fixed
+- **Checkerboard map tiles / missing vehicle marker** - Home Assistant may already
+  expose the global `L` object without its Leaflet stylesheet. The card now always
+  injects and waits for `leaflet.css` before creating the map, so tiles are positioned
+  absolutely and vehicle markers render correctly.
+
 ## [1.6.7-hotfix] - 2026-11-06
 
 ### Fixed
