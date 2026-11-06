@@ -807,7 +807,7 @@ var Ee = {
 	}
 };
 W.directiveName = "unsafeHTML", W.resultType = 1;
-var G = De(W), ke = "1.6.7", K = {
+var G = De(W), ke = "1.6.7-hotfix", K = {
 	pl: {
 		no_entities: "Dodaj encje sensorów w konfiguracji",
 		no_departures: "Brak nadchodzących odjazdów",
@@ -1248,9 +1248,7 @@ ha-card { container-type: inline-size; }
 		};
 		o.querySelector("button").onclick = s, o.onclick = (e) => {
 			e.target === o && s();
-		}, l.onKeyDown = (e) => {
-			e.key === "Escape" && s();
-		}, document.addEventListener("keydown", l.onKeyDown);
+		};
 		let c = o.querySelector("#vmap");
 		if (!document.getElementById("ztm-map-style")) {
 			let e = document.createElement("style");
@@ -1270,7 +1268,9 @@ ha-card { container-type: inline-size; }
 			entityId: n.entityId,
 			vehicleCode: n.code
 		};
-		this.mapCtx = l;
+		this.mapCtx = l, l.onKeyDown = (e) => {
+			e.key === "Escape" && s();
+		}, document.addEventListener("keydown", l.onKeyDown);
 		let u = Z(n.route, n.provider || "", n.route_color), d = () => {
 			requestAnimationFrame(() => {
 				if (l.destroyed) return;

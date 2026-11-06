@@ -82,8 +82,6 @@ export class VehicleMap {
     const closeMap = () => { if (this.mapCtx) this.mapCtx.destroy(); };
     overlay.querySelector("button").onclick = closeMap;
     overlay.onclick = (e) => { if (e.target === overlay) closeMap(); };
-    ctx.onKeyDown = (e) => { if (e.key === "Escape") closeMap(); };
-    document.addEventListener("keydown", ctx.onKeyDown);
 
     const container = overlay.querySelector("#vmap");
 
@@ -115,6 +113,11 @@ export class VehicleMap {
       vehicleCode: info.code,
     };
     this.mapCtx = ctx;
+
+    // Wire Escape after ctx exists; referencing ctx before its declaration throws
+    // a temporal-dead-zone ReferenceError and leaves the overlay unclosable.
+    ctx.onKeyDown = (e) => { if (e.key === "Escape") closeMap(); };
+    document.addEventListener("keydown", ctx.onKeyDown);
 
     const color = routeColor(info.route, info.provider || "", info.route_color);
 
