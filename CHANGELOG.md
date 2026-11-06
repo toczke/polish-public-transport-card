@@ -17,8 +17,9 @@
   renders a multi-column board, the optional header refresh button re-queries sensors,
   and provider subtitles use friendly operator names
 - **Row polish** - live countdown reads `za 11 min`, vehicle numbers use a compact
-  `#1040` monospace chip, platform/track/train details are merged into one pill, and
-  accessibility icons are right-aligned; stop names expose the full text in a tooltip
+  `#1040` monospace chip, platform/track stay in one pill while train number and
+  carrier are a separate muted line, and accessibility icons sit under the direction
+  as before; stop names expose the full text in a tooltip
 - **Presets** - `compact`, `minimal` and `e-ink` now hide secondary metadata
   consistently (`minimal`/`e-ink` also hide the vehicle number); `native` keeps
   HA-styled chips and only highlights interactive rows on hover

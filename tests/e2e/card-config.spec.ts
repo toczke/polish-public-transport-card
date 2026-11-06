@@ -93,6 +93,8 @@ test('countdown, vehicle number and consolidated meta chips', async ({ page }) =
       ztmIcons: ztm.querySelectorAll('.icons svg').length,
       ztmStruck: ztm.querySelectorAll('.time-struck').length,
       plkMeta: plk.querySelector('.meta-pill')?.textContent?.trim() || '',
+      plkTrain: plk.querySelector('.train-info')?.textContent?.trim() || '',
+      iconsFirst: ztm.querySelector('.meta-row')?.firstElementChild?.classList.contains('icons') || false,
       plkHasCountdown: Boolean(plk.querySelector('.time-sub')),
     };
   }, { soon, later });
@@ -103,7 +105,9 @@ test('countdown, vehicle number and consolidated meta chips', async ({ page }) =
   expect(result.ztmStopTitle).toBe('Płocka');
   expect(result.ztmIcons).toBe(1);
   expect(result.ztmStruck).toBe(0);
-  expect(result.plkMeta).toBe('peron 1 · tor 502 · nr 95485 · SKM');
+  expect(result.plkMeta).toBe('peron 1 · tor 502');
+  expect(result.plkTrain).toBe('nr 95485 · SKM');
+  expect(result.iconsFirst).toBe(true);
   expect(result.plkHasCountdown).toBe(false);
 });
 

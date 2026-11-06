@@ -606,15 +606,16 @@ export class MzkzgTransportCard extends LitElement {
         timeHTML = html`<div class="time-main">${formatTime(d.theoretical_time || d.estimated_time)}</div>`;
       }
 
-      const metaParts = [];
+      const platformParts = [];
       if (c.show_platform && d._provider === "plk_rail") {
-        if (d.platform) metaParts.push(`${t("platform")} ${d.platform}`);
-        if (d.track) metaParts.push(`${t("track")} ${d.track}`);
+        if (d.platform) platformParts.push(`${t("platform")} ${d.platform}`);
+        if (d.track) platformParts.push(`${t("track")} ${d.track}`);
       }
+      const trainParts = [];
       if (d.train_number && d._provider === "plk_rail") {
         const shortCarrier = (d.carrier || "").replace(/^[„""'\s]+/, "").replace(/PKP\s*Szybka\s*Kolej\s*Miejska.*/i, "SKM").replace(/PKP\s*Intercity.*/i, "IC").replace(/POLREGIO.*/i, "Polregio").replace(/\s*sp\.?\s*z\s*o\.?\s*o\.?.*/i, "");
-        metaParts.push(`${t("train_no")} ${d.train_number}`);
-        if (shortCarrier) metaParts.push(shortCarrier);
+        trainParts.push(`${t("train_no")} ${d.train_number}`);
+        if (shortCarrier) trainParts.push(shortCarrier);
       }
 
       const iconsHTML = [];
@@ -633,12 +634,17 @@ export class MzkzgTransportCard extends LitElement {
       const hasPos = parseVehiclePosition(d.vehicle_lat, d.vehicle_lng) !== null;
 
       const metaChips = [];
-      if (metaParts.length) metaChips.push(html`<span class="meta-pill">${metaParts.join(" · ")}</span>`);
+      if (platformParts.length) metaChips.push(html`<span class="meta-pill">${platformParts.join(" · ")}</span>`);
       if (platformText !== nothing) metaChips.push(platformText);
-      const metaRow = (iconsHTML.length > 0 || metaChips.length > 0)
+      const trainInfo = trainParts.length
+        ? html`<span class="train-info">${trainParts.join(" · ")}</span>`
+        : nothing;
+      const metaRow = (iconsHTML.length > 0 || metaChips.length > 0 || trainInfo !== nothing)
         ? html`<span class="meta-row">
-            <span class="meta-chips">${metaChips}</span>
             ${iconsHTML.length ? html`<span class="icons">${iconsHTML}</span>` : nothing}
+            ${metaChips.length || trainInfo !== nothing
+              ? html`<span class="meta-chips">${metaChips}${trainInfo}</span>`
+              : nothing}
           </span>`
         : nothing;
 

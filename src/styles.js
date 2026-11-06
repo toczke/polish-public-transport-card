@@ -104,7 +104,7 @@ ha-card.e-ink .dep-row { transition: none; }
 }
 .head-main { display: inline-flex; align-items: center; gap: 6px; width: 100%; min-width: 0; }
 .headsign-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 0 1 auto; min-width: 0; max-width: 100%; }
-.icons { display: inline-flex; gap: 3px; align-items: center; flex-shrink: 0; white-space: nowrap; margin-left: auto; }
+.icons { display: inline-flex; gap: 3px; align-items: center; flex-shrink: 0; white-space: nowrap; flex-basis: 100%; width: 100%; margin-left: 0; }
 .icons svg { color: var(--mzkzg-muted); opacity: 0.75; }
 .platform { display: inline-flex; align-items: center; justify-content: center; background: var(--mzkzg-chip-bg); color: var(--mzkzg-chip-text); border-radius: 6px; padding: 1px 6px; font-size: 10px; font-weight: 600; letter-spacing: 0.02em; white-space: nowrap; flex-shrink: 0; }
 .vehicle-no {
@@ -114,9 +114,10 @@ ha-card.e-ink .dep-row { transition: none; }
   color: var(--mzkzg-muted); background: var(--mzkzg-chip-bg);
   border-radius: 4px; padding: 0 4px; white-space: nowrap;
 }
-.meta-row { display: flex; align-items: center; justify-content: space-between; gap: 6px; flex-wrap: wrap; width: 100%; margin-top: 2px; }
-.meta-chips { display: inline-flex; align-items: center; gap: 4px; flex-wrap: wrap; min-width: 0; }
+.meta-row { display: flex; align-items: center; justify-content: flex-start; gap: 2px 6px; flex-wrap: wrap; width: 100%; margin-top: 2px; }
+.meta-chips { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; min-width: 0; }
 .meta-pill { display: inline-flex; align-items: center; background: var(--mzkzg-chip-bg); color: var(--mzkzg-chip-text); border-radius: 6px; padding: 1px 6px; font-size: 10px; font-weight: 600; letter-spacing: 0.01em; white-space: nowrap; }
+.train-info { display: inline-flex; align-items: center; font-size: 10px; font-weight: 500; color: var(--mzkzg-muted); white-space: nowrap; }
 .stop-name { display: block; font-size: 10px; color: var(--mzkzg-muted); font-weight: 400; margin-top: 1px; width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 ha-card.minimal .header,
 ha-card.minimal .footer,
@@ -206,6 +207,7 @@ ha-card.native .dep-row { padding: 12px 16px; border-bottom: 1px solid var(--div
 ha-card.native .dep-row.interactive:hover { background: var(--secondary-background-color); }
 ha-card.native .vehicle-no { background: var(--secondary-background-color); color: var(--secondary-text-color); }
 ha-card.native .meta-pill { background: var(--secondary-background-color); color: var(--secondary-text-color); }
+ha-card.native .train-info { color: var(--secondary-text-color); }
 ha-card.native .time-main { font-weight: 500; }
 ha-card.native .platform { background: var(--secondary-background-color); color: var(--secondary-text-color); }
 ha-card.native .tabs { border-bottom: 1px solid var(--divider-color); }
