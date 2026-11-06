@@ -60,6 +60,96 @@ test('global and per-sensor filters are applied', async ({ page }) => {
   expect(result.mapPins).toBe(0);
 });
 
+test('countdown, vehicle number and consolidated meta chips', async ({ page }) => {
+  await page.goto('about:blank');
+  await page.addScriptTag({ path: SCRIPT });
+  const soon = new Date(Date.now() + 11 * 60000).toISOString();
+  const later = new Date(Date.now() + 20 * 60000).toISOString();
+  const result = await page.evaluate(async ({ soon, later }) => {
+    document.documentElement.lang = 'pl';
+    const card: any = document.createElement('polish-transport-card');
+    card.setConfig({ entities: ['sensor.ztm', 'sensor.plk'], show_stop_name: true });
+    document.body.appendChild(card);
+    card.hass = {
+      locale: { language: 'pl' },
+      states: {
+        'sensor.ztm': { attributes: { provider: 'ztm_gdansk', stop_name: 'Płocka', departures: [
+          { route: '6', headsign: 'Jelitkowo', estimated_time: soon, theoretical_time: soon, realtime: true, vehicle_code: '100', platform: '5', bike_allowed: true, vehicle_lat: 54.4, vehicle_lng: 18.6 },
+        ] } },
+        'sensor.plk': { attributes: { provider: 'plk_rail', stop_name: 'Gdańsk Śródmieście', departures: [
+          { route: 'S1', headsign: 'Wejherowo', estimated_time: later, theoretical_time: later, realtime: false, platform: '1', track: '502', train_number: '95485', carrier: 'PKP Szybka Kolej Miejska w Trójmieście' },
+        ] } },
+      },
+    };
+    await card.updateComplete;
+    const rows = [...card.shadowRoot.querySelectorAll('.dep-row')] as HTMLElement[];
+    const ztm = rows.find((r) => r.textContent.includes('Jelitkowo')) as HTMLElement;
+    const plk = rows.find((r) => r.textContent.includes('Wejherowo')) as HTMLElement;
+    return {
+      ztmCountdown: ztm.querySelector('.time-sub')?.textContent?.replace(/\s+/g, ' ').trim() || '',
+      ztmVehicle: ztm.querySelector('.vehicle-no')?.textContent?.trim() || '',
+      ztmPlatform: ztm.querySelector('.platform')?.textContent?.trim() || '',
+      ztmStopTitle: ztm.querySelector('.stop-name')?.getAttribute('title') || '',
+      ztmIcons: ztm.querySelectorAll('.icons svg').length,
+      plkMeta: plk.querySelector('.meta-pill')?.textContent?.trim() || '',
+      plkHasCountdown: Boolean(plk.querySelector('.time-sub')),
+    };
+  }, { soon, later });
+  expect(result.ztmCountdown).toContain('za');
+  expect(result.ztmCountdown).toContain('min');
+  expect(result.ztmVehicle).toBe('#100');
+  expect(result.ztmPlatform).toBe('5');
+  expect(result.ztmStopTitle).toBe('Płocka');
+  expect(result.ztmIcons).toBe(1);
+  expect(result.plkMeta).toBe('peron 1 · tor 502 · nr 95485 · SKM');
+  expect(result.plkHasCountdown).toBe(false);
+});
+
+test('presets hide secondary metadata consistently', async ({ page }) => {
+  await page.goto('about:blank');
+  await page.addScriptTag({ path: SCRIPT });
+  const soon = new Date(Date.now() + 600000).toISOString();
+  const result = await page.evaluate(async ({ soon }) => {
+    document.documentElement.lang = 'pl';
+    const card: any = document.createElement('polish-transport-card');
+    document.body.appendChild(card);
+    card.hass = {
+      locale: { language: 'pl' },
+      states: {
+        'sensor.ztm': { attributes: { provider: 'ztm_gdansk', stop_name: 'Płocka', departures: [
+          { route: '6', headsign: 'Jelitkowo', estimated_time: soon, theoretical_time: soon, realtime: true, vehicle_code: '100', platform: '5', vehicle_lat: 54.4, vehicle_lng: 18.6 },
+        ] } },
+        'sensor.plk': { attributes: { provider: 'plk_rail', stop_name: 'Gdańsk Śródmieście', departures: [
+          { route: 'S1', headsign: 'Wejherowo', estimated_time: soon, theoretical_time: soon, realtime: false, platform: '1', track: '502', train_number: '95485', carrier: 'PKP Szybka Kolej Miejska w Trójmieście' },
+        ] } },
+      },
+    };
+    const out: any = {};
+    for (const preset of ['standard', 'compact', 'minimal', 'native', 'e_ink']) {
+      card.setConfig({ entities: ['sensor.ztm', 'sensor.plk'], display_preset: preset });
+      await card.updateComplete;
+      await new Promise((r) => setTimeout(r, 20));
+      const meta = card.shadowRoot.querySelector('.meta-row');
+      const vehicle = card.shadowRoot.querySelector('.vehicle-no');
+      out[preset] = {
+        meta: meta ? getComputedStyle(meta).display : 'missing',
+        vehicle: vehicle ? getComputedStyle(vehicle).display : 'missing',
+      };
+    }
+    return out;
+  }, { soon });
+  expect(result.standard.meta).not.toBe('none');
+  expect(result.standard.vehicle).not.toBe('none');
+  expect(result.compact.meta).toBe('none');
+  expect(result.compact.vehicle).not.toBe('none');
+  expect(result.minimal.meta).toBe('none');
+  expect(result.minimal.vehicle).toBe('none');
+  expect(result.native.meta).not.toBe('none');
+  expect(result.native.vehicle).not.toBe('none');
+  expect(result.e_ink.meta).toBe('none');
+  expect(result.e_ink.vehicle).toBe('none');
+});
+
 test('rows without live position are not clickable', async ({ page }) => {
   await page.goto('about:blank');
   await page.addScriptTag({ path: SCRIPT });

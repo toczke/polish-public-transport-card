@@ -88,6 +88,7 @@ ha-card.e-ink .dep-row { transition: none; }
   padding: 10px 14px; border-bottom: 1px solid var(--mzkzg-divider); min-height: 52px;
 }
 .dep-row.interactive { cursor: pointer; }
+.dep-row.interactive:hover { background: var(--secondary-background-color, rgba(0, 0, 0, 0.03)); }
 .dep-row:focus-visible { outline: 2px solid var(--mzkzg-focus); outline-offset: -2px; }
 .dep-row:last-child { border-bottom: none; }
 .dep-row.imminent { }
@@ -103,16 +104,27 @@ ha-card.e-ink .dep-row { transition: none; }
 }
 .head-main { display: inline-flex; align-items: center; gap: 6px; width: 100%; min-width: 0; }
 .headsign-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 0 1 auto; min-width: 0; max-width: 100%; }
-.icons { display: inline-flex; gap: 3px; align-items: center; flex-shrink: 0; white-space: nowrap; flex-basis: 100%; width: 100%; margin-top: 1px; }
-.icons svg { color: var(--mzkzg-muted); opacity: 0.8; }
+.icons { display: inline-flex; gap: 3px; align-items: center; flex-shrink: 0; white-space: nowrap; margin-left: auto; }
+.icons svg { color: var(--mzkzg-muted); opacity: 0.75; }
 .platform { display: inline-flex; align-items: center; justify-content: center; background: var(--mzkzg-chip-bg); color: var(--mzkzg-chip-text); border-radius: 6px; padding: 1px 6px; font-size: 10px; font-weight: 600; letter-spacing: 0.02em; white-space: nowrap; flex-shrink: 0; }
-.meta-row { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; width: 100%; margin-top: 1px; }
-.stop-name { display: block; font-size: 10px; color: var(--mzkzg-muted); font-weight: 400; margin-top: 1px; width: 100%; }
+.vehicle-no {
+  display: inline-flex; align-items: center; flex-shrink: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 10px; font-weight: 600; letter-spacing: 0;
+  color: var(--mzkzg-muted); background: var(--mzkzg-chip-bg);
+  border-radius: 4px; padding: 0 4px; white-space: nowrap;
+}
+.meta-row { display: flex; align-items: center; justify-content: space-between; gap: 6px; flex-wrap: wrap; width: 100%; margin-top: 2px; }
+.meta-chips { display: inline-flex; align-items: center; gap: 4px; flex-wrap: wrap; min-width: 0; }
+.meta-pill { display: inline-flex; align-items: center; background: var(--mzkzg-chip-bg); color: var(--mzkzg-chip-text); border-radius: 6px; padding: 1px 6px; font-size: 10px; font-weight: 600; letter-spacing: 0.01em; white-space: nowrap; }
+.stop-name { display: block; font-size: 10px; color: var(--mzkzg-muted); font-weight: 400; margin-top: 1px; width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 ha-card.minimal .header,
 ha-card.minimal .footer,
 ha-card.minimal .stop-name,
 ha-card.minimal .icons,
-ha-card.minimal .platform { display: none; }
+ha-card.minimal .platform,
+ha-card.minimal .vehicle-no,
+ha-card.minimal .meta-row { display: none; }
 ha-card.minimal .dep-row { min-height: 34px; padding: 5px 10px; gap: 8px; }
 ha-card.minimal .badge { min-width: 32px; padding: 2px 5px; font-size: 11px; }
 ha-card.minimal .headsign { font-size: 12px; }
@@ -191,7 +203,9 @@ ha-card.native .badge {
   font-weight: 600;
 }
 ha-card.native .dep-row { padding: 12px 16px; border-bottom: 1px solid var(--divider-color); }
-ha-card.native .dep-row:hover { background: var(--secondary-background-color); }
+ha-card.native .dep-row.interactive:hover { background: var(--secondary-background-color); }
+ha-card.native .vehicle-no { background: var(--secondary-background-color); color: var(--secondary-text-color); }
+ha-card.native .meta-pill { background: var(--secondary-background-color); color: var(--secondary-text-color); }
 ha-card.native .time-main { font-weight: 500; }
 ha-card.native .platform { background: var(--secondary-background-color); color: var(--secondary-text-color); }
 ha-card.native .tabs { border-bottom: 1px solid var(--divider-color); }
@@ -208,7 +222,9 @@ ha-card.e-ink { background: #fff; color: #000; border: 0; border-radius: 0; box-
 ha-card.e-ink .header { background: #fff !important; border-bottom: 2px solid #000; }
 ha-card.e-ink .header-title, ha-card.e-ink .header-sub, ha-card.e-ink .header-icon { color: #000; }
 ha-card.e-ink .header-icon ha-icon { color: #000 !important; --mdc-icon-size: 20px; }
-ha-card.e-ink .stop-name, ha-card.e-ink .platform, ha-card.e-ink .icons, ha-card.e-ink .time-sub, ha-card.e-ink .footer { display: none; }
+ha-card.e-ink .stop-name, ha-card.e-ink .platform, ha-card.e-ink .icons, ha-card.e-ink .time-sub, ha-card.e-ink .footer,
+ha-card.e-ink .meta-row, ha-card.e-ink .vehicle-no { display: none; }
+ha-card.e-ink .dep-row.interactive:hover { background: #fff; }
 ha-card.e-ink .dep-row { border-bottom-color: #000; }
 ha-card.e-ink .badge { background: #fff !important; border: 2px solid #000; color: #000; }
 ha-card.e-ink .dep-row.imminent { background: #fff; }

@@ -594,7 +594,11 @@ export class MzkzgTransportCard extends LitElement {
         const mainTime = showDelay
           ? html`<span class="time-struck">${formatTime(d.theoretical_time || d.estimated_time)}</span> ${formatTime(d.estimated_time)}`
           : formatTime(d.estimated_time);
-        const countdown = mins !== null && mins <= 0 ? t("departing") : formatMins(mins);
+        const countdown = mins === null
+          ? ""
+          : mins <= 0
+            ? t("departing")
+            : `${t("in")} ${formatMins(mins)}`;
         timeHTML = c.show_countdown
           ? html`<div class="time-main">${mainTime}</div><div class="time-sub"><span class="dot">●</span> ${countdown}${delayPart}</div>`
           : html`<div class="time-main">${mainTime}${delayPart}</div>`;
@@ -602,12 +606,15 @@ export class MzkzgTransportCard extends LitElement {
         timeHTML = html`<div class="time-main">${formatTime(d.theoretical_time || d.estimated_time)}</div>`;
       }
 
-      let platformHTML = nothing;
+      const metaParts = [];
       if (c.show_platform && d._provider === "plk_rail") {
-        platformHTML = html`
-          ${d.platform ? html`<span class="platform">${t("platform")} ${d.platform}</span>` : nothing}
-          ${d.track ? html`<span class="platform">${t("track")} ${d.track}</span>` : nothing}
-        `;
+        if (d.platform) metaParts.push(`${t("platform")} ${d.platform}`);
+        if (d.track) metaParts.push(`${t("track")} ${d.track}`);
+      }
+      if (d.train_number && d._provider === "plk_rail") {
+        const shortCarrier = (d.carrier || "").replace(/^[„""'\s]+/, "").replace(/PKP\s*Szybka\s*Kolej\s*Miejska.*/i, "SKM").replace(/PKP\s*Intercity.*/i, "IC").replace(/POLREGIO.*/i, "Polregio").replace(/\s*sp\.?\s*z\s*o\.?\s*o\.?.*/i, "");
+        metaParts.push(`${t("train_no")} ${d.train_number}`);
+        if (shortCarrier) metaParts.push(shortCarrier);
       }
 
       const iconsHTML = [];
@@ -618,27 +625,25 @@ export class MzkzgTransportCard extends LitElement {
       }
 
       const vehicleChip = (c.show_vehicle && d._provider !== "plk_rail" && d.vehicle_code && d.realtime)
-        ? html`<span class="platform">${d.vehicle_code}</span>`
+        ? html`<span class="vehicle-no" title=${t("show_vehicle")}>#${d.vehicle_code}</span>`
         : nothing;
       const platformText = (c.show_platform && d.platform && d._provider !== "plk_rail")
         ? html`<span class="platform" title=${t("platform")}>${d.platform}</span>`
         : nothing;
       const hasPos = parseVehiclePosition(d.vehicle_lat, d.vehicle_lng) !== null;
 
-      const metaRow = (iconsHTML.length > 0 || platformText !== nothing || platformHTML !== nothing)
+      const metaChips = [];
+      if (metaParts.length) metaChips.push(html`<span class="meta-pill">${metaParts.join(" · ")}</span>`);
+      if (platformText !== nothing) metaChips.push(platformText);
+      const metaRow = (iconsHTML.length > 0 || metaChips.length > 0)
         ? html`<span class="meta-row">
-            <span class="icons">${iconsHTML}</span>${platformHTML}${platformText}
+            <span class="meta-chips">${metaChips}</span>
+            ${iconsHTML.length ? html`<span class="icons">${iconsHTML}</span>` : nothing}
           </span>`
         : nothing;
 
       const showStop = c.show_stop_name && c.entities.length > 1 && c.view_mode !== "tabs" && d._stopName;
       const cleanStopName = (d._stopName || "").replace(/\s*\(?(bus|tramwaj|tram|train|skm)\)?\s*/gi, " ").trim();
-      
-      let trainInfo = nothing;
-      if (d.train_number && d._provider === "plk_rail") {
-        const shortCarrier = (d.carrier || "").replace(/^[„""'\s]+/, "").replace(/PKP\s*Szybka\s*Kolej\s*Miejska.*/i, "SKM").replace(/PKP\s*Intercity.*/i, "IC").replace(/POLREGIO.*/i, "Polregio").replace(/\s*sp\.?\s*z\s*o\.?\s*o\.?.*/i, "");
-        trainInfo = html`<span class="stop-name">${t("train_no")} ${d.train_number} - ${shortCarrier}</span>`;
-      }
 
       const isInteractive = hasPos || hasExplicitActions;
 
@@ -653,7 +658,7 @@ export class MzkzgTransportCard extends LitElement {
           <span class="headsign">
             <span class="head-main"><span class="headsign-text">${d.headsign}</span>${vehicleChip}</span>
             ${metaRow}
-            ${trainInfo !== nothing ? trainInfo : (showStop ? html`<span class="stop-name">${cleanStopName}</span>` : nothing)}
+            ${showStop ? html`<span class="stop-name" title=${cleanStopName}>${cleanStopName}</span>` : nothing}
           </span>
           <div class="time-col">${timeHTML}</div>
         </div>

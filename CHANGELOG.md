@@ -16,6 +16,12 @@
 - **Views and layout** - `view_mode: grouped` groups rows by line, `columns: 1|2|3`
   renders a multi-column board, the optional header refresh button re-queries sensors,
   and provider subtitles use friendly operator names
+- **Row polish** - live countdown reads `za 11 min`, vehicle numbers use a compact
+  `#1040` monospace chip, platform/track/train details are merged into one pill, and
+  accessibility icons are right-aligned; stop names expose the full text in a tooltip
+- **Presets** - `compact`, `minimal` and `e-ink` now hide secondary metadata
+  consistently (`minimal`/`e-ink` also hide the vehicle number); `native` keeps
+  HA-styled chips and only highlights interactive rows on hover
 - **Interactions** - tap / hold / double-tap actions are now editable in the GUI with
   Home Assistant's native action picker, including navigation, URL and service calls
 - **Live map** - vehicle markers show hover tooltips and detail popups, overlapping
@@ -42,6 +48,8 @@
   centred on the vehicle and a small direction pointer; the selected vehicle stays
   centred at zoom 16. The map now has one compact detail popup opened by clicking a
   marker (no auto-opened giant bubble and no tiny hover tooltip), without emoji
+- **Dark map** - zoom controls, attribution, popup and the refresh status chip follow
+  a dark Home Assistant theme instead of staying light
 - **Live vehicle marker** - removed the black vehicle-code badge that overlapped the
   route circle. Markers now show only the route number and direction arrow, with a
   white ring around the selected vehicle. The map also always waits for Leaflet CSS,

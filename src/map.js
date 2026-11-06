@@ -104,10 +104,12 @@ export class VehicleMap {
     const isMobile = window.innerWidth < 480;
     const w = Math.min(window.innerWidth * 0.92, 520);
     const h = Math.min(window.innerHeight * 0.65, 420);
+    const dark = this._isDarkTheme();
 
     const overlay = document.createElement("div");
+    if (dark) overlay.classList.add("zm-dark");
     overlay.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:100000;display:flex;align-items:center;justify-content:center;";
-    overlay.innerHTML = `<div style="position:relative;width:${w}px;height:${h}px;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.3);"><button style="position:absolute;top:8px;right:8px;z-index:1001;background:rgba(0,0,0,0.6);border:none;border-radius:50%;width:32px;height:32px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;color:#fff;">✕</button><div id="vmap" style="width:${w}px;height:${h}px;"></div><div id="vmap-status" style="position:absolute;bottom:6px;left:10px;z-index:1001;font-size:10px;color:#999;background:rgba(255,255,255,0.8);padding:2px 6px;border-radius:4px">${escapeHtml(t("map_refresh"))}</div></div>`;
+    overlay.innerHTML = `<div style="position:relative;width:${w}px;height:${h}px;background:${dark ? "#1c1c1e" : "#fff"};border-radius:12px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.3);"><button style="position:absolute;top:8px;right:8px;z-index:1001;background:rgba(0,0,0,0.6);border:none;border-radius:50%;width:32px;height:32px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;color:#fff;">✕</button><div id="vmap" style="width:${w}px;height:${h}px;background:${dark ? "#1c1c1e" : "#fff"};"></div><div id="vmap-status" class="zm-map-status">${escapeHtml(t("map_refresh"))}</div></div>`;
     document.body.appendChild(overlay);
     const closeMap = () => { if (this.mapCtx) this.mapCtx.destroy(); };
     overlay.querySelector("button").onclick = closeMap;
@@ -118,7 +120,7 @@ export class VehicleMap {
     if (!document.getElementById("ztm-map-style")) {
       const s = document.createElement("style");
       s.id = "ztm-map-style";
-      s.textContent = `.zm-arrow{position:relative;display:inline-block;transition:transform 0.8s ease}.zm-arrow svg{display:block}.zm-popup{font-family:system-ui,sans-serif;font-size:11px;line-height:1.25;min-width:0;max-width:180px}.zm-popup-route{font-size:17px;font-weight:800;line-height:1}.zm-popup-headsign{font-size:12px;color:#555;margin-top:2px}.zm-popup-meta{font-size:10px;color:#999;margin-top:1px}.zm-popup-delay-row{margin-top:3px;font-size:12px;font-weight:600}.zm-popup-delay{color:#e53935}.zm-popup-delay.ontime{color:#43a047}.zm-popup-delay.early{color:#1e88e5}.zm-dark-map .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(0.9) contrast(0.9)}.zm-dark-map .leaflet-popup-content-wrapper,.zm-dark-map .leaflet-popup-tip{background:#1c1c1e;color:#eee}.zm-dark-map .zm-popup-headsign{color:#bbb}.zm-dark-map .zm-popup-meta{color:#888}`;
+      s.textContent = `.zm-arrow{position:relative;display:inline-block;transition:transform 0.8s ease}.zm-arrow svg{display:block}.zm-map-status{position:absolute;bottom:6px;left:10px;z-index:1001;font-size:10px;color:#999;background:rgba(255,255,255,0.8);padding:2px 6px;border-radius:4px}.zm-popup{font-family:system-ui,sans-serif;font-size:11px;line-height:1.25;min-width:0;max-width:180px}.zm-popup-route{font-size:17px;font-weight:800;line-height:1}.zm-popup-headsign{font-size:12px;color:#555;margin-top:2px}.zm-popup-meta{font-size:10px;color:#999;margin-top:1px}.zm-popup-delay-row{margin-top:3px;font-size:12px;font-weight:600}.zm-popup-delay{color:#e53935}.zm-popup-delay.ontime{color:#43a047}.zm-popup-delay.early{color:#1e88e5}.zm-dark .zm-map-status{background:rgba(0,0,0,0.62);color:#ddd}.zm-dark-map .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(0.9) contrast(0.9)}.zm-dark-map .leaflet-popup-content-wrapper,.zm-dark-map .leaflet-popup-tip{background:#1c1c1e;color:#eee}.zm-dark-map .leaflet-popup-close-button{color:#eee}.zm-dark-map .leaflet-control-zoom a{background:#1c1c1e;color:#eee;border-color:#333}.zm-dark-map .leaflet-control-zoom a:hover{background:#2a2a2e}.zm-dark-map .leaflet-control-attribution{background:rgba(0,0,0,0.6);color:#bbb}.zm-dark-map .leaflet-control-attribution a{color:#8ab4f8}.zm-dark-map .zm-popup-headsign{color:#bbb}.zm-dark-map .zm-popup-meta{color:#888}`;
       document.head.appendChild(s);
     }
 
