@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.7-hotfix] - 2026-11-06
+
+### Fixed
+- **Live vehicle map** - the map overlay no longer throws a temporal-dead-zone
+  `ReferenceError` before `ctx` is initialized; clicking a row with GPS now opens the
+  map and the close button, backdrop and Escape key all work again.
+
 ## [1.6.7] - 2026-11-06
 
 ### Added
