@@ -2,6 +2,22 @@
 
 ## [1.7.0] - unreleased
 
+### Added
+- **Theme controls** - `theme_mode: auto|light|dark` follows the active Home Assistant
+  theme by default; `header_style: provider|theme|custom` selects the header colour;
+  optional header clock and `time_format: auto|24h|12h`
+- **Display modes** - added the `minimal` preset next to `standard`, `compact` and
+  `e_ink`, plus row-level switches for countdown, vehicle number, platform/stand,
+  accessibility icons, stop name, footer and last-update time
+- **Filters** - `exclude_routes`, `filter_vehicle_types`, `filter_providers` and
+  `hide_cancelled`, alongside the existing route/destination/platform/track filters
+- **Per-sensor editor** - the GUI editor now has a second form for per-sensor overrides
+  (routes, destinations, vehicle type, provider, platform/track, max rows, realtime,
+  highlight mode)
+- **Map discoverability** - rows with a live vehicle position show a map-pin icon
+- **YAML documentation** - README options table and example config updated with all
+  global/per-sensor keys and theme examples
+
 ### Fixed
 - **Live vehicle marker** - removed the black vehicle-code badge that overlapped the
   route circle. Markers now show only the route number and direction arrow, with a

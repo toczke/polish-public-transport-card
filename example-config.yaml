@@ -68,6 +68,18 @@ entities:
     realtime_only: true
 
 ---
+# ── Theme, clock and vehicle-type filter ─────────────────────────────────
+type: custom:polish-transport-card
+entities:
+  - sensor.centrum_01_odjazdy
+theme_mode: dark          # auto | light | dark
+header_style: theme       # provider | theme | custom
+show_clock: true
+time_format: 24h
+filter_vehicle_types: ["tram"]
+show_vehicle: false
+
+---
 # ── Compact preset ───────────────────────────────────────────────────────
 type: custom:polish-transport-card
 display_preset: compact

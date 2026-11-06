@@ -138,7 +138,8 @@ When a departure includes GPS coordinates, clicking the row opens a Leaflet map 
 
 ## What's New in 1.7.0
 
-- **Live vehicle markers cleaned up** — removed the overlapping vehicle-code badge; the map now shows a clean route circle with direction arrow and a white ring on the selected vehicle. Leaflet CSS is always loaded, fixing checkerboard tiles.
+- **Card UI overhaul** — theme modes (`auto`/`light`/`dark`), header style (provider/HA theme/custom), optional clock, `minimal` preset, row-density and visibility switches, per-sensor overrides in the GUI editor, new route/vehicle/provider filters and a map-pin hint on live rows
+- **Live vehicle markers cleaned up** - removed the overlapping vehicle-code badge; the map now shows a clean route circle with direction arrow and a white ring on the selected vehicle. Leaflet CSS is always loaded, fixing checkerboard tiles.
 - **Kraków on zbiorkom.live api6-open** — new stop picker (all tram platforms and agglomeration stops), brigade/next-stop GPS matching and automatic legacy stop-id migration
 - **Wrocław and 11 api6 feeds fixed** — Lublin, Kielce, Radom, Elbląg, Gorzów, Suwałki, Przemyśl, Rybnik, Kutno, Legnica and Leszno now use static + realtime api6 endpoints
 - **Correct service-day filtering** — feeds with only `calendar_dates.txt` no longer show departures from other weekdays
@@ -220,21 +221,48 @@ The card registers itself automatically. In the Lovelace UI: **Add Card → Poli
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `entities` | list | required | Sensor entity IDs (string or object with per-sensor overrides) |
-| `display_preset` | string | `standard` | `standard` / `compact` / `e_ink` |
+| `display_preset` | string | `standard` | `standard` / `compact` / `minimal` / `e_ink` |
 | `view_mode` | string | `mixed` | `mixed` (merged timeline) / `tabs` (per-stop) |
+| `theme_mode` | string | `auto` | `auto` (follow HA), `light`, `dark` |
+| `header_style` | string | `provider` | `provider`, `theme` (HA primary), `custom` |
+| `header_color` | string | — | Custom header color (when `header_style: custom`) |
+| `show_header` | bool | `true` | Show the card header |
+| `show_clock` | bool | `false` | Show current time in the header |
 | `max_departures` | int | `10` | Max rows per stop (1–100) |
 | `min_departures` | int | `0` | Minimum rows; shorter lists are padded with empty rows |
+| `time_format` | string | `auto` | `auto` / `24h` / `12h` |
+| `show_delays` | bool | `true` | Show realtime delays |
+| `show_countdown` | bool | `true` | Show minutes-until-departure |
+| `show_vehicle` | bool | `true` | Show vehicle number chip |
+| `show_platform` | bool | `true` | Show platform / stand / track |
+| `show_accessibility` | bool | `true` | Show bike / wheelchair / A/C icons |
+| `show_stop_name` | bool | `false` | Show stop name on merged rows |
+| `show_footer` | bool | `true` | Show footer |
+| `show_last_update` | bool | `true` | Show last update time in the footer |
 | `filter_routes` | list | — | Show only these routes |
+| `exclude_routes` | list | — | Hide these routes |
 | `destination_filter` | list | — | Show only these destinations |
 | `exclude_destinations` | list | — | Hide departures whose destination contains any of these strings |
+| `filter_vehicle_types` | list | — | Show only `bus`, `tram` or `train` |
+| `filter_providers` | list | — | Show only these provider keys |
 | `filter_platform` | string | — | Show only this platform |
 | `filter_track` | string | — | Show only this track |
 | `highlight_mode` | bool | `false` | Dim instead of hide filtered routes |
 | `hide_terminus` | bool | `true` | Hide departures ending at this stop |
+| `hide_cancelled` | bool | `false` | Hide cancelled departures |
 | `realtime_only` | bool | `false` | Show only realtime departures |
 | `tap_action` | object | `more-info` | Row tap action |
 | `hold_action` | object | `none` | Row hold action |
 | `double_tap_action` | object | `none` | Row double-tap action |
+
+All filters and `max_departures` can be overridden per sensor. The visual editor exposes
+both a global form and a **per-sensor override** form; the same structure is accepted in YAML.
+
+### Themes
+
+`theme_mode: auto` uses the active Home Assistant theme. Use `light`/`dark` for kiosk or
+e-ink panels that must not follow the UI theme. `header_style: theme` makes the header use
+the HA primary colour; `provider` keeps the operator colour; `custom` uses `header_color`.
 
 ### Per-sensor Overrides
 
@@ -243,14 +271,20 @@ type: custom:polish-transport-card
 entities:
   - entity: sensor.gdansk_main_odjazdy
     filter_routes: ["2", "8"]
+    exclude_routes: ["N1"]
     destination_filter: ["Wrzeszcz"]
     exclude_destinations: ["Poznań Główny"]
+    filter_vehicle_types: ["tram"]
     max_departures: 40
   - entity: sensor.gdynia_central_odjazdy
     filter_routes: ["147"]
     realtime_only: true
 filter_routes: ["N1"]
 min_departures: 5
+theme_mode: auto
+header_style: provider
+time_format: 24h
+show_clock: true
 ```
 
 ---

@@ -17,6 +17,7 @@ export const LOCALE = {
     track: "tor",
     min: "min",
     departing: "Odjeżdża",
+    show_on_map: "Pokaż pojazd na mapie",
     editor_data: "Dane",
     editor_appearance: "Wygląd",
     editor_filtering: "Filtrowanie",
@@ -33,6 +34,7 @@ export const LOCALE = {
     track: "track",
     min: "min",
     departing: "Departing",
+    show_on_map: "Show vehicle on map",
     editor_data: "Data",
     editor_appearance: "Appearance",
     editor_filtering: "Filtering",
@@ -184,13 +186,17 @@ export function normalizeEntityEntry(item) {
   if (!item || typeof item !== "object" || typeof item.entity !== "string") return null;
   const entry = { entity: item.entity };
   if ("filter_routes" in item) entry.filter_routes = normalizeList(item.filter_routes);
-  if ("max_departures" in item) entry.max_departures = parseInt(item.max_departures) || null;
+  if ("exclude_routes" in item) entry.exclude_routes = normalizeList(item.exclude_routes);
+  if ("max_departures" in item) entry.max_departures = Math.max(1, Math.min(100, parseInt(item.max_departures) || 0)) || null;
   if ("destination_filter" in item) entry.destination_filter = normalizeList(item.destination_filter);
   if ("exclude_destinations" in item) entry.exclude_destinations = normalizeList(item.exclude_destinations);
+  if ("filter_vehicle_types" in item) entry.filter_vehicle_types = normalizeList(item.filter_vehicle_types).map(v => v.toLowerCase());
+  if ("filter_providers" in item) entry.filter_providers = normalizeList(item.filter_providers);
   if ("filter_platform" in item) entry.filter_platform = item.filter_platform == null ? "" : String(item.filter_platform);
   if ("filter_track" in item) entry.filter_track = item.filter_track == null ? "" : String(item.filter_track);
   if ("realtime_only" in item) entry.realtime_only = item.realtime_only === true;
   if ("hide_terminus" in item) entry.hide_terminus = item.hide_terminus === true;
+  if ("hide_cancelled" in item) entry.hide_cancelled = item.hide_cancelled === true;
   if ("highlight_mode" in item) entry.highlight_mode = item.highlight_mode === true;
   return entry;
 }
