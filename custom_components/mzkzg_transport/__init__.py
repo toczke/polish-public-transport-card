@@ -98,6 +98,15 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok and DOMAIN in hass.data:
         hass.data[DOMAIN]["_coordinators"].pop(entry.entry_id, None)
+        # A PLK entry owns the shared usage sensor while it is loaded. Drop the
+        # guard so a reload of the owning entry recreates the sensor (unloading
+        # a different PLK entry must not create a duplicate).
+        marker = "_plk_usage_sensor_plk_rail"
+        if (
+            entry.data.get(CONF_PROVIDER) == "plk_rail"
+            and hass.data[DOMAIN].get(marker) == entry.entry_id
+        ):
+            hass.data[DOMAIN].pop(marker, None)
         # Clean up shared caches if no more entries
         if not hass.data[DOMAIN].get("_coordinators"):
             for key in ("_plk_cache", "_plk_lock", "_ztm_fleet", "_ztm_gtfs_cache",

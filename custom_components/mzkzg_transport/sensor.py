@@ -35,15 +35,9 @@ async def async_setup_entry(
     # counters are global, so a sensor per PLK entry would only duplicate the same
     # unique id and make Home Assistant log "does not generate unique IDs" on startup.
     if provider == PROVIDER_PLK:
-        from homeassistant.helpers import entity_registry as er
-
-        unique_id = f"{DOMAIN}_plk_api_usage"
-        already_registered = er.async_get(hass).async_get_entity_id(
-            "sensor", DOMAIN, unique_id
-        )
         marker = f"_plk_usage_sensor_{provider}"
-        if not already_registered and not hass.data[DOMAIN].get(marker):
-            hass.data[DOMAIN][marker] = True
+        if not hass.data[DOMAIN].get(marker):
+            hass.data[DOMAIN][marker] = entry.entry_id
             entities.append(MzkzgPlkApiUsageSensor(hass, entry))
 
     async_add_entities(entities)
