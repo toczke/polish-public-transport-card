@@ -74,7 +74,7 @@ test('countdown, vehicle number and consolidated meta chips', async ({ page }) =
       locale: { language: 'pl' },
       states: {
         'sensor.ztm': { attributes: { provider: 'ztm_gdansk', stop_name: 'Płocka', departures: [
-          { route: '6', headsign: 'Jelitkowo', estimated_time: soon, theoretical_time: soon, realtime: true, vehicle_code: '100', platform: '5', bike_allowed: true, vehicle_lat: 54.4, vehicle_lng: 18.6 },
+          { route: '6', headsign: 'Jelitkowo', estimated_time: soon, theoretical_time: soon, realtime: true, vehicle_code: '100', platform: '5', bike_allowed: true, vehicle_lat: 54.4, vehicle_lng: 18.6, delay_seconds: 60 },
         ] } },
         'sensor.plk': { attributes: { provider: 'plk_rail', stop_name: 'Gdańsk Śródmieście', departures: [
           { route: 'S1', headsign: 'Wejherowo', estimated_time: later, theoretical_time: later, realtime: false, platform: '1', track: '502', train_number: '95485', carrier: 'PKP Szybka Kolej Miejska w Trójmieście' },
@@ -91,6 +91,7 @@ test('countdown, vehicle number and consolidated meta chips', async ({ page }) =
       ztmPlatform: ztm.querySelector('.platform')?.textContent?.trim() || '',
       ztmStopTitle: ztm.querySelector('.stop-name')?.getAttribute('title') || '',
       ztmIcons: ztm.querySelectorAll('.icons svg').length,
+      ztmStruck: ztm.querySelectorAll('.time-struck').length,
       plkMeta: plk.querySelector('.meta-pill')?.textContent?.trim() || '',
       plkHasCountdown: Boolean(plk.querySelector('.time-sub')),
     };
@@ -101,6 +102,7 @@ test('countdown, vehicle number and consolidated meta chips', async ({ page }) =
   expect(result.ztmPlatform).toBe('5');
   expect(result.ztmStopTitle).toBe('Płocka');
   expect(result.ztmIcons).toBe(1);
+  expect(result.ztmStruck).toBe(0);
   expect(result.plkMeta).toBe('peron 1 · tor 502 · nr 95485 · SKM');
   expect(result.plkHasCountdown).toBe(false);
 });

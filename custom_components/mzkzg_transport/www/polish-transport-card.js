@@ -2548,7 +2548,7 @@ ha-card { container-type: inline-size; }
 			if (s) c = j`<div class="time-main cancelled">${U("cancelled")}</div>`;
 			else if (e.display_preset === "e_ink") c = j`<div class="time-main">${K(t.estimated_time || t.theoretical_time)}</div>`;
 			else if (t.realtime) {
-				let r = o ? j` <span class="delay-badge ${i > 0 ? "late" : "early"}">${i > 0 ? "+" : ""}${i}min</span>` : P, a = o ? j`<span class="time-struck">${K(t.theoretical_time || t.estimated_time)}</span> ${K(t.estimated_time)}` : K(t.estimated_time), s = n === null ? "" : n <= 0 ? U("departing") : `${U("in")} ${Oe(n)}`;
+				let r = o ? j` <span class="delay-badge ${i > 0 ? "late" : "early"}">${i > 0 ? "+" : ""}${i}min</span>` : P, a = o && K(t.theoretical_time || t.estimated_time) !== K(t.estimated_time) ? j`<span class="time-struck">${K(t.theoretical_time || t.estimated_time)}</span> ${K(t.estimated_time)}` : K(t.estimated_time), s = n === null ? "" : n <= 0 ? U("departing") : `${U("in")} ${Oe(n)}`;
 				c = e.show_countdown ? j`<div class="time-main">${a}</div><div class="time-sub"><span class="dot">●</span> ${s}${r}</div>` : j`<div class="time-main">${a}${r}</div>`;
 			} else c = j`<div class="time-main">${K(t.theoretical_time || t.estimated_time)}</div>`;
 			let l = [];

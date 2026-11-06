@@ -591,7 +591,7 @@ export class MzkzgTransportCard extends LitElement {
         const delayPart = showDelay
           ? html` <span class="delay-badge ${delayMin > 0 ? 'late' : 'early'}">${delayMin > 0 ? "+" : ""}${delayMin}min</span>`
           : nothing;
-        const mainTime = showDelay
+        const mainTime = showDelay && formatTime(d.theoretical_time || d.estimated_time) !== formatTime(d.estimated_time)
           ? html`<span class="time-struck">${formatTime(d.theoretical_time || d.estimated_time)}</span> ${formatTime(d.estimated_time)}`
           : formatTime(d.estimated_time);
         const countdown = mins === null
