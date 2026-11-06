@@ -18,5 +18,5 @@
   "requirements": [
     "gtfs-realtime-bindings==2.1.0"
   ],
-  "version": "1.6.7-hotfix2"
+  "version": "1.7.0"
 }

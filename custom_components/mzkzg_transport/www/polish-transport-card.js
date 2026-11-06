@@ -29,11 +29,11 @@ var e = globalThis, t = e.ShadowRoot && (e.ShadyCSS === void 0 || e.ShadyCSS.nat
 	let t = "";
 	for (let n of e.cssRules) t += n.cssText;
 	return a(t);
-})(e) : e, { is: l, defineProperty: u, getOwnPropertyDescriptor: d, getOwnPropertyNames: f, getOwnPropertySymbols: p, getPrototypeOf: m } = Object, h = globalThis, g = h.trustedTypes, ee = g ? g.emptyScript : "", _ = h.reactiveElementPolyfillSupport, v = (e, t) => e, y = {
+})(e) : e, { is: l, defineProperty: u, getOwnPropertyDescriptor: d, getOwnPropertyNames: f, getOwnPropertySymbols: p, getPrototypeOf: ee } = Object, m = globalThis, h = m.trustedTypes, te = h ? h.emptyScript : "", g = m.reactiveElementPolyfillSupport, _ = (e, t) => e, v = {
 	toAttribute(e, t) {
 		switch (t) {
 			case Boolean:
-				e = e ? ee : null;
+				e = e ? te : null;
 				break;
 			case Object:
 			case Array: e = e == null ? e : JSON.stringify(e);
@@ -58,23 +58,23 @@ var e = globalThis, t = e.ShadowRoot && (e.ShadyCSS === void 0 || e.ShadyCSS.nat
 		}
 		return n;
 	}
-}, te = (e, t) => !l(e, t), ne = {
+}, ne = (e, t) => !l(e, t), re = {
 	attribute: !0,
 	type: String,
-	converter: y,
+	converter: v,
 	reflect: !1,
 	useDefault: !1,
-	hasChanged: te
+	hasChanged: ne
 };
-Symbol.metadata ??= Symbol("metadata"), h.litPropertyMetadata ??= /* @__PURE__ */ new WeakMap();
-var b = class extends HTMLElement {
+Symbol.metadata ??= Symbol("metadata"), m.litPropertyMetadata ??= /* @__PURE__ */ new WeakMap();
+var y = class extends HTMLElement {
 	static addInitializer(e) {
 		this._$Ei(), (this.l ??= []).push(e);
 	}
 	static get observedAttributes() {
 		return this.finalize(), this._$Eh && [...this._$Eh.keys()];
 	}
-	static createProperty(e, t = ne) {
+	static createProperty(e, t = re) {
 		if (t.state && (t.attribute = !1), this._$Ei(), this.prototype.hasOwnProperty(e) && ((t = Object.create(t)).wrapped = !0), this.elementProperties.set(e, t), !t.noAccessor) {
 			let n = Symbol(), r = this.getPropertyDescriptor(e, n, t);
 			r !== void 0 && u(this.prototype, e, r);
@@ -100,16 +100,16 @@ var b = class extends HTMLElement {
 		};
 	}
 	static getPropertyOptions(e) {
-		return this.elementProperties.get(e) ?? ne;
+		return this.elementProperties.get(e) ?? re;
 	}
 	static _$Ei() {
-		if (this.hasOwnProperty(v("elementProperties"))) return;
-		let e = m(this);
+		if (this.hasOwnProperty(_("elementProperties"))) return;
+		let e = ee(this);
 		e.finalize(), e.l !== void 0 && (this.l = [...e.l]), this.elementProperties = new Map(e.elementProperties);
 	}
 	static finalize() {
-		if (this.hasOwnProperty(v("finalized"))) return;
-		if (this.finalized = !0, this._$Ei(), this.hasOwnProperty(v("properties"))) {
+		if (this.hasOwnProperty(_("finalized"))) return;
+		if (this.finalized = !0, this._$Ei(), this.hasOwnProperty(_("properties"))) {
 			let e = this.properties, t = [...f(e), ...p(e)];
 			for (let n of t) this.createProperty(n, e[n]);
 		}
@@ -171,14 +171,14 @@ var b = class extends HTMLElement {
 	_$ET(e, t) {
 		let n = this.constructor.elementProperties.get(e), r = this.constructor._$Eu(e, n);
 		if (r !== void 0 && !0 === n.reflect) {
-			let i = (n.converter?.toAttribute === void 0 ? y : n.converter).toAttribute(t, n.type);
+			let i = (n.converter?.toAttribute === void 0 ? v : n.converter).toAttribute(t, n.type);
 			this._$Em = e, i == null ? this.removeAttribute(r) : this.setAttribute(r, i), this._$Em = null;
 		}
 	}
 	_$AK(e, t) {
 		let n = this.constructor, r = n._$Eh.get(e);
 		if (r !== void 0 && this._$Em !== r) {
-			let e = n.getPropertyOptions(r), i = typeof e.converter == "function" ? { fromAttribute: e.converter } : e.converter?.fromAttribute === void 0 ? y : e.converter;
+			let e = n.getPropertyOptions(r), i = typeof e.converter == "function" ? { fromAttribute: e.converter } : e.converter?.fromAttribute === void 0 ? v : e.converter;
 			this._$Em = r;
 			let a = i.fromAttribute(t, e.type);
 			this[r] = a ?? this._$Ej?.get(r) ?? a, this._$Em = null;
@@ -187,7 +187,7 @@ var b = class extends HTMLElement {
 	requestUpdate(e, t, n, r = !1, i) {
 		if (e !== void 0) {
 			let a = this.constructor;
-			if (!1 === r && (i = this[e]), n ??= a.getPropertyOptions(e), !((n.hasChanged ?? te)(i, t) || n.useDefault && n.reflect && i === this._$Ej?.get(e) && !this.hasAttribute(a._$Eu(e, n)))) return;
+			if (!1 === r && (i = this[e]), n ??= a.getPropertyOptions(e), !((n.hasChanged ?? ne)(i, t) || n.useDefault && n.reflect && i === this._$Ej?.get(e) && !this.hasAttribute(a._$Eu(e, n)))) return;
 			this.C(e, t, n);
 		}
 		!1 === this.isUpdatePending && (this._$ES = this._$EP());
@@ -251,25 +251,25 @@ var b = class extends HTMLElement {
 	updated(e) {}
 	firstUpdated(e) {}
 };
-b.elementStyles = [], b.shadowRootOptions = { mode: "open" }, b[v("elementProperties")] = /* @__PURE__ */ new Map(), b[v("finalized")] = /* @__PURE__ */ new Map(), _?.({ ReactiveElement: b }), (h.reactiveElementVersions ??= []).push("2.1.2");
+y.elementStyles = [], y.shadowRootOptions = { mode: "open" }, y[_("elementProperties")] = /* @__PURE__ */ new Map(), y[_("finalized")] = /* @__PURE__ */ new Map(), g?.({ ReactiveElement: y }), (m.reactiveElementVersions ??= []).push("2.1.2");
 //#endregion
 //#region node_modules/lit-html/lit-html.js
-var x = globalThis, re = (e) => e, S = x.trustedTypes, ie = S ? S.createPolicy("lit-html", { createHTML: (e) => e }) : void 0, ae = "$lit$", C = `lit$${Math.random().toFixed(9).slice(2)}$`, oe = "?" + C, se = `<${oe}>`, w = document, T = () => w.createComment(""), E = (e) => e === null || typeof e != "object" && typeof e != "function", D = Array.isArray, ce = (e) => D(e) || typeof e?.[Symbol.iterator] == "function", O = "[ 	\n\f\r]", k = /<(?:(!--|\/[^a-zA-Z])|(\/?[a-zA-Z][^>\s]*)|(\/?$))/g, A = /-->/g, le = />/g, j = RegExp(`>|${O}(?:([^\\s"'>=/]+)(${O}*=${O}*(?:[^ \t\n\f\r"'\`<>=]|("|')|))|$)`, "g"), ue = /'/g, de = /"/g, fe = /^(?:script|style|textarea|title)$/i, pe = (e) => (t, ...n) => ({
+var b = globalThis, ie = (e) => e, x = b.trustedTypes, ae = x ? x.createPolicy("lit-html", { createHTML: (e) => e }) : void 0, S = "$lit$", C = `lit$${Math.random().toFixed(9).slice(2)}$`, oe = "?" + C, se = `<${oe}>`, w = document, T = () => w.createComment(""), E = (e) => e === null || typeof e != "object" && typeof e != "function", D = Array.isArray, ce = (e) => D(e) || typeof e?.[Symbol.iterator] == "function", O = "[ 	\n\f\r]", k = /<(?:(!--|\/[^a-zA-Z])|(\/?[a-zA-Z][^>\s]*)|(\/?$))/g, le = /-->/g, ue = />/g, A = RegExp(`>|${O}(?:([^\\s"'>=/]+)(${O}*=${O}*(?:[^ \t\n\f\r"'\`<>=]|("|')|))|$)`, "g"), de = /'/g, j = /"/g, fe = /^(?:script|style|textarea|title)$/i, pe = (e) => (t, ...n) => ({
 	_$litType$: e,
 	strings: t,
 	values: n
 }), M = pe(1), N = pe(2), P = Symbol.for("lit-noChange"), F = Symbol.for("lit-nothing"), me = /* @__PURE__ */ new WeakMap(), I = w.createTreeWalker(w, 129);
 function he(e, t) {
 	if (!D(e) || !e.hasOwnProperty("raw")) throw Error("invalid template strings array");
-	return ie === void 0 ? t : ie.createHTML(t);
+	return ae === void 0 ? t : ae.createHTML(t);
 }
 var ge = (e, t) => {
 	let n = e.length - 1, r = [], i, a = t === 2 ? "<svg>" : t === 3 ? "<math>" : "", o = k;
 	for (let t = 0; t < n; t++) {
 		let n = e[t], s, c, l = -1, u = 0;
-		for (; u < n.length && (o.lastIndex = u, c = o.exec(n), c !== null);) u = o.lastIndex, o === k ? c[1] === "!--" ? o = A : c[1] === void 0 ? c[2] === void 0 ? c[3] !== void 0 && (o = j) : (fe.test(c[2]) && (i = RegExp("</" + c[2], "g")), o = j) : o = le : o === j ? c[0] === ">" ? (o = i ?? k, l = -1) : c[1] === void 0 ? l = -2 : (l = o.lastIndex - c[2].length, s = c[1], o = c[3] === void 0 ? j : c[3] === "\"" ? de : ue) : o === de || o === ue ? o = j : o === A || o === le ? o = k : (o = j, i = void 0);
-		let d = o === j && e[t + 1].startsWith("/>") ? " " : "";
-		a += o === k ? n + se : l >= 0 ? (r.push(s), n.slice(0, l) + ae + n.slice(l) + C + d) : n + C + (l === -2 ? t : d);
+		for (; u < n.length && (o.lastIndex = u, c = o.exec(n), c !== null);) u = o.lastIndex, o === k ? c[1] === "!--" ? o = le : c[1] === void 0 ? c[2] === void 0 ? c[3] !== void 0 && (o = A) : (fe.test(c[2]) && (i = RegExp("</" + c[2], "g")), o = A) : o = ue : o === A ? c[0] === ">" ? (o = i ?? k, l = -1) : c[1] === void 0 ? l = -2 : (l = o.lastIndex - c[2].length, s = c[1], o = c[3] === void 0 ? A : c[3] === "\"" ? j : de) : o === j || o === de ? o = A : o === le || o === ue ? o = k : (o = A, i = void 0);
+		let d = o === A && e[t + 1].startsWith("/>") ? " " : "";
+		a += o === k ? n + se : l >= 0 ? (r.push(s), n.slice(0, l) + S + n.slice(l) + C + d) : n + C + (l === -2 ? t : d);
 	}
 	return [he(e, a + (e[n] || "<?>") + (t === 2 ? "</svg>" : t === 3 ? "</math>" : "")), r];
 }, L = class e {
@@ -283,7 +283,7 @@ var ge = (e, t) => {
 		}
 		for (; (i = I.nextNode()) !== null && c.length < s;) {
 			if (i.nodeType === 1) {
-				if (i.hasAttributes()) for (let e of i.getAttributeNames()) if (e.endsWith(ae)) {
+				if (i.hasAttributes()) for (let e of i.getAttributeNames()) if (e.endsWith(S)) {
 					let t = u[o++], n = i.getAttribute(e).split(C), r = /([.?@])?(.*)/.exec(t);
 					c.push({
 						type: 1,
@@ -299,7 +299,7 @@ var ge = (e, t) => {
 				if (fe.test(i.tagName)) {
 					let e = i.textContent.split(C), t = e.length - 1;
 					if (t > 0) {
-						i.textContent = S ? S.emptyScript : "";
+						i.textContent = x ? x.emptyScript : "";
 						for (let n = 0; n < t; n++) i.append(e[n], T()), I.nextNode(), c.push({
 							type: 2,
 							index: ++a
@@ -409,8 +409,8 @@ var _e = class {
 	}
 	_$AR(e = this._$AA.nextSibling, t) {
 		for (this._$AP?.(!1, !0, t); e !== this._$AB;) {
-			let t = re(e).nextSibling;
-			re(e).remove(), e = t;
+			let t = ie(e).nextSibling;
+			ie(e).remove(), e = t;
 		}
 	}
 	setConnected(e) {
@@ -474,8 +474,8 @@ var _e = class {
 	_$AI(e) {
 		R(this, e);
 	}
-}, Se = x.litHtmlPolyfillSupport;
-Se?.(L, z), (x.litHtmlVersions ??= []).push("3.3.3");
+}, Se = b.litHtmlPolyfillSupport;
+Se?.(L, z), (b.litHtmlVersions ??= []).push("3.3.3");
 var Ce = (e, t, n) => {
 	let r = n?.renderBefore ?? t, i = r._$litPart$;
 	if (i === void 0) {
@@ -483,7 +483,7 @@ var Ce = (e, t, n) => {
 		r._$litPart$ = i = new z(t.insertBefore(T(), e), e, void 0, n ?? {});
 	}
 	return i._$AI(e), i;
-}, V = globalThis, H = class extends b {
+}, V = globalThis, H = class extends y {
 	constructor() {
 		super(...arguments), this.renderOptions = { host: this }, this._$Do = void 0;
 	}
@@ -807,7 +807,7 @@ var De = {
 	}
 };
 U.directiveName = "unsafeHTML", U.resultType = 1;
-var W = Oe(U), Ae = "1.6.7-hotfix2", G = {
+var W = Oe(U), Ae = "1.7.0", G = {
 	pl: {
 		no_entities: "Dodaj encje sensorów w konfiguracji",
 		no_departures: "Brak nadchodzących odjazdów",
@@ -1347,13 +1347,13 @@ ha-card { container-type: inline-size; }
 			if (!r) continue;
 			let a = t.vehicle_code && t.vehicle_code === e.vehicleCode, o = X(t.route, t._provider || t.provider || "", t.route_color), s = t.vehicle_direction || t.direction || 0;
 			a && (i = !0);
-			let c = t.route || "?", l = s, u = this.buildVehicleMarker(l, o, c, t.vehicle_type || "bus", t, n), d = t.vehicle_code ? `<div style="position:absolute; top:-22px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.75); color:#fff; padding:2px 5px; border-radius:3px; font-size:10px; font-weight:600; font-family:system-ui,sans-serif; white-space:nowrap; pointer-events:none;">${q(t.vehicle_code)}</div>` : "", f = `<div class="zm-arrow" style="opacity:${a ? 1 : .7}">${d}${u.svg}</div>`, p = window.L.divIcon({
+			let c = t.route || "?", l = s, u = this.buildVehicleMarker(l, o, c, t.vehicle_type || "bus", t, n), d = `<div class="zm-arrow" style="opacity:${a ? 1 : .7}">${u.svg}</div>`, f = window.L.divIcon({
 				className: "",
-				html: f,
+				html: d,
 				iconSize: [u.size, u.arrowH],
 				iconAnchor: [u.size / 2, u.arrowH]
-			}), m = window.L.marker([r[0], r[1]], { icon: p }).addTo(e.map);
-			e.markers.push(m);
+			}), p = window.L.marker([r[0], r[1]], { icon: f }).addTo(e.map);
+			e.markers.push(p);
 		}
 		!i && e.markers.length;
 	}
@@ -1367,13 +1367,13 @@ ha-card { container-type: inline-size; }
 		for (let t of n) {
 			let n = J(t.vehicle_lat, t.vehicle_lng);
 			if (!n) continue;
-			let i = t.vehicle_code && t.vehicle_code === e.vehicleCode, a = X(t.route, t._provider || t.provider || "", t.route_color), o = t.vehicle_direction || t.direction || 0, s = t.route || "?", c = this.buildVehicleMarker(o, a, s, t.vehicle_type || "bus", t, r), l = t.vehicle_code ? `<div style="position:absolute; top:-22px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.75); color:#fff; padding:2px 5px; border-radius:3px; font-size:10px; font-weight:600; font-family:system-ui,sans-serif; white-space:nowrap; pointer-events:none;">${q(t.vehicle_code)}</div>` : "", u = `<div class="zm-arrow" style="opacity:${i ? 1 : .7}">${l}${c.svg}</div>`, d = window.L.divIcon({
+			let i = t.vehicle_code && t.vehicle_code === e.vehicleCode, a = X(t.route, t._provider || t.provider || "", t.route_color), o = t.vehicle_direction || t.direction || 0, s = t.route || "?", c = this.buildVehicleMarker(o, a, s, t.vehicle_type || "bus", t, r), l = `<div class="zm-arrow" style="opacity:${i ? 1 : .7}">${c.svg}</div>`, u = window.L.divIcon({
 				className: "",
-				html: u,
+				html: l,
 				iconSize: [c.size, c.arrowH],
 				iconAnchor: [c.size / 2, c.arrowH]
 			});
-			e.markers.push(window.L.marker([n[0], n[1]], { icon: d }).addTo(e.map));
+			e.markers.push(window.L.marker([n[0], n[1]], { icon: u }).addTo(e.map));
 		}
 	}
 	updateVehiclePosition(e) {
@@ -1386,7 +1386,7 @@ ha-card { container-type: inline-size; }
 				let [r, i] = t, a = e.marker.getLatLng();
 				if (Math.abs(a.lat - r) < 1e-5 && Math.abs(a.lng - i) < 1e-5) return;
 				e.marker.setLatLng([r, i]);
-				let o = n.vehicle_direction || n.direction || 0, s = X(n.route, n._provider || n.provider || "", n.route_color), c = n.vehicle_type || "bus", l = window.innerWidth < 480, u = this.buildVehicleMarker(o, s, n.route, c, n, l), d = `<div class="zm-arrow">${n.vehicle_code ? `<div style="position:absolute; top:-22px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.75); color:#fff; padding:2px 5px; border-radius:3px; font-size:10px; font-weight:600; font-family:system-ui,sans-serif; white-space:nowrap; pointer-events:none;">${q(n.vehicle_code)}</div>` : ""}${u.svg}</div>`;
+				let o = n.vehicle_direction || n.direction || 0, s = X(n.route, n._provider || n.provider || "", n.route_color), c = n.vehicle_type || "bus", l = window.innerWidth < 480, u = this.buildVehicleMarker(o, s, n.route, c, n, l), d = `<div class="zm-arrow">${u.svg}</div>`;
 				e.marker.setIcon(window.L.divIcon({
 					className: "",
 					html: d,
@@ -1723,15 +1723,15 @@ ha-card { container-type: inline-size; }
         `);
 			let u = [];
 			e.show_bike && t.bike_allowed === !0 && u.push(M`<span title="Rower">${W(He)}</span>`), e.show_wheelchair && t.wheelchair_accessible === !0 && u.push(M`<span title="Wózek">${W(Ue)}</span>`), e.show_ac && t.air_conditioning === !0 && u.push(M`<span title="Klimatyzacja">${W(We)}</span>`);
-			let d = t._provider !== "plk_rail" && t.vehicle_code && t.realtime ? M`<span class="platform">${t.vehicle_code}</span>` : F, f = t.platform && t._provider !== "plk_rail" ? M`<span class="platform" title="Stanowisko/peron">${t.platform}</span>` : F, p = u.length > 0 || f !== F || l !== F ? M`<span class="meta-row"><span class="icons">${u}</span>${l}${f}</span>` : F, m = e.show_stop_name && e.entities.length > 1 && e.view_mode !== "tabs" && t._stopName, h = (t._stopName || "").replace(/\s*\(?(bus|tramwaj|tram|train|skm)\)?\s*/gi, " ").trim(), g = F;
+			let d = t._provider !== "plk_rail" && t.vehicle_code && t.realtime ? M`<span class="platform">${t.vehicle_code}</span>` : F, f = t.platform && t._provider !== "plk_rail" ? M`<span class="platform" title="Stanowisko/peron">${t.platform}</span>` : F, p = u.length > 0 || f !== F || l !== F ? M`<span class="meta-row"><span class="icons">${u}</span>${l}${f}</span>` : F, ee = e.show_stop_name && e.entities.length > 1 && e.view_mode !== "tabs" && t._stopName, m = (t._stopName || "").replace(/\s*\(?(bus|tramwaj|tram|train|skm)\)?\s*/gi, " ").trim(), h = F;
 			if (t.train_number && t._provider === "plk_rail") {
 				let e = (t.carrier || "").replace(/^[„""'\s]+/, "").replace(/PKP\s*Szybka\s*Kolej\s*Miejska.*/i, "SKM").replace(/PKP\s*Intercity.*/i, "IC").replace(/POLREGIO.*/i, "Polregio").replace(/\s*sp\.?\s*z\s*o\.?\s*o\.?.*/i, "");
-				g = M`<span class="stop-name">nr ${t.train_number} - ${e}</span>`;
+				h = M`<span class="stop-name">nr ${t.train_number} - ${e}</span>`;
 			}
-			let ee = J(t.vehicle_lat, t.vehicle_lng) !== null, _ = n || ee;
+			let te = J(t.vehicle_lat, t.vehicle_lng) !== null, g = n || te;
 			return M`
-        <div class="dep-row ${_ ? "interactive" : ""} ${i ? "imminent" : ""} ${t._dimmed ? "dimmed" : ""} ${s ? "cancelled" : ""}"
-             tabindex=${_ ? "0" : "-1"}
+        <div class="dep-row ${g ? "interactive" : ""} ${i ? "imminent" : ""} ${t._dimmed ? "dimmed" : ""} ${s ? "cancelled" : ""}"
+             tabindex=${g ? "0" : "-1"}
              @click=${(e) => this._onRowClick(e, t)}
              @dblclick=${(e) => this._onRowDblClick(e, t)}
              @contextmenu=${(e) => this._onRowContext(e, t)}
@@ -1742,7 +1742,7 @@ ha-card { container-type: inline-size; }
           <span class="headsign">
             <span class="head-main"><span class="headsign-text">${t.headsign}</span>${d}</span>
             ${p}
-            ${g === F ? m ? M`<span class="stop-name">${h}</span>` : F : g}
+            ${h === F ? ee ? M`<span class="stop-name">${m}</span>` : F : h}
           </span>
           <div class="time-col">${c}</div>
         </div>

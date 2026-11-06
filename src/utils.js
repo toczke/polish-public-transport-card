@@ -4,7 +4,7 @@
  * Reads data from mzkzg_transport HA integration sensors.
  */
 
-export const MZKZG_VERSION = "1.6.7-hotfix2";
+export const MZKZG_VERSION = "1.7.0";
 
 export const LOCALE = {
   pl: {

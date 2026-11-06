@@ -238,8 +238,7 @@ export class VehicleMap {
       const r = d.route || "?";
       const b = bearing;
       const mk = this.buildVehicleMarker(b, color, r, d.vehicle_type || "bus", d, isMobile);
-      const label = d.vehicle_code ? `<div style="position:absolute; top:-22px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.75); color:#fff; padding:2px 5px; border-radius:3px; font-size:10px; font-weight:600; font-family:system-ui,sans-serif; white-space:nowrap; pointer-events:none;">${escapeHtml(d.vehicle_code)}</div>` : "";
-      const mkHtml = `<div class="zm-arrow" style="opacity:${isMain ? 1 : 0.7}">${label}${mk.svg}</div>`;
+      const mkHtml = `<div class="zm-arrow" style="opacity:${isMain ? 1 : 0.7}">${mk.svg}</div>`;
       const icon = window.L.divIcon({
         className: "",
         html: mkHtml,
@@ -275,8 +274,7 @@ export class VehicleMap {
       const b = d.vehicle_direction || d.direction || 0;
       const r = d.route || "?";
       const mk = this.buildVehicleMarker(b, color, r, d.vehicle_type || "bus", d, isMobile);
-      const label = d.vehicle_code ? `<div style="position:absolute; top:-22px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.75); color:#fff; padding:2px 5px; border-radius:3px; font-size:10px; font-weight:600; font-family:system-ui,sans-serif; white-space:nowrap; pointer-events:none;">${escapeHtml(d.vehicle_code)}</div>` : "";
-      const mkHtml = `<div class="zm-arrow" style="opacity:${isMain ? 1 : 0.7}">${label}${mk.svg}</div>`;
+      const mkHtml = `<div class="zm-arrow" style="opacity:${isMain ? 1 : 0.7}">${mk.svg}</div>`;
       const icon = window.L.divIcon({
         className: "", html: mkHtml,
         iconSize: [mk.size, mk.arrowH], iconAnchor: [mk.size / 2, mk.arrowH],
@@ -305,8 +303,7 @@ export class VehicleMap {
         const vt = d.vehicle_type || "bus";
         const isMobile = window.innerWidth < 480;
         const mk = this.buildVehicleMarker(bearing, color, d.route, vt, d, isMobile);
-        const label = d.vehicle_code ? `<div style="position:absolute; top:-22px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.75); color:#fff; padding:2px 5px; border-radius:3px; font-size:10px; font-weight:600; font-family:system-ui,sans-serif; white-space:nowrap; pointer-events:none;">${escapeHtml(d.vehicle_code)}</div>` : "";
-        const mkHtml = `<div class="zm-arrow">${label}${mk.svg}</div>`;
+        const mkHtml = `<div class="zm-arrow">${mk.svg}</div>`;
         ctx.marker.setIcon(window.L.divIcon({
           className: "",
           html: mkHtml,

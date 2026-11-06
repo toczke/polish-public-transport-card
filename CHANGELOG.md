@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.7.0] - unreleased
+
+### Fixed
+- **Live vehicle marker** - removed the black vehicle-code badge that overlapped the
+  route circle. Markers now show only the route number and direction arrow, with a
+  white ring around the selected vehicle. The map also always waits for Leaflet CSS,
+  so tiles no longer render as a checkerboard.
+
 ## [1.6.7-hotfix2] - 2026-11-06
 
 ### Fixed
