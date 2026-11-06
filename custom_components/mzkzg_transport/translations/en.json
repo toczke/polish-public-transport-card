@@ -10,7 +10,7 @@
       },
       "api_key": {
         "title": "PLK API Key",
-        "description": "Enter your PKP PLK OpenData API key.",
+        "description": "Enter your PKP PLK OpenData API key. Get one at {url}",
         "data": {
           "api_key": "API Key",
           "plk_tier": "Usage tier"

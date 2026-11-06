@@ -10,7 +10,7 @@
       },
       "api_key": {
         "title": "Klucz API PLK",
-        "description": "Wprowadź klucz API PKP PLK OpenData. Zarejestruj się na https://dane.plk-sa.pl",
+        "description": "Wprowadź klucz API PKP PLK OpenData. Zarejestruj się na {url}",
         "data": {
           "api_key": "Klucz API",
           "plk_tier": "Limit zapytań"

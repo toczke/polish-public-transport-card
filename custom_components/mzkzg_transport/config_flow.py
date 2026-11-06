@@ -437,7 +437,7 @@ class MzkzgTransportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
 
             errors=errors,
-
+            description_placeholders={"url": "https://dane.plk-sa.pl"},
 
         )
 
