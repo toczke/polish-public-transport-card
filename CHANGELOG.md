@@ -63,7 +63,7 @@
 - **GTFS parsing off the event loop** — Gdańsk and Łódź archives are parsed in the executor
   as well, not just GTFS-RT providers (#20, #21)
 
-## [1.6.0] â€” unreleased
+## [1.6.0] - 2026-07-29
 
 ### New Providers (+8)
 - **MKS Mielec** â€” GTFS-RT + GPS (19 TU, 19 VP) (`api.zbiorkom.live api6-open`)
