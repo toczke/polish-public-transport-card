@@ -1,5 +1,6 @@
 """MZKZG Transport integration for Home Assistant."""
 
+import hashlib
 import json
 import logging
 from pathlib import Path
@@ -15,7 +16,21 @@ _LOGGER = logging.getLogger(__name__)
 PLATFORMS = ["sensor", "binary_sensor"]
 _MANIFEST = json.loads((Path(__file__).parent / "manifest.json").read_text())
 CARD_VERSION = _MANIFEST["version"]
+
+
+def _card_build_hash() -> str:
+    """Return a short content hash of the served card bundle."""
+    try:
+        data = (Path(__file__).parent / "www" / "polish-transport-card.js").read_bytes()
+    except OSError:
+        return ""
+    return hashlib.sha1(data).hexdigest()[:10]
+
+
+_CARD_BUILD = _card_build_hash()
 CARD_URL = f"/polish_transport/polish-transport-card.js?v={CARD_VERSION}"
+if _CARD_BUILD:
+    CARD_URL = f"{CARD_URL}-{_CARD_BUILD}"
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
