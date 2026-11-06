@@ -8,6 +8,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN, DELAY_THRESHOLD_SECONDS, PROVIDER_LABELS
+from .device_utils import async_link_device_to_parent
 
 
 async def async_setup_entry(
@@ -50,8 +51,16 @@ class MzkzgDelayBinarySensor(CoordinatorEntity, BinarySensorEntity):
             "name": stop_label,
             "manufacturer": provider_label,
             "model": provider,
-            "via_device": (DOMAIN, provider),
         }
+
+    async def async_added_to_hass(self) -> None:
+        """Link this stop device to its operator device."""
+        await super().async_added_to_hass()
+        async_link_device_to_parent(
+            self.hass,
+            {(DOMAIN, f"{self.coordinator.provider}_{self.coordinator.stop_id}")},
+            {(DOMAIN, self.coordinator.provider)},
+        )
 
     @property
     def is_on(self) -> bool | None:

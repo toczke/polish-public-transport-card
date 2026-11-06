@@ -146,6 +146,35 @@ class TestParseGtfsZip:
 
         assert "T1" in result["trips"]
 
+    def test_calendar_dates_only_filters_out_other_service_days(self):
+        """A feed with only calendar_dates must still hide trips from other days.
+
+        zbiorkom.live api6 exports have no calendar.txt. Without the fallback to
+        active_services, every trip from every service day leaked into the card
+        (issues #32 and #33).
+        """
+        tomorrow_str = (date.today() + timedelta(days=1)).strftime("%Y%m%d")
+        calendar_dates = (
+            "service_id,date,exception_type\n"
+            f"SVC1,{_today_str()},1\n"
+            f"SVC2,{tomorrow_str},1"
+        )
+        trips = (
+            "trip_id,route_id,service_id,trip_headsign\n"
+            "T1,R1,SVC1,Today\n"
+            "T2,R1,SVC2,Tomorrow"
+        )
+        routes = "route_id,route_short_name,route_type\nR1,7,3"
+        stops = "stop_id,stop_name\nS1,Stop"
+
+        data = _make_gtfs_zip(
+            calendar_dates=calendar_dates, trips=trips, routes=routes, stops=stops
+        )
+        result = _parse_gtfs_zip(data)
+
+        assert "T1" in result["trips"]
+        assert "T2" not in result["trips"]
+
     def test_calendar_dates_exception_remove(self):
         """calendar_dates exception_type=2 removes a service."""
         calendar = f"{CALENDAR_HEADER}\n{_calendar_line('SVC1', True)}"

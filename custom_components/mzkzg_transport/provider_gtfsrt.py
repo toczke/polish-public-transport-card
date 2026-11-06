@@ -6,12 +6,13 @@ import logging
 import zipfile
 from datetime import timedelta
 from io import BytesIO, StringIO, TextIOWrapper
+from pathlib import Path
 
 import aiohttp
 
 from homeassistant.util import dt as dt_util
 
-from .const import DOMAIN
+from .const import DOMAIN, MAX_DEPARTURES
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -52,21 +53,24 @@ GTFSRT_CITIES = {
         "label": "ZTM Pozna\u0144",
     },
     "gtfsrt_lublin": {
-        "gtfs_url": "https://cdn.zbiorkom.live/gtfs/lublin.zip",
-        "rt_url": "https://cdn.zbiorkom.live/gtfs-rt/lublin.pb",
-        "positions_url": "https://cdn.zbiorkom.live/gtfs-rt/lublin.pb",
+        "gtfs_url": "https://api.zbiorkom.live/api6-open/lublin/gtfs/default",
+        "rt_url": "https://api.zbiorkom.live/api6-open/lublin/gtfsRealtime/default/tripUpdates",
+        "positions_url": "https://api.zbiorkom.live/api6-open/lublin/gtfsRealtime/default/vehiclePositions",
+        "positions_format": "gtfsrt_protobuf",
         "label": "ZTM Lublin",
     },
     "gtfsrt_kielce": {
-        "gtfs_url": "https://cdn.zbiorkom.live/gtfs/kielce.zip",
-        "rt_url": "https://cdn.zbiorkom.live/gtfs-rt/kielce.pb",
-        "positions_url": "https://cdn.zbiorkom.live/gtfs-rt/kielce.pb",
+        "gtfs_url": "https://api.zbiorkom.live/api6-open/kielce/gtfs/default",
+        "rt_url": "https://api.zbiorkom.live/api6-open/kielce/gtfsRealtime/default/tripUpdates",
+        "positions_url": "https://api.zbiorkom.live/api6-open/kielce/gtfsRealtime/default/vehiclePositions",
+        "positions_format": "gtfsrt_protobuf",
         "label": "MPK Kielce",
     },
     "gtfsrt_radom": {
-        "gtfs_url": "https://cdn.zbiorkom.live/gtfs/radom.zip",
-        "rt_url": "https://cdn.zbiorkom.live/gtfs-rt/radom.pb",
-        "positions_url": "https://cdn.zbiorkom.live/gtfs-rt/radom.pb",
+        "gtfs_url": "https://api.zbiorkom.live/api6-open/radom/gtfs/default",
+        "rt_url": "https://api.zbiorkom.live/api6-open/radom/gtfsRealtime/default/tripUpdates",
+        "positions_url": "https://api.zbiorkom.live/api6-open/radom/gtfsRealtime/default/vehiclePositions",
+        "positions_format": "gtfsrt_protobuf",
         "label": "MZDiK Radom",
     },
     "gtfsrt_czestochowa": {
@@ -77,45 +81,52 @@ GTFSRT_CITIES = {
         "label": "MPK Cz\u0119stochowa",
     },
     "gtfsrt_elblag": {
-        "gtfs_url": "https://cdn.zbiorkom.live/gtfs/elblag.zip",
-        "rt_url": "https://cdn.zbiorkom.live/gtfs-rt/elblag.pb",
-        "positions_url": "https://cdn.zbiorkom.live/gtfs-rt/elblag.pb",
+        "gtfs_url": "https://api.zbiorkom.live/api6-open/elblag/gtfs/default",
+        "rt_url": "https://api.zbiorkom.live/api6-open/elblag/gtfsRealtime/default/tripUpdates",
+        "positions_url": "https://api.zbiorkom.live/api6-open/elblag/gtfsRealtime/default/vehiclePositions",
+        "positions_format": "gtfsrt_protobuf",
         "label": "ZKM Elbl\u0105g",
     },
     "gtfsrt_gorzow": {
-        "gtfs_url": "https://cdn.zbiorkom.live/gtfs/gorzow.zip",
-        "rt_url": "https://cdn.zbiorkom.live/gtfs-rt/gorzow.pb",
-        "positions_url": "https://cdn.zbiorkom.live/gtfs-rt/gorzow.pb",
+        "gtfs_url": "https://api.zbiorkom.live/api6-open/gorzow/gtfs/default",
+        "rt_url": "https://api.zbiorkom.live/api6-open/gorzow/gtfsRealtime/default/tripUpdates",
+        "positions_url": "https://api.zbiorkom.live/api6-open/gorzow/gtfsRealtime/default/vehiclePositions",
+        "positions_format": "gtfsrt_protobuf",
         "label": "MZK Gorz\u00f3w Wlkp.",
     },
     "gtfsrt_suwalki": {
-        "gtfs_url": "https://cdn.zbiorkom.live/gtfs/suwalki.zip",
-        "rt_url": "https://cdn.zbiorkom.live/gtfs-rt/suwalki.pb",
-        "positions_url": "https://cdn.zbiorkom.live/gtfs-rt/suwalki.pb",
+        "gtfs_url": "https://api.zbiorkom.live/api6-open/suwalki/gtfs/default",
+        "rt_url": "https://api.zbiorkom.live/api6-open/suwalki/gtfsRealtime/default/tripUpdates",
+        "positions_url": "https://api.zbiorkom.live/api6-open/suwalki/gtfsRealtime/default/vehiclePositions",
+        "positions_format": "gtfsrt_protobuf",
         "label": "PGK Suwa\u0142ki",
     },
     "gtfsrt_przemysl": {
-        "gtfs_url": "https://cdn.zbiorkom.live/gtfs/przemysl.zip",
-        "rt_url": "https://cdn.zbiorkom.live/gtfs-rt/przemysl.pb",
-        "positions_url": "https://cdn.zbiorkom.live/gtfs-rt/przemysl.pb",
+        "gtfs_url": "https://api.zbiorkom.live/api6-open/przemysl/gtfs/default",
+        "rt_url": "https://api.zbiorkom.live/api6-open/przemysl/gtfsRealtime/default/tripUpdates",
+        "positions_url": "https://api.zbiorkom.live/api6-open/przemysl/gtfsRealtime/default/vehiclePositions",
+        "positions_format": "gtfsrt_protobuf",
         "label": "MZK Przemy\u015bl",
     },
     "gtfsrt_rybnik": {
-        "gtfs_url": "https://cdn.zbiorkom.live/gtfs/rybnik.zip",
-        "rt_url": "https://cdn.zbiorkom.live/gtfs-rt/rybnik.pb",
-        "positions_url": "https://cdn.zbiorkom.live/gtfs-rt/rybnik.pb",
+        "gtfs_url": "https://api.zbiorkom.live/api6-open/rybnik/gtfs/default",
+        "rt_url": "https://api.zbiorkom.live/api6-open/rybnik/gtfsRealtime/default/tripUpdates",
+        "positions_url": "https://api.zbiorkom.live/api6-open/rybnik/gtfsRealtime/default/vehiclePositions",
+        "positions_format": "gtfsrt_protobuf",
         "label": "ZTZ Rybnik",
     },
     "gtfsrt_kutno": {
-        "gtfs_url": "https://cdn.zbiorkom.live/gtfs/kutno.zip",
-        "rt_url": "https://cdn.zbiorkom.live/gtfs-rt/kutno.pb",
-        "positions_url": "https://cdn.zbiorkom.live/gtfs-rt/kutno.pb",
+        "gtfs_url": "https://api.zbiorkom.live/api6-open/kutno/gtfs/default",
+        "rt_url": "https://api.zbiorkom.live/api6-open/kutno/gtfsRealtime/default/tripUpdates",
+        "positions_url": "https://api.zbiorkom.live/api6-open/kutno/gtfsRealtime/default/vehiclePositions",
+        "positions_format": "gtfsrt_protobuf",
         "label": "MZK Kutno",
     },
     "gtfsrt_legnica": {
-        "gtfs_url": "https://cdn.zbiorkom.live/gtfs/legnica.zip",
-        "rt_url": "https://cdn.zbiorkom.live/gtfs-rt/legnica.pb",
-        "positions_url": "https://cdn.zbiorkom.live/gtfs-rt/legnica.pb",
+        "gtfs_url": "https://api.zbiorkom.live/api6-open/legnica/gtfs/default",
+        "rt_url": "https://api.zbiorkom.live/api6-open/legnica/gtfsRealtime/default/tripUpdates",
+        "positions_url": "https://api.zbiorkom.live/api6-open/legnica/gtfsRealtime/default/vehiclePositions",
+        "positions_format": "gtfsrt_protobuf",
         "label": "MPK Legnica",
     },
     "gtfsrt_szczecin": {
@@ -163,9 +174,10 @@ GTFSRT_CITIES = {
         "label": "MZK Opole",
     },
     "gtfsrt_wroclaw": {
-        "gtfs_url": "https://cdn.zbiorkom.live/gtfs/wroclaw.zip",
-        "rt_url": "https://mapadlugoleka.klosok.eu/vehicle_positions.pb",
-        "positions_url": "https://mapadlugoleka.klosok.eu/vehicle_positions.pb",
+        "gtfs_url": "https://api.zbiorkom.live/api6-open/wroclaw/gtfs/default",
+        "rt_url": "https://api.zbiorkom.live/api6-open/wroclaw/gtfsRealtime/default/tripUpdates",
+        "positions_url": "https://api.zbiorkom.live/api6-open/wroclaw/gtfsRealtime/default/vehiclePositions",
+        "positions_format": "gtfsrt_protobuf",
         "label": "MPK Wroc\u0142aw",
     },
     "gtfs_rzeszow": {
@@ -299,8 +311,10 @@ GTFSRT_CITIES = {
         "label": "MZK Ostrołęka",
     },
     "gtfs_leszno": {
-        "gtfs_url": "https://cdn.zbiorkom.live/gtfs/leszno.zip",
-        "rt_url": None,
+        "gtfs_url": "https://api.zbiorkom.live/api6-open/leszno/gtfs/default",
+        "rt_url": "https://api.zbiorkom.live/api6-open/leszno/gtfsRealtime/default/tripUpdates",
+        "positions_url": "https://api.zbiorkom.live/api6-open/leszno/gtfsRealtime/default/vehiclePositions",
+        "positions_format": "gtfsrt_protobuf",
         "label": "MZK Leszno",
     },
     "gtfsrt_torun": {
@@ -462,15 +476,13 @@ async def fetch(coord: "MzkzgTransportCoordinator") -> dict:
         "stop_id": coord.stop_id,
         "stop_name": coord.stop_name,
         "provider": coord.provider,
-        "departures": unique[:20],
+        "departures": unique[:MAX_DEPARTURES],
         "last_update": now.isoformat(),
     }
 
 
 def _get_tomorrow_departures(gtfs, stop_id, tomorrow, now):
     """Get scheduled departures for tomorrow from raw GTFS zip."""
-    from datetime import date as dt_date
-
     raw = gtfs.get("_raw")
     if not raw:
         return []
@@ -724,7 +736,60 @@ async def _get_gzm_gtfs_url(session, package_id: str, target_date=None) -> str |
         return None
 
 
+def _gtfs_cache_path(coord) -> Path | None:
+    """Return the on-disk GTFS fallback path, or None in minimal/test setups."""
+    try:
+        base = coord.hass.config.path(".storage", DOMAIN, "gtfs")
+    except Exception:
+        return None
+    if not isinstance(base, str):
+        return None
+    return Path(base) / f"{coord.provider}.zip"
+
+
+async def _save_gtfs_cache(coord, data: bytes) -> None:
+    """Persist a downloaded GTFS archive so departures survive an outage."""
+    path = _gtfs_cache_path(coord)
+    if path is None:
+        return
+
+    def _write() -> None:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        tmp = path.with_suffix(".tmp")
+        tmp.write_bytes(data)
+        tmp.replace(path)
+
+    try:
+        await coord.hass.async_add_executor_job(_write)
+    except Exception as err:
+        _LOGGER.debug("GTFS-RT: could not cache GTFS for %s: %s", coord.provider, err)
+
+
+async def _load_gtfs_cache(coord) -> bytes | None:
+    """Return the last successfully downloaded GTFS archive, if any."""
+    path = _gtfs_cache_path(coord)
+    if path is None:
+        return None
+
+    def _read() -> bytes | None:
+        return path.read_bytes() if path.exists() else None
+
+    try:
+        return await coord.hass.async_add_executor_job(_read)
+    except Exception as err:
+        _LOGGER.debug("GTFS-RT: could not read cached GTFS for %s: %s", coord.provider, err)
+        return None
+
+
 async def _get_gtfs_data(coord, session, city_cfg, now):
+    """Load GTFS data once when several stops of one provider refresh concurrently."""
+    locks = coord.hass.data[DOMAIN].setdefault("_gtfsrt_locks", {})
+    lock = locks.setdefault(coord.provider, asyncio.Lock())
+    async with lock:
+        return await _get_gtfs_data_locked(coord, session, city_cfg, now)
+
+
+async def _get_gtfs_data_locked(coord, session, city_cfg, now):
     """Load and cache parsed GTFS data (daily)."""
     cache = coord.hass.data[DOMAIN].setdefault("_gtfsrt_cache", {})
     today = now.strftime("%Y%m%d")
@@ -757,15 +822,15 @@ async def _get_gtfs_data(coord, session, city_cfg, now):
         if not gtfs_url and city_cfg.get("gtfs_package_id"):
             gtfs_url = await _get_gzm_gtfs_url(session, city_cfg["gtfs_package_id"], now.date())
             if not gtfs_url:
-                _LOGGER.warning("GTFS-RT: could not get dynamic URL for GZM")
-                return None
+                raise RuntimeError("could not get dynamic GTFS URL for GZM")
 
         async with session.get(gtfs_url, timeout=aiohttp.ClientTimeout(total=120)) as resp:
             if resp.status != 200:
-                return None
+                raise RuntimeError(f"GTFS download returned HTTP {resp.status}")
             data = await resp.read()
 
         gtfs = await coord.hass.async_add_executor_job(_parse_gtfs_zip, data)
+        await _save_gtfs_cache(coord, data)
 
         # Merge secondary GTFS zip (e.g. Kraków tram)
         if city_cfg.get("gtfs_url_tram"):
@@ -791,19 +856,31 @@ async def _get_gtfs_data(coord, session, city_cfg, now):
         return gtfs
     except Exception as e:
         _LOGGER.warning("GTFS-RT: failed to load GTFS for %s: %s", coord.provider, e)
+        # Offline/outage fallback: keep serving the last downloaded schedule.
+        cached = await _load_gtfs_cache(coord)
+        if cached:
+            try:
+                gtfs = await coord.hass.async_add_executor_job(_parse_gtfs_zip, cached)
+                cache[cache_key] = gtfs
+                if coord.stop_id not in gtfs["stop_times"]:
+                    await coord.hass.async_add_executor_job(
+                        _parse_stop_times_for, gtfs, coord.stop_id
+                    )
+                _LOGGER.info("GTFS-RT: using cached GTFS for %s", coord.provider)
+                return gtfs
+            except Exception as cache_err:
+                _LOGGER.debug("GTFS-RT: cached GTFS unusable for %s: %s", coord.provider, cache_err)
         return cache.get(cache_key)
 
 
 def _parse_gtfs_zip(data: bytes) -> dict:
     """Parse relevant GTFS files from zip."""
-    from datetime import date as dt_date
-
     stops = {}
     routes = {}
     trips = {}
     stop_times = {}  # stop_id -> list of {trip_id, route_id, departure_time, headsign}
     raw_zip = data
-    today = dt_date.today()
+    today = dt_util.now().date()
     today_str = today.strftime("%Y%m%d")
     day_name = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"][today.weekday()]
 
@@ -881,7 +958,11 @@ def _parse_gtfs_zip(data: bytes) -> dict:
             svc_idx = header.index("service_id") if "service_id" in header else -1
             wc_idx = header.index("wheelchair_accessible") if "wheelchair_accessible" in header else -1
             bike_idx = header.index("bikes_allowed") if "bikes_allowed" in header else -1
-            filter_by_service = has_calendar and any_weekday_match
+            # Some feeds (notably the zbiorkom.live api6 exports) only ship
+            # calendar_dates.txt. There is no weekday column to match, but the
+            # exception rows still tell us which services run today. Without this,
+            # every trip from every service day is shown (issues #32/#33).
+            filter_by_service = has_calendar and (any_weekday_match or bool(active_services))
             for parts in rows:
                 if len(parts) > max(tid_idx, rid_idx):
                     tid = parts[tid_idx]
@@ -1264,7 +1345,9 @@ async def _get_rt_delays(session, rt_url: str) -> dict:
                 _LOGGER.debug("GTFS-RT attempt %d failed: %s, retrying...", attempt + 1, e)
                 await asyncio.sleep([1, 3, 7][attempt])
         except Exception as e:
-            _LOGGER.warning("GTFS-RT: failed to fetch RT data from %s: %s", rt_url, e)
+            # A retired/HTML feed must not spam the log on every 30 s poll. The static
+            # schedule still works, so this is a degraded state, not a failure.
+            _LOGGER.debug("GTFS-RT: failed to parse RT data from %s: %s", rt_url, e)
             return {}
     
     if last_err:

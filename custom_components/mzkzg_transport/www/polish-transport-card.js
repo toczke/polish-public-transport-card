@@ -5,6 +5,7 @@
  */
 
 const MZKZG_VERSION = "1.5.0";
+let leafletLoadPromise = null;
 
 const LOCALE = {
   pl: {
@@ -183,7 +184,9 @@ function normalizeEntityEntry(item) {
   if (!item || typeof item !== "object" || typeof item.entity !== "string") return null;
   const entry = { entity: item.entity };
   if ("filter_routes" in item) entry.filter_routes = normalizeList(item.filter_routes);
+  if ("max_departures" in item) entry.max_departures = parseInt(item.max_departures) || null;
   if ("destination_filter" in item) entry.destination_filter = normalizeList(item.destination_filter);
+  if ("exclude_destinations" in item) entry.exclude_destinations = normalizeList(item.exclude_destinations);
   if ("filter_platform" in item) entry.filter_platform = item.filter_platform == null ? "" : String(item.filter_platform);
   if ("filter_track" in item) entry.filter_track = item.filter_track == null ? "" : String(item.filter_track);
   if ("realtime_only" in item) entry.realtime_only = item.realtime_only === true;
@@ -570,17 +573,21 @@ class MzkzgTransportCardEditor extends HTMLElement {
 
   _setEntityOverrideFieldsFor(entityId) {
     const routesEl = this.shadowRoot.getElementById("entity_filter_routes");
+    const maxDepEl = this.shadowRoot.getElementById("entity_max_departures");
     const destEl = this.shadowRoot.getElementById("entity_destination_filter");
+    const excludeEl = this.shadowRoot.getElementById("entity_exclude_destinations");
     const platformEl = this.shadowRoot.getElementById("entity_filter_platform");
     const trackEl = this.shadowRoot.getElementById("entity_filter_track");
     const realtimeEl = this.shadowRoot.getElementById("entity_realtime_only");
     const hideTerminusEl = this.shadowRoot.getElementById("entity_hide_terminus");
     const highlightEl = this.shadowRoot.getElementById("entity_highlight_mode");
-    if (!routesEl || !destEl || !platformEl || !trackEl || !realtimeEl || !hideTerminusEl || !highlightEl) return;
+    if (!routesEl || !maxDepEl || !destEl || !excludeEl || !platformEl || !trackEl || !realtimeEl || !hideTerminusEl || !highlightEl) return;
 
     const entry = this._getEntityEntryById().get(entityId);
     routesEl.value = Array.isArray(entry?.filter_routes) ? entry.filter_routes.join(", ") : "";
+    maxDepEl.value = entry?.max_departures ?? "";
     destEl.value = Array.isArray(entry?.destination_filter) ? entry.destination_filter.join(", ") : "";
+    excludeEl.value = Array.isArray(entry?.exclude_destinations) ? entry.exclude_destinations.join(", ") : "";
     platformEl.value = entry?.filter_platform || "";
     trackEl.value = entry?.filter_track || "";
     realtimeEl.checked = entry?.realtime_only === true;
@@ -593,8 +600,9 @@ class MzkzgTransportCardEditor extends HTMLElement {
     const checked = id => this.shadowRoot.getElementById(id)?.checked === true;
     return {
       filter_routes: normalizeList(val("entity_filter_routes")),
-      max_departures: val("entity_max_departures") ? parseInt(val("entity_max_departures")) || null : null,
+      max_departures: val("entity_max_departures") ? Math.max(1, Math.min(100, parseInt(val("entity_max_departures")) || 0)) || null : null,
       destination_filter: normalizeList(val("entity_destination_filter")),
+      exclude_destinations: normalizeList(val("entity_exclude_destinations")),
       filter_platform: val("entity_filter_platform").trim(),
       filter_track: val("entity_filter_track").trim(),
       realtime_only: checked("entity_realtime_only"),
@@ -656,8 +664,10 @@ class MzkzgTransportCardEditor extends HTMLElement {
       const merged = { entity: eid, ...(existing || {}) };
       if (eid === targetEntityId) Object.assign(merged, targetOverride);
       const hasLocalOverride = (
+        (merged.max_departures > 0) ||
         (Array.isArray(merged.filter_routes) && merged.filter_routes.length > 0) ||
         (Array.isArray(merged.destination_filter) && merged.destination_filter.length > 0) ||
+        (Array.isArray(merged.exclude_destinations) && merged.exclude_destinations.length > 0) ||
         !!merged.filter_platform ||
         !!merged.filter_track ||
         merged.realtime_only === true ||
@@ -669,6 +679,7 @@ class MzkzgTransportCardEditor extends HTMLElement {
       if (Array.isArray(merged.filter_routes) && merged.filter_routes.length) clean.filter_routes = merged.filter_routes;
       if (merged.max_departures > 0) clean.max_departures = merged.max_departures;
       if (Array.isArray(merged.destination_filter) && merged.destination_filter.length) clean.destination_filter = merged.destination_filter;
+      if (Array.isArray(merged.exclude_destinations) && merged.exclude_destinations.length) clean.exclude_destinations = merged.exclude_destinations;
       if (merged.filter_platform) clean.filter_platform = String(merged.filter_platform);
       if (merged.filter_track) clean.filter_track = String(merged.filter_track);
       if (merged.realtime_only === true) clean.realtime_only = true;
@@ -678,12 +689,14 @@ class MzkzgTransportCardEditor extends HTMLElement {
     });
     const filterRoutes = val("filter_routes").split(",").map(r => r.trim()).filter(Boolean);
     const destFilter = val("destination_filter").split(",").map(s => s.trim()).filter(Boolean);
+    const excludeFilter = val("exclude_destinations").split(",").map(s => s.trim()).filter(Boolean);
 
     // Only include fields that differ from card defaults — keeps YAML minimal
-    const DEFAULTS = { max_departures:10, display_preset:"standard", view_mode:"mixed", highlight_mode:false, show_delays:true, hide_terminus:true, realtime_only:false, show_footer:true, show_bike:true, show_wheelchair:true, show_ac:true, show_ticket_machine:true, refresh_interval:60};
+    const DEFAULTS = { max_departures:10, min_departures:0, display_preset:"standard", view_mode:"mixed", highlight_mode:false, show_delays:true, hide_terminus:true, realtime_only:false, show_footer:true, show_bike:true, show_wheelchair:true, show_ac:true, show_ticket_machine:true, refresh_interval:60};
     const omit = (k, v) => v === DEFAULTS[k] ? undefined : v;
 
-    const maxDep = parseInt(val("max_departures")) || 10;
+    const maxDep = Math.max(1, Math.min(100, parseInt(val("max_departures")) || 10));
+    const minDep = Math.max(0, Math.min(100, parseInt(val("min_departures")) || 0));
     const preset = this.shadowRoot.querySelector('input[name="display_preset"]:checked')?.value || "standard";
     const viewMode = this.shadowRoot.querySelector('input[name="view_mode"]:checked')?.value || "mixed";
     const refreshInt = parseInt(val("refresh_interval")) || this._config.refresh_interval || 60;
@@ -701,10 +714,12 @@ class MzkzgTransportCardEditor extends HTMLElement {
         ? (checked("header_color_auto") ? undefined : (val("header_color") || undefined))
         : this._config.header_color,
       max_departures: omit("max_departures", maxDep),
+      min_departures: omit("min_departures", minDep),
       display_preset: omit("display_preset", preset),
       view_mode: omit("view_mode", viewMode),
       filter_routes: filterRoutes.length ? filterRoutes : undefined,
       destination_filter: destFilter.length ? destFilter : undefined,
+      exclude_destinations: excludeFilter.length ? excludeFilter : undefined,
       filter_platform: val("filter_platform") || undefined,
       filter_track: val("filter_track") || undefined,
       highlight_mode: omit("highlight_mode", checked("highlight_mode")),
@@ -860,6 +875,10 @@ class MzkzgTransportCardEditor extends HTMLElement {
               <input id="max_departures" type="text" inputmode="numeric" value="${escapeHtml(c.max_departures ?? 10)}" />
             </div>
             <div class="field">
+              <label for="min_departures">Min odjazdów (puste wiersze)</label>
+              <input id="min_departures" type="text" inputmode="numeric" value="${escapeHtml(c.min_departures ?? 0)}" />
+            </div>
+            <div class="field">
               <label for="filter_routes">Linie</label>
               <input id="filter_routes" type="text" value="${escapeHtml((c.filter_routes || []).join(", "))}" placeholder="131, 21, S1" />
             </div>
@@ -867,6 +886,10 @@ class MzkzgTransportCardEditor extends HTMLElement {
           <div class="field">
             <label for="destination_filter">Kierunki</label>
             <input id="destination_filter" type="text" value="${escapeHtml((c.destination_filter || []).join(", "))}" placeholder="Wrzeszcz, Oliwa" />
+          </div>
+          <div class="field">
+            <label for="exclude_destinations">Wyklucz kierunki</label>
+            <input id="exclude_destinations" type="text" value="${escapeHtml((c.exclude_destinations || []).join(", "))}" placeholder="Poznań Główny, Toruń Wschodni" />
           </div>
           <div class="field">
             <label for="filter_platform">Peron</label>
@@ -900,6 +923,10 @@ class MzkzgTransportCardEditor extends HTMLElement {
             <div class="field">
               <label for="entity_destination_filter">Kierunki (sensor)</label>
               <input id="entity_destination_filter" type="text" value="${escapeHtml((activeEntry?.destination_filter || []).join(", "))}" placeholder="np. Wrzeszcz" />
+            </div>
+            <div class="field">
+              <label for="entity_exclude_destinations">Wyklucz kierunki (sensor)</label>
+              <input id="entity_exclude_destinations" type="text" value="${escapeHtml((activeEntry?.exclude_destinations || []).join(", "))}" placeholder="np. Poznań Główny" />
             </div>
           </div>
           <div class="field-row">
@@ -1064,7 +1091,7 @@ class MzkzgTransportCard extends HTMLElement {
 
   static getConfigElement() { return document.createElement("polish-transport-card-editor"); }
   static getStubConfig() {
-    return { type: "custom:polish-transport-card", entities: [], max_departures: 10, show_delays: true, hide_terminus: true, show_bike: true, show_wheelchair: true, show_footer: true };
+    return { type: "custom:polish-transport-card", entities: [], max_departures: 10, min_departures: 0, show_delays: true, hide_terminus: true, show_bike: true, show_wheelchair: true, show_footer: true };
   }
 
   setConfig(config) {
@@ -1073,7 +1100,8 @@ class MzkzgTransportCard extends HTMLElement {
     this._config = {
       ...config,
       entities: Array.isArray(config.entities) ? config.entities : [],
-      max_departures: Math.max(1, Math.min(20, parseInt(config.max_departures) || 10)),
+      max_departures: Math.max(1, Math.min(100, parseInt(config.max_departures) || 10)),
+      min_departures: Math.max(0, Math.min(100, parseInt(config.min_departures) || 0)),
       refresh_interval: Math.max(5, Math.min(600, parseInt(config.refresh_interval) || 60)),
       display_preset: config.display_preset || "standard",
       view_mode: config.view_mode || "mixed",
@@ -1088,6 +1116,7 @@ class MzkzgTransportCard extends HTMLElement {
       show_stop_name: config.show_stop_name === true,
       filter_routes: normalizeList(config.filter_routes),
       destination_filter: Array.isArray(config.destination_filter) ? config.destination_filter : (config.destination_filter ? String(config.destination_filter).split(",").map(s=>s.trim()).filter(Boolean) : []),
+      exclude_destinations: normalizeList(config.exclude_destinations),
       filter_platform: config.filter_platform || "",
       filter_track: config.filter_track || "",
       icon: config.icon || "",
@@ -1097,12 +1126,12 @@ class MzkzgTransportCard extends HTMLElement {
       double_tap_action: normalizeActionConfig(config.double_tap_action, "none"),
     };
     if (this._rendered) this._fullRender();
-    this._preloadLeaflet();
+    if (this.isConnected) this._startTick();
   }
 
   set hass(hass) {
     this._hass = hass;
-    if (!this._rendered) { this._fullRender(); this._startTick(); }
+    if (!this._rendered) { this._fullRender(); }
     else {
       // Only update if our entities' states changed
       const key = this._getEntityIds().map(e => hass.states[e]?.last_updated).join(",");
@@ -1260,6 +1289,15 @@ class MzkzgTransportCard extends HTMLElement {
       return df.some(f => h.includes(f));
     });
 
+    // Exclude destinations (issue #24) — the inverse of destination_filter.
+    deps = deps.filter(d => {
+      const ec = d._entityConfig || {};
+      const excluded = ("exclude_destinations" in ec) ? ec.exclude_destinations : c.exclude_destinations;
+      if (!excluded?.length) return true;
+      const h = (d.headsign || "").toLowerCase();
+      return !excluded.some(f => h.includes(String(f).toLowerCase()));
+    });
+
     // Platform/track filter
     deps = deps.filter(d => {
       const ec = d._entityConfig || {};
@@ -1281,26 +1319,49 @@ class MzkzgTransportCard extends HTMLElement {
       return ma - mb;
     });
 
-    const cap = deps[0]?._entityConfig?.max_departures || c.max_departures;
-    return deps.slice(0, cap);
+    // The first departure's sensor may override the cap. Parse and clamp so a
+    // hand-written YAML value can't render thousands of rows.
+    const cap = parseInt(deps[0]?._entityConfig?.max_departures) || c.max_departures;
+    return deps.slice(0, Math.max(1, Math.min(100, cap)));
   }
 
   _preloadLeaflet() {
-    if (!this._leafletLoading) {
-      this._leafletLoading = new Promise((resolve) => {
-        const l = document.createElement("link");
-        l.rel = "stylesheet";
-        l.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
-        l.onload = () => {
-          const s = document.createElement("script");
-          s.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
-          s.onload = resolve;
-          document.head.appendChild(s);
-        };
-        document.head.appendChild(l);
-      });
-    }
-    return this._leafletLoading;
+    // Share one loader across every card on the dashboard. The old per-card
+    // promise injected duplicate <link>/<script> tags and kept them alive after
+    // a card was removed.
+    if (window.L) return Promise.resolve(window.L);
+    if (leafletLoadPromise) return leafletLoadPromise;
+
+    leafletLoadPromise = new Promise((resolve, reject) => {
+      if (!document.getElementById("polish-transport-leaflet-css")) {
+        const link = document.createElement("link");
+        link.id = "polish-transport-leaflet-css";
+        link.rel = "stylesheet";
+        link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+        document.head.appendChild(link);
+      }
+
+      let script = document.getElementById("polish-transport-leaflet-js");
+      if (!script) {
+        script = document.createElement("script");
+        script.id = "polish-transport-leaflet-js";
+        script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
+        document.head.appendChild(script);
+      }
+      const onLoad = () => {
+        script.removeEventListener("error", onError);
+        resolve(window.L);
+      };
+      const onError = () => {
+        script.removeEventListener("load", onLoad);
+        script.remove();
+        leafletLoadPromise = null;
+        reject(new Error("Failed to load Leaflet"));
+      };
+      script.addEventListener("load", onLoad, { once: true });
+      script.addEventListener("error", onError, { once: true });
+    });
+    return leafletLoadPromise;
   }
 
   _buildVehicleMarker(bearing, color, route, vehicleType, info, isMobile) {
@@ -1335,11 +1396,13 @@ class MzkzgTransportCard extends HTMLElement {
     overlay.innerHTML = `<div style="position:relative;width:${w}px;height:${h}px;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.3);"><button style="position:absolute;top:8px;right:8px;z-index:1001;background:rgba(0,0,0,0.6);border:none;border-radius:50%;width:32px;height:32px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;color:#fff;">✕</button><div id="vmap" style="width:${w}px;height:${h}px;"></div><div id="vmap-status" style="position:absolute;bottom:6px;left:10px;z-index:1001;font-size:10px;color:#999;background:rgba(255,255,255,0.8);padding:2px 6px;border-radius:4px">🔄 odświeżanie co 30s</div></div>`;
     document.body.appendChild(overlay);
     const ctx = {
+      overlay,
       destroyed: false,
       map: null,
       markers: [],
       ro: null,
       interval: null,
+      onKeyDown: null,
       entityId: info.entityId || "",
       vehicleCode: info.code || "",
     };
@@ -1395,7 +1458,7 @@ class MzkzgTransportCard extends HTMLElement {
     };
 
     if (window.L) { createMap(); }
-    else { (this._leafletLoading || this._preloadLeaflet()).then(createMap); }
+    else { this._preloadLeaflet().then(createMap).catch(() => ctx.destroy()); }
   }
 
   // OpenStreetMap tiles (CARTO's now need an API key). HA 2026.9+ proxies them through the
@@ -1404,7 +1467,8 @@ class MzkzgTransportCard extends HTMLElement {
   // browsers without one an "Access blocked" tile and HA pages set no-referrer.
   async _addTileLayer(map, ctx) {
     const fetchToken = () => this._hass.callWS({ type: "map_tiles/access_token" }).then(r => r?.token || null, () => null);
-    const token = await fetchToken();
+    let token = null;
+    try { token = await fetchToken(); } catch (_) { token = null; }
     if (ctx.destroyed) return;
     const origin = (this._hass.auth?.data?.hassUrl || location.origin).replace(/\/+$/, "");
     const proxyUrl = (t) => `${origin}/api/map_tiles/raster/{z}/{x}/{y}.png?token=${encodeURIComponent(t)}`;
@@ -1785,7 +1849,9 @@ class MzkzgTransportCard extends HTMLElement {
       if (hash !== this._lastDepsHash) {
         this._lastDepsHash = hash;
         el.innerHTML = html;
-        this._bindTapActions();
+        // Only the departure rows were replaced; rebinding tabs here added a
+        // new click listener on every refresh (which piled up over time).
+        this._bindDepartureActions();
       }
     }
     // Re-render tabs
@@ -1813,7 +1879,10 @@ class MzkzgTransportCard extends HTMLElement {
     if (!c.entities?.length) return `<div class="state-msg"><span class="icon">📍</span>${t("no_entities")}</div>`;
 
     if (!this._hass) {
-      return Array.from({ length: c.max_departures }, (_, i) =>
+      const skeletonCount = c.min_departures > 0
+        ? Math.min(c.min_departures, c.max_departures || c.min_departures)
+        : Math.min(5, c.max_departures || 5);
+      return Array.from({ length: skeletonCount }, (_, i) =>
         `<div class="dep-row"><div class="skel" style="height:26px;width:40px;border-radius:6px"></div><div class="skel" style="height:13px;flex:1"></div><div class="skel" style="height:13px;width:60px"></div></div>`
       ).join("");
     }
@@ -1930,11 +1999,12 @@ class MzkzgTransportCard extends HTMLElement {
       } catch (_) { return ""; }
     }).join("");
 
-    // Pad with empty rows to maintain consistent card height
-    const maxDep = this._config.max_departures || 10;
+    // Pad with empty rows to the configured minimum height. Padding to
+    // max_departures used to draw dozens of blank rows once the cap was raised.
+    const minDep = Math.max(0, parseInt(this._config.min_departures) || 0);
     const rendered = deps.length;
-    if (rendered > 0 && rendered < maxDep) {
-      const padCount = maxDep - rendered;
+    if (rendered > 0 && rendered < minDep) {
+      const padCount = minDep - rendered;
       const emptyRow = `<div class="dep-row" style="visibility:hidden">&nbsp;</div>`;
       return result + emptyRow.repeat(padCount);
     }

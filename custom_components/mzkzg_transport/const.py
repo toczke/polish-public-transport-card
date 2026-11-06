@@ -22,13 +22,19 @@ KIEDYPRZYJEDZIE_MZK_MALBORK_URL = "https://malbork.kiedyprzyjedzie.pl"
 KIEDYPRZYJEDZIE_PKS_SLUPSK_URL = "https://pksslupsk.kiedyprzyjedzie.pl"
 KIEDYPRZYJEDZIE_MZK_STAROGARD_URL = "https://starogard.kiedyprzyjedzie.pl"
 KIEDYPRZYJEDZIE_PKS_STAROGARD_URL = "https://pksstarogard.kiedyprzyjedzie.pl"
+# Kept for backwards compatibility; Bytów moved to Time4BUS (issue #38).
 KIEDYPRZYJEDZIE_BYTOW_URL = "https://bytow.kiedyprzyjedzie.pl"
+KIEDYPRZYJEDZIE_BIELSKO_URL = "https://bielsko.kiedyprzyjedzie.pl"
 KIEDYPRZYJEDZIE_CZLUCHOW_URL = "https://czluchow.kiedyprzyjedzie.pl"
 TIME4BUS_API_BASE = "https://time4bus.com/t4b"
 TIME4BUS_TCZEW_OPERATOR = "tczew"
+TIME4BUS_BYTOW_OPERATOR = "bytow"
 TIME4BUS_TCZEW_STOPS_URL = f"{TIME4BUS_API_BASE}/operators/{TIME4BUS_TCZEW_OPERATOR}/stops"
 TIME4BUS_TCZEW_LIVE_DEPARTURES_URL = f"{TIME4BUS_API_BASE}/live/schedules/{TIME4BUS_TCZEW_OPERATOR}/stops"
 TIME4BUS_TCZEW_SCHEDULE_DEPARTURES_URL = f"{TIME4BUS_API_BASE}/operators/{TIME4BUS_TCZEW_OPERATOR}/stops"
+TIME4BUS_BYTOW_STOPS_URL = f"{TIME4BUS_API_BASE}/operators/{TIME4BUS_BYTOW_OPERATOR}/stops"
+TIME4BUS_BYTOW_LIVE_DEPARTURES_URL = f"{TIME4BUS_API_BASE}/live/schedules/{TIME4BUS_BYTOW_OPERATOR}/stops"
+TIME4BUS_BYTOW_SCHEDULE_DEPARTURES_URL = f"{TIME4BUS_API_BASE}/operators/{TIME4BUS_BYTOW_OPERATOR}/stops"
 
 # Providers
 PROVIDER_ZTM = "ztm_gdansk"
@@ -44,6 +50,7 @@ PROVIDER_MZK_MALBORK = "kiedyprzyjedzie_mzk_malbork"
 PROVIDER_PKS_SLUPSK = "kiedyprzyjedzie_pks_slupsk"
 PROVIDER_MZK_STAROGARD = "kiedyprzyjedzie_mzk_starogard"
 PROVIDER_PKS_STAROGARD = "kiedyprzyjedzie_pks_starogard"
+PROVIDER_BIELSKO = "kiedyprzyjedzie_bielsko"
 PROVIDER_BYTOW = "kiedyprzyjedzie_bytow"
 PROVIDER_CZLUCHOW = "kiedyprzyjedzie_czluchow"
 PROVIDER_TCZEW = "time4bus_tczew"
@@ -113,12 +120,20 @@ KIEDYPRZYJEDZIE_BASE_URLS = {
     PROVIDER_PKS_SLUPSK: KIEDYPRZYJEDZIE_PKS_SLUPSK_URL,
     PROVIDER_MZK_STAROGARD: KIEDYPRZYJEDZIE_MZK_STAROGARD_URL,
     PROVIDER_PKS_STAROGARD: KIEDYPRZYJEDZIE_PKS_STAROGARD_URL,
-    PROVIDER_BYTOW: KIEDYPRZYJEDZIE_BYTOW_URL,
+    PROVIDER_BIELSKO: KIEDYPRZYJEDZIE_BIELSKO_URL,
     PROVIDER_CZLUCHOW: KIEDYPRZYJEDZIE_CZLUCHOW_URL,
 }
 
 TIME4BUS_BASE_URLS = {
     PROVIDER_TCZEW: TIME4BUS_API_BASE,
+    # Bytów moved from kiedyPrzyjedzie to Time4BUS (issue #38); the provider id is
+    # kept so existing config entries keep working after the update.
+    PROVIDER_BYTOW: TIME4BUS_API_BASE,
+}
+
+TIME4BUS_OPERATORS = {
+    PROVIDER_TCZEW: TIME4BUS_TCZEW_OPERATOR,
+    PROVIDER_BYTOW: TIME4BUS_BYTOW_OPERATOR,
 }
 
 KIEDYPRZYJEDZIE_PROVIDERS = set(KIEDYPRZYJEDZIE_BASE_URLS)
@@ -138,6 +153,7 @@ PROVIDER_LABELS = {
     PROVIDER_PKS_SLUPSK: "PKS S\u0142upsk S.A.",
     PROVIDER_MZK_STAROGARD: "MZK Starogard Gda\u0144ski",
     PROVIDER_PKS_STAROGARD: "PKS Starogard Gda\u0144ski S.A.",
+    PROVIDER_BIELSKO: "MZK Bielsko-Bia\u0142a",
     PROVIDER_BYTOW: "Byt\u00f3w",
     PROVIDER_CZLUCHOW: "Powiat Cz\u0142uchowski",
     PROVIDER_TCZEW: "Tczew",
@@ -202,6 +218,7 @@ PROVIDER_COLORS = {
     PROVIDER_PKS_SLUPSK: "#0f172a",
     PROVIDER_MZK_STAROGARD: "#7f1d1d",
     PROVIDER_PKS_STAROGARD: "#1e3a8a",
+    PROVIDER_BIELSKO: "#0057b8",
     PROVIDER_BYTOW: "#155e75",
     PROVIDER_CZLUCHOW: "#991b1b",
     PROVIDER_TCZEW: "#1d4ed8",
@@ -262,12 +279,13 @@ CONF_SLEEP_START = "sleep_start"
 CONF_SLEEP_END = "sleep_end"
 CONF_SLEEP_ENABLED = "sleep_enabled"
 CONF_FALLBACK_MIN = "fallback_min"
+CONF_TIMETABLE_LINES = "timetable_lines"
 
 DEFAULT_SCAN_INTERVAL = 30
 DEFAULT_SLEEP_START = "00:00"
 DEFAULT_SLEEP_END = "04:30"
 DEFAULT_FALLBACK_MIN = 8
-MAX_DEPARTURES = 20
+MAX_DEPARTURES = 100
 # "+" appears in zbiorkom.live api6 ids of P+R stops (e.g. "czerwone-maki-p+r01-vrfpw")
 STOP_ID_PATTERN = r"^[a-zA-Z0-9_:+-]+$"
 

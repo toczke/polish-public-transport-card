@@ -58,6 +58,22 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     domain_data["_coordinators"][entry.entry_id] = coordinators
 
+    # Register the parent operator device once here, so every platform can link its
+    # stop devices to it regardless of platform setup order.
+    from homeassistant.helpers import device_registry as dr
+
+    from .const import PROVIDER_LABELS
+
+    provider_label = PROVIDER_LABELS.get(provider, provider)
+    dr.async_get(hass).async_get_or_create(
+        config_entry_id=entry.entry_id,
+        identifiers={(DOMAIN, provider)},
+        name=provider_label,
+        manufacturer="MZKZG Transport",
+        model=provider,
+        entry_type=dr.DeviceEntryType.SERVICE,
+    )
+
     # Update options on change
     entry.async_on_unload(entry.add_update_listener(_async_update_options))
 
@@ -84,9 +100,15 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         # Clean up shared caches if no more entries
         if not hass.data[DOMAIN].get("_coordinators"):
             for key in ("_plk_cache", "_plk_lock", "_ztm_fleet", "_ztm_gtfs_cache",
-                        "_ztm_gps", "_gtfsrt_cache", "_gtfsrt_vehicles", "_gtfsrt_positions",
-                        "_lodz_gtfs_data", "_krakow_meta", "_krakow_vehicles"):
+                        "_ztm_gps", "_gtfsrt_cache", "_gtfsrt_locks", "_gtfsrt_vehicles",
+                        "_gtfsrt_positions", "_lodz_gtfs_data", "_krakow_meta",
+                        "_krakow_vehicles"):
                 hass.data[DOMAIN].pop(key, None)
+            # Shared entity guards must be dropped with the entries that own them,
+            # otherwise a re-added provider would never recreate those entities.
+            for key in list(hass.data[DOMAIN]):
+                if key.startswith("_health_") or key.startswith("_plk_usage_sensor_"):
+                    hass.data[DOMAIN].pop(key, None)
     return unload_ok
 
 

@@ -12,6 +12,36 @@
 - **KrakĂłw outages** â€” departures keep updating when the stop list or vehicle positions are down
 - **KrakĂłw DST** â€” correct order and times in the October fall-back hour
 - **Vehicle map tiles** â€” OpenStreetMap instead of CARTO, whose basemaps now need an API key (#35). On Home Assistant 2026.9+ tiles come through HA's own tile proxy, so OpenStreetMap never sees your instance's address; older versions load them directly and send your Home Assistant's origin (e.g. `https://xyz.ui.nabu.casa`) as the Referer, which OpenStreetMap requires from browsers. Attribution links open in a new tab
+- **PLK API usage sensor** — created once per Home Assistant instead of once per PLK
+  entry, so several stations no longer log "does not generate unique IDs" on startup (#41)
+- **Deprecated `via_device`** — stop devices are linked to their operator device through
+  `via_device_id` after registration; entity re-adds on HA 2026.9+ no longer raise
+  `RuntimeError` (#27, #44)
+- **Recorder attribute warnings** — `departures`, `last_update` and `timetable` are marked
+  as unrecorded attributes, so large stop attributes no longer trigger the 16 KiB recorder
+  warning (#39)
+- **Departures from all service days** — feeds that only ship `calendar_dates.txt`
+  (Elbląg, Kielce and other api6 exports) are now filtered to the services running today
+  (#32, #33)
+- **Retired zbiorkom CDN feeds** — Lublin, Kielce, Radom, Elbląg, Gorzów, Suwałki,
+  Przemyśl, Rybnik, Kutno, Legnica, Leszno and Wrocław now use `api6-open` static and
+  realtime endpoints. Wrocław schedules work again (#36, #44, #46)
+- **Bytów** — moved from kiedyPrzyjedzie to Time4BUS; existing provider ids keep working (#38)
+- **Bielsko-Biała** — new MZK Bielsko-Biała provider (#16)
+- **Bydgoszcz** — already supported since 1.6.0; added to the supported-operators table (#26)
+- **Offline GTFS fallback** — the last downloaded schedule is stored under
+  `.storage/mzkzg_transport/gtfs/` and served when the upstream feed is unreachable (#18)
+- **Full timetable attribute** — kiedyPrzyjedzie entries can list timetable lines and expose
+  today/tomorrow departures in the `timetable` sensor attribute (#28)
+- **Card destination exclusions and minimum rows** — new `exclude_destinations` and
+  `min_departures` options, per-sensor overrides, and the cap raised to 100 so PLK can show a
+  whole day (#22, #24)
+- **Card lifecycle** — Leaflet assets are shared across cards, the refresh timer only runs
+  while connected, and an open map is disposed with the card (#21)
+- **GTFS concurrency lock** — several stops of one provider now load the archive once instead
+  of racing to parse it in parallel (#20, #21)
+- **GTFS-RT log spam** — malformed/retired realtime feeds are logged at debug level instead
+  of warning on every poll (#44)
 
 ## [1.6.0] â€” unreleased
 

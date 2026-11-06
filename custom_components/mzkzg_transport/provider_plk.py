@@ -10,7 +10,7 @@ import aiohttp
 from homeassistant.helpers.update_coordinator import UpdateFailed
 from homeassistant.util import dt as dt_util
 
-from .const import DOMAIN, PLK_API_BASE, PROVIDER_PLK
+from .const import DOMAIN, MAX_DEPARTURES, PLK_API_BASE, PROVIDER_PLK
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -218,7 +218,7 @@ async def fetch(coord: "MzkzgTransportCoordinator") -> dict:
                 break
 
     departures.sort(key=lambda x: x.get("estimated_time") or "")
-    departures = departures[:30]
+    departures = departures[:MAX_DEPARTURES]
     return {
         "stop_id": coord.stop_id,
         "stop_name": coord.stop_name or f"Stacja {coord.stop_id}",
