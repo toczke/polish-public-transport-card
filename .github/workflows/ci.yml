@@ -112,37 +112,21 @@ jobs:
           category: integration
 
   e2e:
-    name: Card E2E (optional)
+    name: Card E2E
     runs-on: ubuntu-latest
     needs: [frontend]
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: "24"
           cache: npm
-      - name: Check HA availability
-        id: ha
-        env:
-          HA_URL: ${{ secrets.HA_URL || 'http://localhost:8123' }}
-        run: |
-          if curl -sf "$HA_URL/api/" -o /dev/null; then
-            echo "available=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "available=false" >> "$GITHUB_OUTPUT"
-          fi
-      - name: Install browsers
-        if: steps.ha.outputs.available == 'true'
+      - name: Install dependencies and browser
         run: |
           npm ci
           npx playwright install --with-deps chromium
-      - name: Run E2E
-        if: steps.ha.outputs.available == 'true'
+      - name: Run E2E and visual snapshots
         run: npx playwright test
-      - name: Skip E2E
-        if: steps.ha.outputs.available != 'true'
-        run: echo "Home Assistant is not reachable; E2E skipped."
 
   release-gate:
     name: Release gate

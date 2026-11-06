@@ -73,7 +73,7 @@ ha-card {
 .dep-list.columns-3 > .dep-row:nth-child(3n) { border-right: none; }
 .provider-header.line-header { text-transform: none; letter-spacing: 0; font-size: 12px; font-weight: 600; }
 .dep-list { list-style: none; }
-.dep-row { transition: opacity 0.4s, max-height 0.4s, padding 0.4s; max-height: 80px; overflow: hidden; }
+.dep-row { transition: opacity 0.4s, max-height 0.4s, padding 0.4s; max-height: 120px; overflow: hidden; }
 .dep-row.departing { opacity: 0; max-height: 0; padding-top: 0; padding-bottom: 0; }
 ha-card.e-ink .dep-row { transition: none; }
 .tabs { display: flex; overflow-x: auto; scrollbar-width: none; border-bottom: 1px solid var(--divider-color, #e5e5e5); }
@@ -103,7 +103,7 @@ ha-card.e-ink .dep-row { transition: none; }
   flex: 1; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 2px 6px;
 }
 .head-main { display: inline-flex; align-items: center; gap: 6px; width: 100%; min-width: 0; }
-.headsign-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 0 1 auto; min-width: 0; max-width: 100%; }
+.headsign-text { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; white-space: normal; overflow: hidden; line-height: 1.2; flex: 0 1 auto; min-width: 0; max-width: 100%; }
 .icons { display: inline-flex; gap: 3px; align-items: center; flex-shrink: 0; white-space: nowrap; flex-basis: 100%; width: 100%; margin-left: 0; }
 .icons svg { color: var(--mzkzg-muted); opacity: 0.75; }
 .platform { display: inline-flex; align-items: center; justify-content: center; background: var(--mzkzg-chip-bg); color: var(--mzkzg-chip-text); border-radius: 6px; padding: 1px 6px; font-size: 10px; font-weight: 600; letter-spacing: 0.02em; white-space: nowrap; flex-shrink: 0; }
@@ -141,7 +141,7 @@ ha-card.compact .footer { display: none; }
 .time-main.cancelled { font-size: 12px; color: #dc2626; font-weight: 600; }
 .provider-header { color: var(--mzkzg-muted); }
 
-.time-col { text-align: right; flex-shrink: 0; display: flex; flex-direction: column; align-items: flex-end; gap: 1px; }
+.time-col { text-align: right; flex-shrink: 0; display: flex; flex-direction: column; align-items: flex-end; gap: 1px; min-width: 76px; font-variant-numeric: tabular-nums; }
 .time-main { font-size: 15px; font-weight: 600; color: var(--mzkzg-text); white-space: nowrap; }
 .time-struck { text-decoration: line-through; opacity: 0.5; font-size: 13px; font-weight: 400; }
 .time-sub { font-size: 11px; color: var(--mzkzg-muted); white-space: nowrap; display: flex; align-items: center; gap: 4px; }
@@ -152,7 +152,7 @@ ha-card.compact .footer { display: none; }
 .delay-badge.late { color: #dc2626; }
 .delay-badge.early { color: #0369a1; }
 .state-msg { padding: 24px 16px; text-align: center; color: var(--mzkzg-muted); font-size: 13px; }
-.state-msg .icon { font-size: 28px; display: block; margin-bottom: 8px; }
+.state-msg .state-icon { --mdc-icon-size: 32px; color: var(--mzkzg-muted); display: block; margin: 0 auto 8px; }
 .footer { padding: 5px 14px; font-size: 10px; color: var(--mzkzg-muted); text-align: right; border-top: 1px solid var(--mzkzg-divider); }
 .skel { background: var(--divider-color, #e5e5e5); border-radius: 4px; }
 @keyframes shimmer { 0%,100%{opacity:.5} 50%{opacity:1} }

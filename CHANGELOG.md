@@ -19,21 +19,28 @@
 - **Row polish** - live countdown reads `za 11 min`, vehicle numbers use a compact
   `#1040` monospace chip, platform/track stay in one pill while train number and
   carrier are a separate muted line, and accessibility icons sit under the direction
-  as before; stop names expose the full text in a tooltip
+  as before; stop names and long headsigns expose full text in tooltips, and the time
+  column keeps a stable width
 - **Presets** - `compact`, `minimal` and `e-ink` now hide secondary metadata
   consistently (`minimal`/`e-ink` also hide the vehicle number); `native` keeps
   HA-styled chips and only highlights interactive rows on hover
 - **Interactions** - tap / hold / double-tap actions are now editable in the GUI with
   Home Assistant's native action picker, including navigation, URL and service calls
-- **Live map** - vehicle markers show hover tooltips and detail popups, overlapping
-  markers are spread apart, the selected vehicle opens its popup automatically, and
-  the map follows a dark HA theme
-- **Per-sensor editor** - stop-name labels, override reset, row reordering and
-  validation for departure limits and header colour
-- **Per-sensor editor** - the GUI editor now has a second form for per-sensor overrides
-  (routes, destinations, vehicle type, provider, platform/track, max rows, realtime,
-  highlight mode)
+- **Live map** - vehicle markers open one compact detail popup on click, overlapping
+  markers are spread apart, the selected vehicle stays centred at zoom 16, and the
+  map controls/status follow a dark HA theme
+- **Per-sensor editor** - stop-name labels, override reset, row reordering, a live
+  visible-row preview, provider multi-select and validation for departure limits and
+  header colour; editor option labels and section titles are localized
+- **Departure visibility** - `hide_departed` (default `true`) removes rows after their
+  departure time, with `departed_grace_minutes` (default `1`) keeping late vehicles
+  visible briefly
 - **Map discoverability** - rows with a live vehicle position open the map when clicked; the extra row pin icon was removed to keep rows compact
+- **Accessibility** - the map is a modal dialog with focus trap and focus restore,
+  interactive rows expose `role="button"` and descriptive labels, and empty states
+  use Home Assistant icons instead of emoji
+- **Quality gates** - GitHub Actions CI for lint/build/pytest/Playwright, visual
+  snapshot baselines for all five presets, and a permanent map popup/marker test
 - **YAML documentation** - README options table and example config updated with all
   global/per-sensor keys and theme examples
 

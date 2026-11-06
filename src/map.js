@@ -108,12 +108,18 @@ export class VehicleMap {
 
     const overlay = document.createElement("div");
     if (dark) overlay.classList.add("zm-dark");
+    overlay.setAttribute("role", "dialog");
+    overlay.setAttribute("aria-modal", "true");
+    overlay.setAttribute("aria-label", `${t("map_title")}: ${info.route || ""} ${info.headsign || ""}`.trim());
     overlay.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:100000;display:flex;align-items:center;justify-content:center;";
-    overlay.innerHTML = `<div style="position:relative;width:${w}px;height:${h}px;background:${dark ? "#1c1c1e" : "#fff"};border-radius:12px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.3);"><button style="position:absolute;top:8px;right:8px;z-index:1001;background:rgba(0,0,0,0.6);border:none;border-radius:50%;width:32px;height:32px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;color:#fff;">✕</button><div id="vmap" style="width:${w}px;height:${h}px;background:${dark ? "#1c1c1e" : "#fff"};"></div><div id="vmap-status" class="zm-map-status">${escapeHtml(t("map_refresh"))}</div></div>`;
+    overlay.innerHTML = `<div style="position:relative;width:${w}px;height:${h}px;background:${dark ? "#1c1c1e" : "#fff"};border-radius:12px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.3);"><button aria-label="${escapeHtml(t("close"))}" style="position:absolute;top:8px;right:8px;z-index:1001;background:rgba(0,0,0,0.6);border:none;border-radius:50%;width:32px;height:32px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;color:#fff;">✕</button><div id="vmap" style="width:${w}px;height:${h}px;background:${dark ? "#1c1c1e" : "#fff"};"></div><div id="vmap-status" class="zm-map-status">${escapeHtml(t("map_refresh"))}</div></div>`;
+    const previousFocus = document.activeElement;
     document.body.appendChild(overlay);
     const closeMap = () => { if (this.mapCtx) this.mapCtx.destroy(); };
-    overlay.querySelector("button").onclick = closeMap;
+    const closeButton = overlay.querySelector("button");
+    closeButton.onclick = closeMap;
     overlay.onclick = (e) => { if (e.target === overlay) closeMap(); };
+    closeButton.focus();
 
     const container = overlay.querySelector("#vmap");
 
@@ -132,6 +138,7 @@ export class VehicleMap {
       markers: [],
       overlay: overlay,
       onKeyDown: null,
+      previousFocus,
       destroy: () => {
         ctx.destroyed = true;
         if (ctx.interval) clearInterval(ctx.interval);
@@ -139,6 +146,7 @@ export class VehicleMap {
         if (ctx.map) { ctx.map.remove(); ctx.map = null; }
         if (ctx.onKeyDown) { document.removeEventListener("keydown", ctx.onKeyDown); ctx.onKeyDown = null; }
         if (ctx.overlay && ctx.overlay.parentNode) ctx.overlay.parentNode.removeChild(ctx.overlay);
+        if (ctx.previousFocus?.focus) ctx.previousFocus.focus();
         if (this.mapCtx === ctx) this.mapCtx = null;
       },
       entityId: info.entityId,
@@ -148,7 +156,22 @@ export class VehicleMap {
 
     // Wire Escape after ctx exists; referencing ctx before its declaration throws
     // a temporal-dead-zone ReferenceError and leaves the overlay unclosable.
-    ctx.onKeyDown = (e) => { if (e.key === "Escape") closeMap(); };
+    ctx.onKeyDown = (e) => {
+      if (e.key === "Escape") { closeMap(); return; }
+      if (e.key !== "Tab" || !ctx.overlay) return;
+      const focusable = [...ctx.overlay.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')]
+        .filter((el) => !el.disabled && el.getClientRects().length > 0);
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
     document.addEventListener("keydown", ctx.onKeyDown);
 
     const color = routeColor(info.route, info.provider || "", info.route_color);

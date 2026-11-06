@@ -3,6 +3,55 @@ import * as path from 'path';
 
 const SCRIPT = path.resolve('custom_components/mzkzg_transport/www/polish-transport-card.js');
 
+test('editor localizes options, previews rows and uses provider multi-select', async ({ page }) => {
+  await page.goto('about:blank');
+  await page.addScriptTag({ path: SCRIPT });
+  const soon = new Date(Date.now() + 600000).toISOString();
+  const result = await page.evaluate(async ({ soon }) => {
+    document.documentElement.lang = 'pl';
+    const editor: any = document.createElement('polish-transport-card-editor');
+    editor.setConfig({ entities: ['sensor.one'] });
+    editor.hass = {
+      language: 'pl',
+      states: {
+        'sensor.one': {
+          last_updated: '2026-11-06T21:00:00',
+          attributes: {
+            provider: 'ztm_gdansk',
+            stop_name: 'Płocka',
+            departures: [
+              { route: '6', headsign: 'Jelitkowo', estimated_time: soon, theoretical_time: soon, realtime: false },
+              { route: '7', headsign: 'Nowy Port', estimated_time: soon, theoretical_time: soon, realtime: false },
+              { route: '8', headsign: 'Siedlce', estimated_time: soon, theoretical_time: soon, realtime: false },
+            ],
+          },
+        },
+      },
+    };
+    document.body.appendChild(editor);
+    await editor.updateComplete;
+    await new Promise((r) => setTimeout(r, 50));
+    const schema = editor.shadowRoot.querySelector('ha-form')?.schema || [];
+    const flatten = (items: any[]): any[] => items.flatMap((s: any) => s.schema || [s]);
+    const preset = flatten(schema).find((s: any) => s.name === 'display_preset');
+    const filters = schema.find((s: any) => s.title === 'Filtry');
+    const provider = flatten(filters?.schema || []).find((s: any) => s.name === 'filter_providers');
+    return {
+      presetLabels: preset?.selector?.select?.options?.map((o: any) => o.label) || [],
+      sectionTitles: schema.filter((s: any) => s.type === 'expandable').map((s: any) => s.title),
+      providerMultiple: provider?.selector?.select?.multiple === true,
+      providerCount: provider?.selector?.select?.options?.length || 0,
+      preview: editor.shadowRoot.querySelector('.preview')?.textContent?.replace(/\s+/g, ' ').trim() || '',
+    };
+  }, { soon });
+  expect(result.presetLabels).toEqual(expect.arrayContaining(['Standard', 'Kompaktowy', 'Home Assistant', 'E-ink']));
+  expect(result.sectionTitles).toEqual(expect.arrayContaining(['Wiersze', 'Filtry', 'Interakcje']));
+  expect(result.providerMultiple).toBe(true);
+  expect(result.providerCount).toBeGreaterThan(20);
+  expect(result.preview).toContain('Widoczne odjazdy');
+  expect(result.preview).toContain('3 / 3');
+});
+
 test('editor shows global form and per-sensor override form', async ({ page }) => {
   await page.goto('about:blank');
   await page.addScriptTag({ path: SCRIPT });

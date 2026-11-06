@@ -12,6 +12,8 @@ const ICON_BIKE = `<svg viewBox="0 0 24 24" width="14" height="14"><path fill="c
 const ICON_WHEELCHAIR = `<svg viewBox="0 0 24 24" width="14" height="14"><path fill="currentColor" d="M18.4,11.2L14.3,11.4L16.6,8.8C16.8,8.5 16.9,8 16.8,7.5C16.7,7.2 16.6,6.9 16.3,6.7L10.9,3.5C10.5,3.2 9.9,3.3 9.5,3.6L6.8,6.1C6.3,6.6 6.2,7.3 6.7,7.8C7.1,8.3 7.9,8.3 8.4,7.9L10.4,6.1L12.3,7.2L8.1,11.5C8,11.6 8,11.7 7.9,11.7C7.4,11.9 6.9,12.1 6.5,12.4L8,13.9C8.5,13.7 9,13.5 9.5,13.5C11.4,13.5 13,15.1 13,17C13,17.6 12.9,18.1 12.6,18.5L14.1,20C14.7,19.1 15,18.1 15,17C15,15.8 14.6,14.6 13.9,13.7L17.2,13.4L17,18.2C16.9,18.9 17.4,19.4 18.1,19.5H18.2C18.8,19.5 19.3,19 19.4,18.4L19.6,12.5C19.6,12.2 19.5,11.8 19.3,11.6C19,11.3 18.7,11.2 18.4,11.2M18,5.5A2,2 0 0,0 20,3.5A2,2 0 0,0 18,1.5A2,2 0 0,0 16,3.5A2,2 0 0,0 18,5.5M12.5,21.6C11.6,22.2 10.6,22.5 9.5,22.5C6.5,22.5 4,20 4,17C4,15.9 4.3,14.9 4.9,14L6.4,15.5C6.2,16 6,16.5 6,17C6,18.9 7.6,20.5 9.5,20.5C10.1,20.5 10.6,20.4 11,20.1L12.5,21.6Z"/></svg>`;
 const ICON_AC = `<svg viewBox="0 0 24 24" width="14" height="14"><path fill="currentColor" d="M20.79,13.95L18.46,14.57L16.46,13.44V10.56L18.46,9.43L20.79,10.05L21.31,8.12L19.54,7.65L20,5.88L18.07,5.36L17.45,7.69L15.45,8.82L13,7.38V5.12L14.71,3.41L13.29,2L12,3.29L10.71,2L9.29,3.41L11,5.12V7.38L8.5,8.82L6.5,7.69L5.92,5.36L4,5.88L4.47,7.65L2.7,8.12L3.22,10.05L5.55,9.43L7.55,10.56V13.45L5.55,14.58L3.22,13.96L2.7,15.89L4.47,16.36L4,18.12L5.93,18.64L6.55,16.31L8.55,15.18L11,16.62V18.88L9.29,20.59L10.71,22L12,20.71L13.29,22L14.7,20.59L13,18.88V16.62L15.5,15.17L17.5,16.3L18.12,18.63L20,18.12L19.53,16.35L21.3,15.88L20.79,13.95M9.5,10.56L12,9.11L14.5,10.56V13.44L12,14.89L9.5,13.44V10.56Z"/></svg>`;
 
+const stateIcon = (icon) => html`<ha-icon class="state-icon" icon=${icon}></ha-icon>`;
+
 export class MzkzgTransportCard extends LitElement {
   static get properties() {
     return {
@@ -80,6 +82,13 @@ export class MzkzgTransportCard extends LitElement {
       show_refresh: config.show_refresh === true,
       columns: Math.max(1, Math.min(3, parseInt(config.columns) || 1)),
       max_minutes: Math.max(0, Math.min(1440, parseInt(config.max_minutes) || 0)),
+      hide_departed: config.hide_departed !== false,
+      departed_grace_minutes: Math.max(
+        0,
+        Math.min(60, Number.isFinite(parseInt(config.departed_grace_minutes, 10))
+          ? parseInt(config.departed_grace_minutes, 10)
+          : 1)
+      ),
       only_low_floor: config.only_low_floor === true,
       only_bike: config.only_bike === true,
       only_ac: config.only_ac === true,
@@ -225,6 +234,12 @@ export class MzkzgTransportCard extends LitElement {
       if (cfg(d, "only_bike", c.only_bike) && d.bike_allowed !== true) return false;
       if (cfg(d, "only_ac", c.only_ac) && d.air_conditioning !== true) return false;
       if (cfg(d, "only_ticket_machine", c.only_ticket_machine) && d.ticket_machine !== true) return false;
+
+      if (cfg(d, "hide_departed", c.hide_departed)) {
+        const mins = minutesUntil(d.estimated_time || d.theoretical_time);
+        const grace = parseInt(cfg(d, "departed_grace_minutes", c.departed_grace_minutes), 10);
+        if (mins !== null && mins < -(Number.isFinite(grace) ? grace : 1)) return false;
+      }
 
       return true;
     });
@@ -530,7 +545,7 @@ export class MzkzgTransportCard extends LitElement {
 
   _renderDeps() {
     const c = this._config;
-    if (!c.entities?.length) return html`<div class="state-msg"><span class="icon">📍</span>${t("no_entities")}</div>`;
+    if (!c.entities?.length) return html`<div class="state-msg">${stateIcon("mdi:map-marker-off")}${t("no_entities")}</div>`;
 
     if (!this.hass) {
       const skeletonCount = typeof c.min_departures !== 'undefined' && c.min_departures > 0 ? c.min_departures : Math.min(5, c.max_departures || 5);
@@ -548,7 +563,7 @@ export class MzkzgTransportCard extends LitElement {
       const missing = this._getEntityIds().filter(eid => !this.hass.states[eid]);
       if (missing.length) {
         const names = missing.map(e => e.replace("sensor.", "")).join(", ");
-        return html`<div class="state-msg"><span class="icon">⚠️</span>${t("missing_entities")}<br><small>${names}</small></div>`;
+        return html`<div class="state-msg">${stateIcon("mdi:alert-circle-outline")}${t("missing_entities")}<br><small>${names}</small></div>`;
       }
       const unavailable = this._getEntityIds().filter(eid => {
         const s = this.hass.states[eid];
@@ -557,15 +572,15 @@ export class MzkzgTransportCard extends LitElement {
       if (unavailable.length) {
         const hasPlk = unavailable.some(eid => this.hass.states[eid]?.attributes?.provider === "plk_rail");
         const msg = hasPlk ? t("plk_rate_limit") : t("unavailable");
-        return html`<div class="state-msg"><span class="icon">⚠️</span>${msg}</div>`;
+        return html`<div class="state-msg">${stateIcon(hasPlk ? "mdi:cloud-alert-outline" : "mdi:alert-outline")}${msg}</div>`;
       }
       const allDeps = this._getAllDepartures();
       if (allDeps.length) {
         const next = allDeps[0];
         const nextTime = next.estimated_time ? formatTime(next.estimated_time) : "";
-        return html`<div class="state-msg"><span class="icon">🕐</span>${t("no_departures")}<br><small>${nextTime ? `${t("next")}: ${next.route} → ${next.headsign} ${nextTime}` : ""}</small></div>`;
+        return html`<div class="state-msg">${stateIcon("mdi:clock-outline")}${t("no_departures")}<br><small>${nextTime ? `${t("next")}: ${next.route} → ${next.headsign} ${nextTime}` : ""}</small></div>`;
       }
-      return html`<div class="state-msg"><span class="icon">⏳</span>${t("no_departures")}</div>`;
+      return html`<div class="state-msg">${stateIcon("mdi:timer-sand-empty")}${t("no_departures")}</div>`;
     }
     const tapAction = this._resolveActionConfig("tap").action || "none";
     const holdAction = this._resolveActionConfig("hold").action || "none";
@@ -652,17 +667,21 @@ export class MzkzgTransportCard extends LitElement {
       const cleanStopName = (d._stopName || "").replace(/\s*\(?(bus|tramwaj|tram|train|skm)\)?\s*/gi, " ").trim();
 
       const isInteractive = hasPos || hasExplicitActions;
+      const rowTime = formatTime(d.estimated_time || d.theoretical_time);
+      const rowLabel = `${d.route} → ${d.headsign || ""}${rowTime ? `, ${rowTime}` : ""}${hasPos ? `, ${t("show_on_map")}` : ""}`;
 
       return html`
         <div class="dep-row ${isInteractive ? 'interactive' : ''} ${imminent ? 'imminent' : ''} ${d._dimmed ? 'dimmed' : ''} ${cancelled ? 'cancelled' : ''}"
              tabindex=${isInteractive ? "0" : "-1"}
+             role=${isInteractive ? "button" : nothing}
+             aria-label=${isInteractive ? rowLabel : nothing}
              @click=${(e) => this._onRowClick(e, d)}
              @dblclick=${(e) => this._onRowDblClick(e, d)}
              @contextmenu=${(e) => this._onRowContext(e, d)}
              @keydown=${(e) => { if(e.key==="Enter" || e.key===" ") { e.preventDefault(); this._onRowClick(e, d); }}}>
           <span class="badge" style="background:${routeColor(d.route, d._provider || d.provider, d.route_color)}">${d.route}</span>
           <span class="headsign">
-            <span class="head-main"><span class="headsign-text">${d.headsign}</span>${vehicleChip}</span>
+            <span class="head-main"><span class="headsign-text" title=${d.headsign}>${d.headsign}</span>${vehicleChip}</span>
             ${metaRow}
             ${showStop ? html`<span class="stop-name" title=${cleanStopName}>${cleanStopName}</span>` : nothing}
           </span>

@@ -186,13 +186,77 @@ test('rows without live position are not clickable', async ({ page }) => {
       staticTabindex: staticRow.getAttribute('tabindex'),
       liveInteractive: liveRow.classList.contains('interactive'),
       liveTabindex: liveRow.getAttribute('tabindex'),
+      staticRole: staticRow.getAttribute('role'),
+      staticAria: staticRow.getAttribute('aria-label'),
+      liveRole: liveRow.getAttribute('role'),
+      liveAria: liveRow.getAttribute('aria-label'),
     };
   }, { departures });
   expect(result.moreInfo).toBe(0);
   expect(result.staticInteractive).toBe(false);
   expect(result.staticTabindex).toBe('-1');
+  expect(result.staticRole).toBeNull();
+  expect(result.staticAria).toBeNull();
   expect(result.liveInteractive).toBe(true);
   expect(result.liveTabindex).toBe('0');
+  expect(result.liveRole).toBe('button');
+  expect(result.liveAria).toContain('→');
+});
+
+test('departed rows are hidden by default and can be re-enabled', async ({ page }) => {
+  await page.goto('about:blank');
+  await page.addScriptTag({ path: SCRIPT });
+  const past = new Date(Date.now() - 5 * 60000).toISOString();
+  const future = new Date(Date.now() + 5 * 60000).toISOString();
+  const departures = [
+    { route: '6', headsign: 'Future', estimated_time: future, theoretical_time: future, realtime: false },
+    { route: '7', headsign: 'Past', estimated_time: past, theoretical_time: past, realtime: false },
+  ];
+  const counts = await page.evaluate(async ({ departures }) => {
+    const make = async (config: any) => {
+      const card: any = document.createElement('polish-transport-card');
+      card.setConfig(config);
+      document.body.appendChild(card);
+      card.hass = {
+        locale: { language: 'pl' },
+        states: { 'sensor.test': { last_updated: 'x', attributes: { provider: 'ztm_gdansk', stop_name: 'Test', departures } } },
+      };
+      await card.updateComplete;
+      const count = card.shadowRoot.querySelectorAll('.dep-row').length;
+      card.remove();
+      return count;
+    };
+    return {
+      byDefault: await make({ entities: ['sensor.test'] }),
+      disabled: await make({ entities: ['sensor.test'], hide_departed: false }),
+      perSensor: await make({ entities: [{ entity: 'sensor.test', hide_departed: false }] }),
+    };
+  }, { departures });
+  expect(counts.byDefault).toBe(1);
+  expect(counts.disabled).toBe(2);
+  expect(counts.perSensor).toBe(2);
+});
+
+test('empty states use ha-icon instead of emoji', async ({ page }) => {
+  await page.goto('about:blank');
+  await page.addScriptTag({ path: SCRIPT });
+  const result = await page.evaluate(async () => {
+    document.documentElement.lang = 'pl';
+    const card: any = document.createElement('polish-transport-card');
+    card.setConfig({ entities: [] });
+    document.body.appendChild(card);
+    card.hass = { locale: { language: 'pl' }, states: {} };
+    await card.updateComplete;
+    const message = card.shadowRoot.querySelector('.state-msg');
+    return {
+      hasIcon: Boolean(message?.querySelector('ha-icon.state-icon')),
+      text: message?.textContent?.trim() || '',
+      emoji: /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(message?.textContent || ''),
+    };
+  });
+  expect(result.hasIcon).toBe(true);
+  expect(result.emoji).toBe(false);
+  expect(result.text).toContain('encje');
 });
 
 test('prefix headsign duplicates are merged in the card', async ({ page }) => {
@@ -206,7 +270,7 @@ test('prefix headsign duplicates are merged in the card', async ({ page }) => {
   ];
   const result = await page.evaluate(async ({ departures }) => {
     const card: any = document.createElement('polish-transport-card');
-    card.setConfig({ entities: ['sensor.test'], hide_terminus: false });
+    card.setConfig({ entities: ['sensor.test'], hide_terminus: false, hide_departed: false });
     document.body.appendChild(card);
     card.hass = {
       locale: { language: 'pl' },

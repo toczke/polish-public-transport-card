@@ -33,6 +33,8 @@ export const LOCALE = {
     train_no: "nr",
     trains: "Pociągi (SKM/IC/PR)",
     map_refresh: "Odświeżanie co 30 s",
+    map_title: "Mapa pojazdu",
+    close: "Zamknij",
     on_time: "o czasie",
     no_route: "?",
     editor_data: "Dane",
@@ -67,6 +69,8 @@ export const LOCALE = {
     train_no: "No.",
     trains: "Trains (SKM/IC/PR)",
     map_refresh: "Refreshing every 30 s",
+    map_title: "Vehicle map",
+    close: "Close",
     on_time: "on time",
     no_route: "?",
     editor_data: "Data",
@@ -235,6 +239,8 @@ export function normalizeEntityEntry(item) {
   if ("hide_terminus" in item) entry.hide_terminus = item.hide_terminus === true;
   if ("hide_cancelled" in item) entry.hide_cancelled = item.hide_cancelled === true;
   if ("max_minutes" in item) entry.max_minutes = Math.max(0, Math.min(1440, parseInt(item.max_minutes) || 0));
+  if ("hide_departed" in item) entry.hide_departed = item.hide_departed === true;
+  if ("departed_grace_minutes" in item) entry.departed_grace_minutes = Math.max(0, Math.min(60, parseInt(item.departed_grace_minutes) || 0));
   if ("only_low_floor" in item) entry.only_low_floor = item.only_low_floor === true;
   if ("only_bike" in item) entry.only_bike = item.only_bike === true;
   if ("only_ac" in item) entry.only_ac = item.only_ac === true;

@@ -252,6 +252,8 @@ The card registers itself automatically. In the Lovelace UI: **Add Card → Poli
 | `hide_terminus` | bool | `true` | Hide departures ending at this stop |
 | `hide_cancelled` | bool | `false` | Hide cancelled departures |
 | `realtime_only` | bool | `false` | Show only realtime departures |
+| `hide_departed` | bool | `true` | Hide rows after their departure time (+ grace) |
+| `departed_grace_minutes` | int | `1` | Minutes a departed row may stay visible |
 | `max_minutes` | int | `0` | Show only departures within this many minutes (`0` = no limit) |
 | `only_low_floor` | bool | `false` | Show only low-floor vehicles |
 | `only_bike` | bool | `false` | Show only vehicles with bike space |
@@ -264,7 +266,9 @@ The card registers itself automatically. In the Lovelace UI: **Add Card → Poli
 All filters and `max_departures` can be overridden per sensor. The visual editor exposes
 both a global form and a **per-sensor override** form (including stop-name labels,
 override reset and row ordering); the same structure is accepted in YAML. Tap, hold and
-double-tap actions are editable with Home Assistant's native action picker.
+double-tap actions are editable with Home Assistant's native action picker. The editor
+also shows how many rows remain visible after filtering; providers use a multi-select
+of known operators.
 
 ### Card presets
 
@@ -316,9 +320,19 @@ hold_action:
 ```bash
 pip install -r requirements_test.txt
 PYTHONPATH=custom_components:$PYTHONPATH pytest tests/ -q
+
+npm ci
+npm run lint
+npm run build
+npx playwright test
 ```
 
-**90 tests** covering GTFS-RT parsing, calendar filtering, position matching, route fallback, speed normalization, deduplication, and provider-specific integration.
+**151 Python tests** cover GTFS-RT parsing, calendar filtering, position matching,
+route fallback, speed normalization, deduplication and provider-specific integration.
+**21 Playwright tests** cover card config, filters, the editor, the live-map popup,
+accessibility and visual snapshots for all five presets. Update visual baselines with
+`npx playwright test tests/e2e/visual-presets.spec.ts --update-snapshots`. CI runs
+lint, build, Python and Playwright on every push and pull request.
 
 ---
 

@@ -104,6 +104,8 @@ entities:
   - entity: sensor.centrum_01_odjazdy
     max_minutes: 30
     only_low_floor: true
+hide_departed: true
+departed_grace_minutes: 1
 
 ---
 # ── E-ink preset (black & white, no animations) ──────────────────────────

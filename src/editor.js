@@ -1,7 +1,11 @@
 import { LitElement, html, css, nothing } from 'lit';
-import { normalizeEntityEntry, normalizeList } from './utils.js';
+import { normalizeEntityEntry, normalizeList, PROVIDER_LABELS } from './utils.js';
 
 const SELECT = (options) => ({ select: { options } });
+const MULTI_SELECT = (options) => ({ select: { multiple: true, options } });
+const PROVIDER_OPTIONS = Object.entries(PROVIDER_LABELS)
+  .map(([value, label]) => ({ value, label }))
+  .sort((a, b) => a.label.localeCompare(b.label, "pl"));
 
 const SCHEMA = [
   { name: "entities", selector: { entity: { multiple: true, domain: "sensor" } } },
@@ -18,16 +22,16 @@ const SCHEMA = [
     name: "",
     schema: [
       { name: "display_preset", selector: SELECT([
-        { value: "standard", label: "Standard" },
-        { value: "compact", label: "Compact" },
-        { value: "minimal", label: "Minimal" },
-        { value: "native", label: "Home Assistant" },
-        { value: "e_ink", label: "E-ink" },
+        { value: "standard", label: "preset_standard" },
+        { value: "compact", label: "preset_compact" },
+        { value: "minimal", label: "preset_minimal" },
+        { value: "native", label: "preset_native" },
+        { value: "e_ink", label: "preset_eink" },
       ]) },
       { name: "view_mode", selector: SELECT([
-        { value: "mixed", label: "Mixed" },
-        { value: "tabs", label: "Tabs" },
-        { value: "grouped", label: "Group by line" },
+        { value: "mixed", label: "view_mixed" },
+        { value: "tabs", label: "view_tabs" },
+        { value: "grouped", label: "view_grouped" },
       ]) },
       { name: "columns", selector: { number: { min: 1, max: 3, mode: "box" } } },
     ],
@@ -37,9 +41,9 @@ const SCHEMA = [
     name: "",
     schema: [
       { name: "header_style", selector: SELECT([
-        { value: "provider", label: "Provider color" },
-        { value: "theme", label: "Home Assistant theme" },
-        { value: "custom", label: "Custom color" },
+        { value: "provider", label: "header_provider" },
+        { value: "theme", label: "header_theme" },
+        { value: "custom", label: "header_custom" },
       ]) },
       { name: "header_color", selector: { text: { type: "color" } } },
       { name: "show_header", selector: { boolean: {} } },
@@ -55,15 +59,15 @@ const SCHEMA = [
       { name: "min_departures", selector: { number: { min: 0, max: 100, mode: "box" } } },
       { name: "refresh_interval", selector: { number: { min: 10, max: 600, mode: "box", unit_of_measurement: "s" } } },
       { name: "time_format", selector: SELECT([
-        { value: "auto", label: "Auto (Home Assistant)" },
-        { value: "24h", label: "24-hour" },
-        { value: "12h", label: "12-hour" },
+        { value: "auto", label: "time_auto" },
+        { value: "24h", label: "time_24h" },
+        { value: "12h", label: "time_12h" },
       ]) },
     ],
   },
   {
     type: "expandable",
-    title: "Rows",
+    title: "section_rows",
     schema: [
       { name: "show_delays", selector: { boolean: {} } },
       { name: "show_countdown", selector: { boolean: {} } },
@@ -81,14 +85,14 @@ const SCHEMA = [
   },
   {
     type: "expandable",
-    title: "Filters",
+    title: "section_filters",
     schema: [
       { name: "filter_routes", selector: { text: { multiple: true } } },
       { name: "exclude_routes", selector: { text: { multiple: true } } },
       { name: "destination_filter", selector: { text: { multiple: true } } },
       { name: "exclude_destinations", selector: { text: { multiple: true } } },
       { name: "filter_vehicle_types", selector: { text: { multiple: true } } },
-      { name: "filter_providers", selector: { text: { multiple: true } } },
+      { name: "filter_providers", selector: MULTI_SELECT(PROVIDER_OPTIONS) },
       { name: "filter_platform", selector: { text: {} } },
       { name: "filter_track", selector: { text: {} } },
       { name: "highlight_mode", selector: { boolean: {} } },
@@ -96,6 +100,8 @@ const SCHEMA = [
       { name: "hide_cancelled", selector: { boolean: {} } },
       { name: "realtime_only", selector: { boolean: {} } },
       { name: "max_minutes", selector: { number: { min: 0, max: 1440, mode: "box", unit_of_measurement: "min" } } },
+      { name: "hide_departed", selector: { boolean: {} } },
+      { name: "departed_grace_minutes", selector: { number: { min: 0, max: 60, mode: "box", unit_of_measurement: "min" } } },
       { name: "only_low_floor", selector: { boolean: {} } },
       { name: "only_bike", selector: { boolean: {} } },
       { name: "only_ac", selector: { boolean: {} } },
@@ -104,7 +110,7 @@ const SCHEMA = [
   },
   {
     type: "expandable",
-    title: "Interactions",
+    title: "section_interactions",
     schema: [
       { name: "tap_action", selector: { ui_action: {} } },
       { name: "hold_action", selector: { ui_action: {} } },
@@ -123,14 +129,14 @@ const OVERRIDE_SCHEMA = [
   },
   {
     type: "expandable",
-    title: "Filters",
+    title: "section_filters",
     schema: [
       { name: "filter_routes", selector: { text: { multiple: true } } },
       { name: "exclude_routes", selector: { text: { multiple: true } } },
       { name: "destination_filter", selector: { text: { multiple: true } } },
       { name: "exclude_destinations", selector: { text: { multiple: true } } },
       { name: "filter_vehicle_types", selector: { text: { multiple: true } } },
-      { name: "filter_providers", selector: { text: { multiple: true } } },
+      { name: "filter_providers", selector: MULTI_SELECT(PROVIDER_OPTIONS) },
       { name: "filter_platform", selector: { text: {} } },
       { name: "filter_track", selector: { text: {} } },
       { name: "highlight_mode", selector: { boolean: {} } },
@@ -138,6 +144,8 @@ const OVERRIDE_SCHEMA = [
       { name: "hide_cancelled", selector: { boolean: {} } },
       { name: "realtime_only", selector: { boolean: {} } },
       { name: "max_minutes", selector: { number: { min: 0, max: 1440, mode: "box", unit_of_measurement: "min" } } },
+      { name: "hide_departed", selector: { boolean: {} } },
+      { name: "departed_grace_minutes", selector: { number: { min: 0, max: 60, mode: "box", unit_of_measurement: "min" } } },
       { name: "only_low_floor", selector: { boolean: {} } },
       { name: "only_bike", selector: { boolean: {} } },
       { name: "only_ac", selector: { boolean: {} } },
@@ -206,10 +214,13 @@ export class MzkzgTransportCardEditor extends LitElement {
       font-size: 12px;
     }
     .validation ul { margin: 0; padding-left: 16px; }
+    .preview { font-size: 12px; color: var(--secondary-text-color); }
+    .preview strong { color: var(--primary-text-color); }
   `;
 
   setConfig(config) {
     this._config = { ...config };
+    this._previewCache = null;
     const entries = this._entries();
     if (!this._targetEntity || !entries.some(e => e.entity === this._targetEntity)) {
       this._targetEntity = entries[0]?.entity || "";
@@ -228,6 +239,65 @@ export class MzkzgTransportCardEditor extends LitElement {
 
   _selectedEntry() {
     return this._entries().find(e => e.entity === this._targetEntity) || null;
+  }
+
+  _lang() {
+    return (this.hass?.language || document.documentElement.lang || "en").slice(0, 2);
+  }
+
+  _localizeSchema(schema) {
+    return schema.map((item) => {
+      if (item.type === "expandable") {
+        return {
+          ...item,
+          title: this._label(item.title),
+          schema: this._localizeSchema(item.schema || []),
+        };
+      }
+      if (item.schema) {
+        return { ...item, schema: this._localizeSchema(item.schema) };
+      }
+      const select = item.selector?.select;
+      if (select?.options) {
+        return {
+          ...item,
+          selector: {
+            select: {
+              ...select,
+              options: select.options.map((opt) => ({ ...opt, label: this._label(opt.label) })),
+            },
+          },
+        };
+      }
+      return item;
+    });
+  }
+
+  _preview() {
+    if (!this.hass || !this._config?.entities?.length) return null;
+    const ids = this._entries().map((e) => e.entity);
+    const statesKey = ids
+      .map((id) => `${id}:${this.hass.states?.[id]?.last_updated || ""}`)
+      .join("|");
+    const key = JSON.stringify(this._config) + "|" + statesKey;
+    if (this._previewCache?.key === key) return this._previewCache.value;
+    let total = 0;
+    for (const id of ids) {
+      total += (this.hass.states?.[id]?.attributes?.departures || []).length;
+    }
+    let filtered = null;
+    try {
+      const card = document.createElement("polish-transport-card");
+      card.vehicleMap.preloadLeaflet = () => Promise.resolve();
+      card.setConfig({ ...this._config });
+      card.hass = this.hass;
+      filtered = card._getDepartures().length;
+    } catch {
+      // Keep null when the preview cannot be computed.
+    }
+    const value = { total, filtered };
+    this._previewCache = { key, value };
+    return value;
   }
 
   _valueChanged(ev) {
@@ -324,6 +394,9 @@ export class MzkzgTransportCardEditor extends LitElement {
     if (!this.hass || !this._config) return nothing;
     const entries = this._entries();
     const errors = this._validation();
+    const preview = this._preview();
+    const schema = this._localizeSchema(SCHEMA);
+    const overrideSchema = this._localizeSchema(OVERRIDE_SCHEMA);
     const targetIndex = entries.findIndex(e => e.entity === this._targetEntity);
     return html`
       <div class="editor">
@@ -332,10 +405,13 @@ export class MzkzgTransportCardEditor extends LitElement {
             <ul>${errors.map(e => html`<li>${e}</li>`)}</ul>
           </div>
         ` : nothing}
+        ${preview ? html`
+          <div class="preview">${this._label("preview_rows")}: <strong>${preview.filtered ?? "—"}</strong> / ${preview.total}</div>
+        ` : nothing}
         <ha-form
           .hass=${this.hass}
           .data=${this._formData()}
-          .schema=${SCHEMA}
+          .schema=${schema}
           .computeLabel=${(schema) => this._computeLabel(schema)}
           @value-changed=${this._valueChanged}
         ></ha-form>
@@ -354,7 +430,7 @@ export class MzkzgTransportCardEditor extends LitElement {
             <ha-form
               .hass=${this.hass}
               .data=${this._selectedEntry() || {}}
-              .schema=${OVERRIDE_SCHEMA}
+              .schema=${overrideSchema}
               .computeLabel=${(schema) => this._computeLabel(schema)}
               @value-changed=${this._overrideChanged}
             ></ha-form>
@@ -417,6 +493,26 @@ export class MzkzgTransportCardEditor extends LitElement {
       tap_action: "Kliknięcie",
       hold_action: "Przytrzymanie",
       double_tap_action: "Podwójne kliknięcie",
+      section_rows: "Wiersze",
+      section_filters: "Filtry",
+      section_interactions: "Interakcje",
+      preset_standard: "Standard",
+      preset_compact: "Kompaktowy",
+      preset_minimal: "Minimalny",
+      preset_native: "Home Assistant",
+      preset_eink: "E-ink",
+      view_mixed: "Mieszany",
+      view_tabs: "Zakładki",
+      view_grouped: "Grupuj po linii",
+      header_provider: "Kolor przewoźnika",
+      header_theme: "Motyw Home Assistant",
+      header_custom: "Własny kolor",
+      time_auto: "Automatyczny (Home Assistant)",
+      time_24h: "24-godzinny",
+      time_12h: "12-godzinny",
+      hide_departed: "Ukryj odjazdy po czasie",
+      departed_grace_minutes: "Bufor po odjeździe",
+      preview_rows: "Widoczne odjazdy",
       override_title: "Nadpisania per sensor",
       override_hint: "Puste pola dziedziczą ustawienia globalne.",
       move_up: "W górę",
@@ -473,6 +569,26 @@ export class MzkzgTransportCardEditor extends LitElement {
       tap_action: "Tap",
       hold_action: "Hold",
       double_tap_action: "Double tap",
+      section_rows: "Rows",
+      section_filters: "Filters",
+      section_interactions: "Interactions",
+      preset_standard: "Standard",
+      preset_compact: "Compact",
+      preset_minimal: "Minimal",
+      preset_native: "Home Assistant",
+      preset_eink: "E-ink",
+      view_mixed: "Mixed",
+      view_tabs: "Tabs",
+      view_grouped: "Group by line",
+      header_provider: "Provider color",
+      header_theme: "Home Assistant theme",
+      header_custom: "Custom color",
+      time_auto: "Auto (Home Assistant)",
+      time_24h: "24-hour",
+      time_12h: "12-hour",
+      hide_departed: "Hide departed",
+      departed_grace_minutes: "Post-departure grace",
+      preview_rows: "Visible departures",
       override_title: "Per-sensor overrides",
       override_hint: "Empty fields inherit the global settings.",
       move_up: "Move up",
