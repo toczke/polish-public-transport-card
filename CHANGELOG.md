@@ -1,6 +1,16 @@
 # Changelog
 
-## [Unreleased]
+## [1.6.7] - 2026-11-06
+
+### Added
+- **Beta 1.6.x features** - PLK delay binary sensor, native route colors, `refresh_gtfs`
+  service, walking distance/time attributes, English card editor, advanced OptionsFlow
+  filters and parallel GTFS downloads
+- **Bielsko-Biała** provider, **Bytów** on Time4BUS, `timetable` attribute for
+  kiedyPrzyjedzie full-day schedules
+- **Card** `exclude_destinations`, `min_departures`, per-sensor overrides and
+  OpenStreetMap/HA `map_tiles` basemap support
+
 
 ### Changed
 - **ZTP KrakĂłw â†’ zbiorkom.live api6-open** â€” departures, stops and vehicle positions from `api.zbiorkom.live/api6-open/krakow` (4.8 API is being retired, #37). Existing stops switch to api6 ids automatically; entity ids and history are kept

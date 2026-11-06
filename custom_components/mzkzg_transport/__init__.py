@@ -82,6 +82,20 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         await _register_card(hass)
         domain_data["_card_registered"] = True
 
+    if not hass.services.has_service(DOMAIN, "refresh_gtfs"):
+        async def handle_refresh_gtfs(call):
+            provider = call.data.get("provider")
+            gtfs_cache = hass.data[DOMAIN].get("_gtfsrt_cache", {})
+            if provider:
+                keys_to_remove = [k for k in gtfs_cache if k.startswith(provider)]
+                for k in keys_to_remove:
+                    gtfs_cache.pop(k, None)
+            else:
+                gtfs_cache.clear()
+            _LOGGER.info("GTFS cache cleared%s", f" for {provider}" if provider else "")
+        
+        hass.services.async_register(DOMAIN, "refresh_gtfs", handle_refresh_gtfs)
+
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 

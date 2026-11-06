@@ -97,10 +97,17 @@ class MzkzgTransportSensor(CoordinatorEntity, SensorEntity):
             "stop_name": data.get("stop_name"),
             "provider": data.get("provider"),
             "last_update": data.get("last_update"),
-            "departures": data.get("departures", []),
         }
         if data.get("timetable"):
             attrs["timetable"] = data["timetable"]
+        if "walking_distance_m" in data:
+            attrs["walking_distance_m"] = data["walking_distance_m"]
+            attrs["walking_time_min"] = data["walking_time_min"]
+            if hasattr(self.coordinator, "stop_lat") and self.coordinator.stop_lat is not None:
+                attrs["latitude"] = self.coordinator.stop_lat
+                attrs["longitude"] = self.coordinator.stop_lon
+
+        attrs["departures"] = data.get("departures", [])
         return attrs
 
 
@@ -138,13 +145,21 @@ class MzkzgAggregatedSensor(SensorEntity):
     def extra_state_attributes(self) -> dict:
         deps = self._merged_departures()
         data = self._coordinators[0].data if self._coordinators else {}
-        return {
+        attrs = {
             "stop_id": "|".join(c.stop_id for c in self._coordinators),
             "stop_name": data.get("stop_name", ""),
             "provider": data.get("provider", ""),
             "last_update": data.get("last_update", ""),
-            "departures": deps,
         }
+        
+        # Calculate min walking distance across all aggregated stops
+        min_dist = min((c.data.get("walking_distance_m") for c in self._coordinators if c.data and "walking_distance_m" in c.data), default=None)
+        if min_dist is not None:
+            attrs["walking_distance_m"] = min_dist
+            attrs["walking_time_min"] = min((c.data.get("walking_time_min") for c in self._coordinators if c.data and "walking_time_min" in c.data), default=0)
+
+        attrs["departures"] = deps
+        return attrs
 
     def _merged_departures(self) -> list:
         all_deps = []

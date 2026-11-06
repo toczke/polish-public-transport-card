@@ -286,7 +286,7 @@ async def _load_gtfs(coord, session=None) -> dict | None:
                     mapping.setdefault(stop_id, []).append(stop_id)
 
         # Parse full GTFS schedule
-        from .provider_gtfsrt import _parse_gtfs_zip
+        from .gtfsrt_parser import _parse_gtfs_zip
         gtfs = await coord.hass.async_add_executor_job(_parse_gtfs_zip, zip_bytes)
 
         result = {"stop_mapping": mapping, "gtfs": gtfs, "_date": today}
@@ -426,7 +426,7 @@ async def _get_gtfs_zip(coord, session=None) -> bytes | None:
 
 def _get_gtfs_stop_departures(gtfs: dict, gtfs_stop_id: str, now, coord) -> list:
     """Get scheduled departures from GTFS for a specific stop (within _GTFS_MAX_HOURS)."""
-    from .provider_gtfsrt import _parse_stop_times_for
+    from .gtfsrt_parser import _parse_stop_times_for
 
     stop_id_key = str(gtfs_stop_id)
     if stop_id_key not in gtfs.get("stop_times", {}):

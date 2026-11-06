@@ -1,7 +1,7 @@
 # Polish Public Transport Card
 
 [![HACS](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
-[![Version](https://img.shields.io/badge/version-1.5.0-blue.svg)](https://github.com/toczke/polish-public-transport-card/releases)
+[![Version](https://img.shields.io/badge/version-1.6.7-blue.svg)](https://github.com/toczke/polish-public-transport-card/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Tests](https://img.shields.io/badge/tests-90%20passed-success.svg)]()
 
@@ -136,21 +136,17 @@ When a departure includes GPS coordinates, clicking the row opens a Leaflet map 
 
 ---
 
-## What's New in 1.5.0
+## What's New in 1.6.7
 
-- **Live vehicle map for all GTFS-RT cities** — GPS enrichment via `vehicle_code`, `trip_id`, and `route_id` fallback matching
-- **Łódź switched to official GTFS-RT** — uses `otwarte.miasto.lodz.pl` feeds with 100% trip_id overlap
-- **Łódź bus stop groups** — 120 transfer hubs from `GetMapBusStopGroupList` API, selectable as single aggregated sensors
-- **6 api6‑open cities activated** — Białystok, Częstochowa, Olsztyn, Opole, Rzeszów, Toruń now have RT delays + GPS
-- **New providers** — Toruń, Wrocław, Ełk (all with GPS)
-- **Route‑level RT fallback** — cities with mismatched GTFS/RT trip_ids (Poznań, Wrocław) now receive delays via route matching
-- **Speed normalization** — all providers report vehicle speed in km/h; protobuf `HasField` compatibility fixes
-- **GPS without vehicle_code** — positions fetched even when RT trip_updates are unavailable
-- **Calendar resilience** — GTFS feeds that don't cover today's weekday fall back to showing all scheduled departures
-- **Blocking I/O fixes** — file operations moved to executor threads
-- **Config flow improvements** — HH:MM validation on sleep times, DRY provider options
-- **Resilient setup** — individual stop failures in multi-stop entries don't block sibling stops
-- **Minimal map markers** — clean circle + arrow design without popup or pulse animation
+- **Kraków on zbiorkom.live api6-open** — new stop picker (all tram platforms and agglomeration stops), brigade/next-stop GPS matching and automatic legacy stop-id migration
+- **Wrocław and 11 api6 feeds fixed** — Lublin, Kielce, Radom, Elbląg, Gorzów, Suwałki, Przemyśl, Rybnik, Kutno, Legnica and Leszno now use static + realtime api6 endpoints
+- **Correct service-day filtering** — feeds with only `calendar_dates.txt` no longer show departures from other weekdays
+- **New providers** — MZK Bielsko-Biała and Bytów (moved to Time4BUS)
+- **Memory/OOM work** — streamed GTFS parsing, executor offload, a per-provider load lock and parallel archive downloads
+- **Offline GTFS fallback** — the last schedule is kept on disk and served when the source is unavailable
+- **Beta 1.6 features** — PLK delay sensor, route colors, `refresh_gtfs` service, walking distance/time, English editor and advanced OptionsFlow filters
+- **Card** — OpenStreetMap through HA `map_tiles`, `exclude_destinations`, `min_departures`, max rows up to 100 and per-sensor overrides
+- **Reliability** — PLK 429 backoff, TLS verification everywhere, single shared PLK usage sensor, recorder-friendly attributes and fixed translation placeholders
 
 ---
 

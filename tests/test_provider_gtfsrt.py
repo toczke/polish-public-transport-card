@@ -8,15 +8,20 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from mzkzg_transport.provider_gtfsrt import (
+    _get_rt_delays,
+    fetch,
+)
+from mzkzg_transport.gtfsrt_gzm import (
     _calendar_covers,
     _get_gzm_gtfs_url,
+    _peek_zip_member,
+)
+from mzkzg_transport.gtfsrt_parser import (
     _parse_gtfs_zip,
     _parse_stop_times_for,
-    _peek_zip_member,
-    _get_rt_delays,
+    _read_csv,
     _parse_rt_feed,
     _parse_gtfsrt_positions,
-    fetch,
 )
 
 
@@ -59,6 +64,17 @@ def _today_str():
 
 def _day_name():
     return ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"][date.today().weekday()]
+
+
+def test_read_csv_streams_rows_from_zip():
+    """Large GTFS members are not materialized as a list or decoded string."""
+    data = _make_gtfs_zip(stops="stop_id,stop_name\nS1,First\nS2,Second")
+
+    with zipfile.ZipFile(BytesIO(data)) as zf:
+        header, rows = _read_csv(zf, "stops.txt")
+        assert header == ["stop_id", "stop_name"]
+        assert not isinstance(rows, list)
+        assert list(rows) == [["S1", "First"], ["S2", "Second"]]
 
 
 def _calendar_line(service_id, active_today=True):
@@ -746,7 +762,7 @@ def test_apply_positions_multiple_vehicles_same_route():
 def test_parse_gtfsrt_positions_includes_route_id():
     """_parse_gtfsrt_positions stores route_id from trip.route_id."""
     from google.transit import gtfs_realtime_pb2
-    from mzkzg_transport.provider_gtfsrt import _parse_gtfsrt_positions
+    from mzkzg_transport.gtfsrt_parser import _parse_gtfsrt_positions
 
     feed = gtfs_realtime_pb2.FeedMessage()
     feed.header.gtfs_realtime_version = "2.0"
@@ -832,7 +848,7 @@ class TestParseGtfsrtPositionsRouteId:
 
     def test_route_id_extracted_when_trip_present(self):
         from google.transit import gtfs_realtime_pb2
-        from mzkzg_transport.provider_gtfsrt import _parse_gtfsrt_positions
+        from mzkzg_transport.gtfsrt_parser import _parse_gtfsrt_positions
 
         feed = gtfs_realtime_pb2.FeedMessage()
         feed.header.gtfs_realtime_version = "2.0"
@@ -848,7 +864,7 @@ class TestParseGtfsrtPositionsRouteId:
 
     def test_route_id_absent_when_no_trip(self):
         from google.transit import gtfs_realtime_pb2
-        from mzkzg_transport.provider_gtfsrt import _parse_gtfsrt_positions
+        from mzkzg_transport.gtfsrt_parser import _parse_gtfsrt_positions
 
         feed = gtfs_realtime_pb2.FeedMessage()
         feed.header.gtfs_realtime_version = "2.0"
@@ -863,7 +879,7 @@ class TestParseGtfsrtPositionsRouteId:
 
     def test_vehicle_id_strips_operator_prefix(self):
         from google.transit import gtfs_realtime_pb2
-        from mzkzg_transport.provider_gtfsrt import _parse_gtfsrt_positions
+        from mzkzg_transport.gtfsrt_parser import _parse_gtfsrt_positions
 
         feed = gtfs_realtime_pb2.FeedMessage()
         feed.header.gtfs_realtime_version = "2.0"

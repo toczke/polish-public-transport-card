@@ -17,7 +17,8 @@ from mzkzg_transport.const import (
 )
 from mzkzg_transport.coordinator import MzkzgTransportCoordinator
 from mzkzg_transport.gtfs_provider import GtfsData, get_gtfs_data
-from mzkzg_transport.binary_sensor import MzkzgDelayBinarySensor, DELAY_THRESHOLD_SECONDS
+from mzkzg_transport.binary_sensor import MzkzgPlkDelayBinarySensor
+from mzkzg_transport.const import DELAY_THRESHOLD_SECONDS
 from mzkzg_transport.sensor import MzkzgPlkApiUsageSensor
 
 
@@ -194,14 +195,14 @@ def test_binary_sensor_is_on_with_delay():
     coordinator = MagicMock()
     coordinator.data = {
         "departures": [
-            {"route": "131", "headsign": "X", "delay_seconds": 200},
+            {"route": "131", "headsign": "X", "delay_seconds": 360},
             {"route": "9", "headsign": "Y", "delay_seconds": 0},
         ]
     }
     entry = MagicMock()
     entry.data = {"stop_id": "123", "provider": PROVIDER_ZTM, "name": "Test"}
     
-    sensor = MzkzgDelayBinarySensor(coordinator, entry)
+    sensor = MzkzgPlkDelayBinarySensor(coordinator, entry)
     assert sensor.is_on is True
 
 
@@ -218,7 +219,7 @@ def test_binary_sensor_is_off_no_delay():
     entry = MagicMock()
     entry.data = {"stop_id": "123", "provider": PROVIDER_ZTM, "name": "Test"}
     
-    sensor = MzkzgDelayBinarySensor(coordinator, entry)
+    sensor = MzkzgPlkDelayBinarySensor(coordinator, entry)
     assert sensor.is_on is False
 
 
@@ -230,7 +231,7 @@ def test_binary_sensor_is_off_empty():
     entry = MagicMock()
     entry.data = {"stop_id": "123", "provider": PROVIDER_ZKM, "name": ""}
     
-    sensor = MzkzgDelayBinarySensor(coordinator, entry)
+    sensor = MzkzgPlkDelayBinarySensor(coordinator, entry)
     assert sensor.is_on is False
 
 
@@ -247,11 +248,11 @@ def test_binary_sensor_attributes():
     entry = MagicMock()
     entry.data = {"stop_id": "123", "provider": PROVIDER_ZTM, "name": "Test"}
     
-    sensor = MzkzgDelayBinarySensor(coordinator, entry)
+    sensor = MzkzgPlkDelayBinarySensor(coordinator, entry)
     attrs = sensor.extra_state_attributes
-    assert len(attrs["delayed_departures"]) == 1
-    assert attrs["delayed_departures"][0]["route"] == "131"
-    assert attrs["delayed_departures"][0]["delay_minutes"] == 5
+    assert len(attrs["delayed_trains"]) == 1
+    assert attrs["delayed_trains"][0]["route"] == "131"
+    assert attrs["delayed_trains"][0]["delay_minutes"] == 5
 
 
 # ── PLK Coordinator tests ────────────────────────────────────────────────────

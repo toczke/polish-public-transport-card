@@ -1,0 +1,10 @@
+refresh_gtfs:
+  name: Refresh GTFS Cache
+  description: Forces a redownload of GTFS ZIP files and clears the cache for the specified provider (or all providers if not specified).
+  fields:
+    provider:
+      name: Provider
+      description: The provider key to refresh (e.g., 'ztm_gdansk', 'mzk_wejherowo'). Leave empty to refresh all.
+      required: false
+      selector:
+        text:

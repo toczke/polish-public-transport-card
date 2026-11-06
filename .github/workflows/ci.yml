@@ -89,8 +89,12 @@ jobs:
           node-version: "24"
       - name: Check Python syntax
         run: python -m py_compile custom_components/mzkzg_transport/*.py
-      - name: Check JS syntax
-        run: node --check custom_components/mzkzg_transport/www/polish-transport-card.js
+      - name: Install dependencies
+        run: npm ci
+      - name: Lint JS
+        run: npm run lint
+      - name: Build JS
+        run: npm run build
 
   validate:
     runs-on: self-hosted

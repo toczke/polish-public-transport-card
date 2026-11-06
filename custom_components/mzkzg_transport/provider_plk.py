@@ -85,7 +85,7 @@ async def fetch(coord: "MzkzgTransportCoordinator") -> dict:
             params = {
                 "stations": coord.stop_id,
                 "dateFrom": today,
-                "dateTo": today,
+                "dateTo": (now + timedelta(days=1)).strftime("%Y-%m-%d"),
                 "dictionaries": "true",
                 "fullRoute": "true",
             }
