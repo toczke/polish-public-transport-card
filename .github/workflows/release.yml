@@ -1,0 +1,102 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to release (e.g. v1.6.7)"
+        required: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  release:
+    name: Build and publish ${{ github.ref_name }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements_test.txt
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: Install Python dependencies
+        run: pip install -r requirements_test.txt
+
+      - name: Run full Python test suite
+        run: python -m pytest -q --tb=short
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Lint frontend
+        run: npm run lint
+
+      - name: Build card
+        run: npm run build
+
+      - name: Verify built card is committed
+        run: |
+          if ! git diff --exit-code -- custom_components/mzkzg_transport/www/polish-transport-card.js; then
+            echo "::error::The built card is stale. Run 'npm run build' and commit the result before tagging."
+            exit 1
+          fi
+
+      - name: Verify tag matches manifest version
+        run: |
+          python - <<'PY'
+          import json, os, re
+          from pathlib import Path
+
+          version = json.loads(
+              Path("custom_components/mzkzg_transport/manifest.json").read_text(encoding="utf-8")
+          )["version"]
+          ref = os.environ.get("GITHUB_REF_NAME") or os.environ.get("INPUTS_TAG", "")
+          tag_version = ref.lstrip("v")
+          if tag_version != version:
+              raise SystemExit(f"tag {tag_version!r} != manifest version {version!r}")
+          card = re.search(
+              r'MZKZG_VERSION\s*=\s*"([^"]+)"',
+              Path("src/utils.js").read_text(encoding="utf-8"),
+          )
+          if not card or card.group(1) != version:
+              raise SystemExit("MZKZG_VERSION does not match manifest version")
+          print(f"Release {version} is consistent")
+          PY
+        env:
+          INPUTS_TAG: ${{ inputs.tag }}
+
+      - name: Create HACS archive
+        run: |
+          rm -f polish-public-transport-card.zip
+          zip -r polish-public-transport-card.zip \
+            custom_components/mzkzg_transport \
+            hacs.json README.md LICENSE CHANGELOG.md
+
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.tag || github.ref_name }}
+          name: Polish Public Transport Card ${{ inputs.tag || github.ref_name }}
+          files: polish-public-transport-card.zip
+          generate_release_notes: true
+          fail_on_unmatched_files: true
