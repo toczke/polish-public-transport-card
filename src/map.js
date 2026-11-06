@@ -1,4 +1,4 @@
-import { escapeHtml, routeColor, parseVehiclePosition } from "./utils.js";
+import { escapeHtml, routeColor, parseVehiclePosition, t } from "./utils.js";
 
 let leafletLoadPromise = null;
 let leafletCssPromise = null;
@@ -71,24 +71,31 @@ export class VehicleMap {
   buildVehicleMarker(bearing, color, route, vehicleType, info, isMobile) {
     const size = isMobile ? 32 : 40;
     const fontSize = isMobile ? 11 : 13;
-    const half = size / 2;
-    // Rotate the arrow path around the center of the circle
-    // By default, the path points DOWN (South). We add 180 so bearing 0 (North) points UP.
-    const pathRotation = bearing + 180;
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size + 6}" viewBox="0 0 ${size} ${size + 6}">
-      <circle cx="${half}" cy="${half}" r="${half - 3}" fill="${color}" stroke="#fff" stroke-width="1.5"/>
-      <path d="M${half},${size - 3} Q${half - 14},${size + 1} ${half - 7},${size - 1} L${half},${size + 6} L${half + 7},${size - 1} Q${half + 14},${size + 1} ${half},${size - 3} Z" fill="${color}" stroke="#fff" stroke-width="1.5" stroke-linejoin="round" transform="rotate(${pathRotation}, ${half}, ${half})"/>
-      <text x="${half}" y="${half}" text-anchor="middle" dominant-baseline="central" font-weight="700" font-size="${fontSize}" fill="#fff" font-family="system-ui,sans-serif">${escapeHtml(route)}</text>
+    const pad = 5;
+    const box = size + pad * 2;
+    const center = box / 2;
+    const radius = size / 2 - 2;
+    const tip = radius + 5;
+    const halfBase = 6;
+    // A clean circular puck centred on the vehicle, with a small direction
+    // pointer drawn inside the padded viewBox. The old bottom pointer rotated
+    // around the circle centre and could be clipped into a stray sliver.
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${box}" height="${box}" viewBox="0 0 ${box} ${box}">
+      <g transform="rotate(${bearing}, ${center}, ${center})">
+        <path d="M${center},${center - tip} L${center - halfBase},${center - radius + 2} L${center + halfBase},${center - radius + 2} Z" fill="${color}" stroke="#fff" stroke-width="1.5" stroke-linejoin="round"/>
+      </g>
+      <circle cx="${center}" cy="${center}" r="${radius}" fill="${color}" stroke="#fff" stroke-width="2"/>
+      <text x="${center}" y="${center}" text-anchor="middle" dominant-baseline="central" font-weight="700" font-size="${fontSize}" fill="#fff" font-family="system-ui,sans-serif">${escapeHtml(route)}</text>
     </svg>`;
 
-    return { svg, size, arrowH: size + 6 };
+    return { svg, size: box };
   }
 
   buildPopupContent(d) {
     const delay = Math.round((d.delay_seconds || 0) / 60);
     const delayTag = delay > 0 ? `+${delay} min` : delay < 0 ? `${delay} min` : "o czasie";
     const delayClass = delay > 0 ? "zm-popup-delay" : delay < 0 ? "zm-popup-delay early" : "zm-popup-delay ontime";
-    return `<div class="zm-popup"><div class="zm-popup-route">${escapeHtml(d.route)}</div>${d.headsign ? `<div class="zm-popup-headsign">→ ${escapeHtml(d.headsign)}</div>` : ""}${d.vehicle_code ? `<div class="zm-popup-meta">🚍 ${escapeHtml(d.vehicle_code)}</div>` : ""}<div class="zm-popup-delay-row"><span class="${delayClass}">${escapeHtml(delayTag)}</span></div></div>`;
+    return `<div class="zm-popup"><div class="zm-popup-route">${escapeHtml(d.route)}</div>${d.headsign ? `<div class="zm-popup-headsign">→ ${escapeHtml(d.headsign)}</div>` : ""}${d.vehicle_code ? `<div class="zm-popup-meta">#${escapeHtml(d.vehicle_code)}</div>` : ""}<div class="zm-popup-delay-row"><span class="${delayClass}">${escapeHtml(delayTag)}</span></div></div>`;
   }
 
   showVehicleMap(lat, lng, info) {
@@ -100,7 +107,7 @@ export class VehicleMap {
 
     const overlay = document.createElement("div");
     overlay.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:100000;display:flex;align-items:center;justify-content:center;";
-    overlay.innerHTML = `<div style="position:relative;width:${w}px;height:${h}px;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.3);"><button style="position:absolute;top:8px;right:8px;z-index:1001;background:rgba(0,0,0,0.6);border:none;border-radius:50%;width:32px;height:32px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;color:#fff;">✕</button><div id="vmap" style="width:${w}px;height:${h}px;"></div><div id="vmap-status" style="position:absolute;bottom:6px;left:10px;z-index:1001;font-size:10px;color:#999;background:rgba(255,255,255,0.8);padding:2px 6px;border-radius:4px">🔄 odświeżanie co 30s</div></div>`;
+    overlay.innerHTML = `<div style="position:relative;width:${w}px;height:${h}px;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.3);"><button style="position:absolute;top:8px;right:8px;z-index:1001;background:rgba(0,0,0,0.6);border:none;border-radius:50%;width:32px;height:32px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;color:#fff;">✕</button><div id="vmap" style="width:${w}px;height:${h}px;"></div><div id="vmap-status" style="position:absolute;bottom:6px;left:10px;z-index:1001;font-size:10px;color:#999;background:rgba(255,255,255,0.8);padding:2px 6px;border-radius:4px">${escapeHtml(t("map_refresh"))}</div></div>`;
     document.body.appendChild(overlay);
     const closeMap = () => { if (this.mapCtx) this.mapCtx.destroy(); };
     overlay.querySelector("button").onclick = closeMap;
@@ -159,6 +166,10 @@ export class VehicleMap {
 
         // Show all vehicles with GPS from this entity
         this.renderAllVehicleMarkers(ctx, info, isMobile);
+        // Keep the selected vehicle centred at a readable zoom. The old
+        // fitBounds call zoomed out and pushed the selected marker off-centre.
+        const focus = ctx.marker?.getLatLng();
+        map.setView(focus || [lat, lng], 16, { animate: false });
 
         // Fetch polyline shape for ZTM Gdańsk
         if (info.provider === "ztm_gdansk" && info.route_id_int && info.trip_id) {
@@ -245,13 +256,17 @@ export class VehicleMap {
     const icon = window.L.divIcon({
       className: "",
       html: mkHtml,
-      iconSize: [mk.size, mk.arrowH],
-      iconAnchor: [mk.size / 2, mk.arrowH],
+      iconSize: [mk.size, mk.size],
+      iconAnchor: [mk.size / 2, mk.size / 2],
     });
-    const marker = window.L.marker(pos, { icon, title: `${d.route || "?"} ${d.headsign || ""}`.trim() }).addTo(ctx.map);
+    const marker = window.L.marker(pos, {
+      icon,
+      title: `${d.route || "?"} ${d.headsign || ""}`.trim(),
+      zIndexOffset: isMain ? 1000 : 0,
+    }).addTo(ctx.map);
     marker.bindTooltip(
       `<strong>${escapeHtml(d.route || "?")}</strong> → ${escapeHtml(d.headsign || "")}`,
-      { direction: "top", offset: [0, -mk.arrowH], opacity: 0.95 }
+      { direction: "top", offset: [0, -mk.size / 2], opacity: 0.95 }
     );
     marker.bindPopup(this.buildPopupContent(d), { closeButton: true, autoPan: true, maxWidth: 220 });
     if (isMain) {
@@ -265,49 +280,45 @@ export class VehicleMap {
     return marker;
   }
 
-  renderAllVehicleMarkers(ctx, info, isMobile) {
-    if (!this.card.hass) return;
-    const state = this.card.hass.states[ctx.entityId];
+  _addAllMarkers(ctx, isMobile, autoOpen) {
+    const state = this.card.hass?.states[ctx.entityId];
     if (!state?.attributes?.departures) return;
-
-    // Clear old markers
-    ctx.markers.forEach(m => ctx.map.removeLayer(m));
-    ctx.markers = [];
-    ctx.marker = null;
-
     const allDeps = state.attributes.departures || [];
     const groups = {};
-    for (const d of allDeps) {
-      const pos = parseVehiclePosition(d.vehicle_lat, d.vehicle_lng);
-      if (!pos) continue;
-      const spread = this._spreadPosition(pos, groups);
-      ctx.markers.push(this._createVehicleMarker(ctx, d, spread, isMobile, true));
+    const main = allDeps.find(
+      d => d.vehicle_code && d.vehicle_code === ctx.vehicleCode && parseVehiclePosition(d.vehicle_lat, d.vehicle_lng)
+    );
+    if (main) {
+      const mainPos = parseVehiclePosition(main.vehicle_lat, main.vehicle_lng);
+      groups[`${mainPos[0].toFixed(4)}|${mainPos[1].toFixed(4)}`] = 1;
+      ctx.markers.push(this._createVehicleMarker(ctx, main, mainPos, isMobile, autoOpen));
     }
-    if (ctx.markers.length > 1) {
-      const bounds = window.L.latLngBounds(ctx.markers.map(m => m.getLatLng()));
-      ctx.map.fitBounds(bounds, { padding: [30, 30], maxZoom: 16 });
-    }
-  }
-
-  updateAllVehiclePositions(ctx) {
-    if (ctx.destroyed || !ctx.entityId || !ctx.map || !this.card.hass) return;
-    const state = this.card.hass.states[ctx.entityId];
-    if (!state?.attributes?.departures) return;
-
-    const allDeps = state.attributes.departures || [];
-    // Clear and re-render all markers
-    ctx.markers.forEach(m => ctx.map.removeLayer(m));
-    ctx.markers = [];
-    ctx.marker = null;
-
-    const isMobile = window.innerWidth < 480;
-    const groups = {};
     for (const d of allDeps) {
+      if (d === main) continue;
       const pos = parseVehiclePosition(d.vehicle_lat, d.vehicle_lng);
       if (!pos) continue;
       const spread = this._spreadPosition(pos, groups);
       ctx.markers.push(this._createVehicleMarker(ctx, d, spread, isMobile));
     }
+    ctx.marker?.bringToFront?.();
+  }
+
+  renderAllVehicleMarkers(ctx, info, isMobile) {
+    if (!this.card.hass) return;
+    ctx.markers.forEach(m => ctx.map.removeLayer(m));
+    ctx.markers = [];
+    ctx.marker = null;
+    this._addAllMarkers(ctx, isMobile, true);
+  }
+
+  updateAllVehiclePositions(ctx) {
+    if (ctx.destroyed || !ctx.entityId || !ctx.map || !this.card.hass) return;
+    const wasOpen = Boolean(ctx.marker?.isPopupOpen?.());
+    ctx.markers.forEach(m => ctx.map.removeLayer(m));
+    ctx.markers = [];
+    ctx.marker = null;
+    this._addAllMarkers(ctx, window.innerWidth < 480, false);
+    if (wasOpen && ctx.marker) ctx.marker.openPopup();
   }
 
   updateVehiclePosition(ctx) {
@@ -334,8 +345,8 @@ export class VehicleMap {
         ctx.marker.setIcon(window.L.divIcon({
           className: "",
           html: mkHtml,
-          iconSize: [mk.size, mk.arrowH],
-          iconAnchor: [mk.size / 2, mk.arrowH],
+          iconSize: [mk.size, mk.size],
+          iconAnchor: [mk.size / 2, mk.size / 2],
         }));
         ctx.map.setView([newLat, newLng], ctx.map.getZoom(), { animate: true });
         break;

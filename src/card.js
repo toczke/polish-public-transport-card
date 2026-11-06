@@ -229,6 +229,8 @@ export class MzkzgTransportCard extends LitElement {
       return true;
     });
 
+    all = this._dedupeDepartures(all);
+
     if (c.highlight_mode) {
       const byRoute = {};
       for (const d of all) {
@@ -254,6 +256,52 @@ export class MzkzgTransportCard extends LitElement {
     const result = all.slice(0, c.max_departures);
     this._depCache = { key: cacheKey, value: result };
     return result;
+  }
+
+  _headsignsCompatible(first, second) {
+    const a = String(first || "").trim().toLowerCase();
+    const b = String(second || "").trim().toLowerCase();
+    if (!a || !b || a === b) return true;
+    return a.startsWith(b) || b.startsWith(a);
+  }
+
+  _mergeDeparture(base, extra) {
+    let primary = base;
+    let secondary = extra;
+    if (extra.realtime && !base.realtime) {
+      primary = extra;
+      secondary = base;
+    }
+    const merged = { ...primary };
+    for (const [key, value] of Object.entries(secondary)) {
+      if (key === "headsign") continue;
+      const current = merged[key];
+      if ((current === undefined || current === null || current === "") &&
+          value !== undefined && value !== null && value !== "") {
+        merged[key] = value;
+      }
+    }
+    if (String(extra.headsign || "").length > String(primary.headsign || "").length) {
+      merged.headsign = extra.headsign;
+    }
+    return merged;
+  }
+
+  _dedupeDepartures(departures) {
+    const groups = [];
+    for (const d of departures) {
+      const time = String(d.theoretical_time || d.estimated_time || "").slice(0, 16);
+      const key = `${d._entityId || ""}|${d.route}|${time}`;
+      const group = groups.find(g =>
+        g.key === key && this._headsignsCompatible(g.base.headsign, d.headsign)
+      );
+      if (group) {
+        group.base = this._mergeDeparture(group.base, d);
+      } else {
+        groups.push({ key, base: d });
+      }
+    }
+    return groups.map(g => g.base);
   }
 
   _getAutoIcon() {

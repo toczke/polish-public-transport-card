@@ -535,6 +535,7 @@ var De = "1.7.0", V = {
 		other: "Inne",
 		train_no: "nr",
 		trains: "Pociągi (SKM/IC/PR)",
+		map_refresh: "Odświeżanie co 30 s",
 		no_route: "?",
 		editor_data: "Dane",
 		editor_appearance: "Wygląd",
@@ -566,6 +567,7 @@ var De = "1.7.0", V = {
 		other: "Other",
 		train_no: "No.",
 		trains: "Trains (SKM/IC/PR)",
+		map_refresh: "Refreshing every 30 s",
 		no_route: "?",
 		editor_data: "Data",
 		editor_appearance: "Appearance",
@@ -1888,25 +1890,26 @@ ha-card { container-type: inline-size; }
 		})), Q);
 	}
 	buildVehicleMarker(e, t, n, r, i, a) {
-		let o = a ? 32 : 40, s = a ? 11 : 13, c = o / 2, l = e + 180;
+		let o = a ? 32 : 40, s = a ? 11 : 13, c = o + 10, l = c / 2, u = o / 2 - 2;
 		return {
-			svg: `<svg xmlns="http://www.w3.org/2000/svg" width="${o}" height="${o + 6}" viewBox="0 0 ${o} ${o + 6}">
-      <circle cx="${c}" cy="${c}" r="${c - 3}" fill="${t}" stroke="#fff" stroke-width="1.5"/>
-      <path d="M${c},${o - 3} Q${c - 14},${o + 1} ${c - 7},${o - 1} L${c},${o + 6} L${c + 7},${o - 1} Q${c + 14},${o + 1} ${c},${o - 3} Z" fill="${t}" stroke="#fff" stroke-width="1.5" stroke-linejoin="round" transform="rotate(${l}, ${c}, ${c})"/>
-      <text x="${c}" y="${c}" text-anchor="middle" dominant-baseline="central" font-weight="700" font-size="${s}" fill="#fff" font-family="system-ui,sans-serif">${U(n)}</text>
+			svg: `<svg xmlns="http://www.w3.org/2000/svg" width="${c}" height="${c}" viewBox="0 0 ${c} ${c}">
+      <g transform="rotate(${e}, ${l}, ${l})">
+        <path d="M${l},${l - (u + 5)} L${l - 6},${l - u + 2} L${l + 6},${l - u + 2} Z" fill="${t}" stroke="#fff" stroke-width="1.5" stroke-linejoin="round"/>
+      </g>
+      <circle cx="${l}" cy="${l}" r="${u}" fill="${t}" stroke="#fff" stroke-width="2"/>
+      <text x="${l}" y="${l}" text-anchor="middle" dominant-baseline="central" font-weight="700" font-size="${s}" fill="#fff" font-family="system-ui,sans-serif">${U(n)}</text>
     </svg>`,
-			size: o,
-			arrowH: o + 6
+			size: c
 		};
 	}
 	buildPopupContent(e) {
 		let t = Math.round((e.delay_seconds || 0) / 60), n = t > 0 ? `+${t} min` : t < 0 ? `${t} min` : "o czasie", r = t > 0 ? "zm-popup-delay" : t < 0 ? "zm-popup-delay early" : "zm-popup-delay ontime";
-		return `<div class="zm-popup"><div class="zm-popup-route">${U(e.route)}</div>${e.headsign ? `<div class="zm-popup-headsign">→ ${U(e.headsign)}</div>` : ""}${e.vehicle_code ? `<div class="zm-popup-meta">🚍 ${U(e.vehicle_code)}</div>` : ""}<div class="zm-popup-delay-row"><span class="${r}">${U(n)}</span></div></div>`;
+		return `<div class="zm-popup"><div class="zm-popup-route">${U(e.route)}</div>${e.headsign ? `<div class="zm-popup-headsign">→ ${U(e.headsign)}</div>` : ""}${e.vehicle_code ? `<div class="zm-popup-meta">#${U(e.vehicle_code)}</div>` : ""}<div class="zm-popup-delay-row"><span class="${r}">${U(n)}</span></div></div>`;
 	}
 	showVehicleMap(e, t, n) {
 		this.mapCtx && this.mapCtx.destroy();
 		let r = window.innerWidth < 480, i = Math.min(window.innerWidth * .92, 520), a = Math.min(window.innerHeight * .65, 420), o = document.createElement("div");
-		o.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:100000;display:flex;align-items:center;justify-content:center;", o.innerHTML = `<div style="position:relative;width:${i}px;height:${a}px;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.3);"><button style="position:absolute;top:8px;right:8px;z-index:1001;background:rgba(0,0,0,0.6);border:none;border-radius:50%;width:32px;height:32px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;color:#fff;">✕</button><div id="vmap" style="width:${i}px;height:${a}px;"></div><div id="vmap-status" style="position:absolute;bottom:6px;left:10px;z-index:1001;font-size:10px;color:#999;background:rgba(255,255,255,0.8);padding:2px 6px;border-radius:4px">🔄 odświeżanie co 30s</div></div>`, document.body.appendChild(o);
+		o.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:100000;display:flex;align-items:center;justify-content:center;", o.innerHTML = `<div style="position:relative;width:${i}px;height:${a}px;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.3);"><button style="position:absolute;top:8px;right:8px;z-index:1001;background:rgba(0,0,0,0.6);border:none;border-radius:50%;width:32px;height:32px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;color:#fff;">✕</button><div id="vmap" style="width:${i}px;height:${a}px;"></div><div id="vmap-status" style="position:absolute;bottom:6px;left:10px;z-index:1001;font-size:10px;color:#999;background:rgba(255,255,255,0.8);padding:2px 6px;border-radius:4px">${U(H("map_refresh"))}</div></div>`, document.body.appendChild(o);
 		let s = () => {
 			this.mapCtx && this.mapCtx.destroy();
 		};
@@ -1942,13 +1945,15 @@ ha-card { container-type: inline-size; }
 				let i = window.L.map(c, { zoomControl: !0 }).setView([e, t], 16);
 				this._isDarkTheme() && c.classList.add("zm-dark-map"), this.addTileLayer(i, l);
 				let a = i.attributionControl.options.prefix;
-				if (a && i.attributionControl.setPrefix(a.replace(/<a /g, "<a target=\"_blank\" rel=\"noopener\" ")), l.map = i, window.L.circleMarker([e, t], {
+				a && i.attributionControl.setPrefix(a.replace(/<a /g, "<a target=\"_blank\" rel=\"noopener\" ")), l.map = i, window.L.circleMarker([e, t], {
 					radius: 5,
 					fillColor: u,
 					fillOpacity: .5,
 					color: "#fff",
 					weight: 2
-				}).addTo(i), this.renderAllVehicleMarkers(l, n, r), n.provider === "ztm_gdansk" && n.route_id_int && n.trip_id) {
+				}).addTo(i), this.renderAllVehicleMarkers(l, n, r);
+				let o = l.marker?.getLatLng();
+				if (i.setView(o || [e, t], 16, { animate: !1 }), n.provider === "ztm_gdansk" && n.route_id_int && n.trip_id) {
 					let e = `https://ckan2.multimediagdansk.pl/shapes?date=${(/* @__PURE__ */ new Date()).toISOString().split("T")[0]}&routeId=${n.route_id_int}&tripId=${n.trip_id}`;
 					fetch(e).then((e) => e.json()).then((e) => {
 						if (!(l.destroyed || !l.map) && e && e.coordinates && Array.isArray(e.coordinates)) {
@@ -2009,15 +2014,16 @@ ha-card { container-type: inline-size; }
 		let a = !!(t.vehicle_code && t.vehicle_code === e.vehicleCode), o = K(t.route, t._provider || t.provider || "", t.route_color), s = t.vehicle_direction || t.direction || 0, c = this.buildVehicleMarker(s, o, t.route || "?", t.vehicle_type || "bus", t, r), l = `<div class="zm-arrow" style="opacity:${a ? 1 : .72}">${c.svg}</div>`, u = window.L.divIcon({
 			className: "",
 			html: l,
-			iconSize: [c.size, c.arrowH],
-			iconAnchor: [c.size / 2, c.arrowH]
+			iconSize: [c.size, c.size],
+			iconAnchor: [c.size / 2, c.size / 2]
 		}), d = window.L.marker(n, {
 			icon: u,
-			title: `${t.route || "?"} ${t.headsign || ""}`.trim()
+			title: `${t.route || "?"} ${t.headsign || ""}`.trim(),
+			zIndexOffset: a ? 1e3 : 0
 		}).addTo(e.map);
 		return d.bindTooltip(`<strong>${U(t.route || "?")}</strong> → ${U(t.headsign || "")}`, {
 			direction: "top",
-			offset: [0, -c.arrowH],
+			offset: [0, -c.size / 2],
 			opacity: .95
 		}), d.bindPopup(this.buildPopupContent(t), {
 			closeButton: !0,
@@ -2027,39 +2033,30 @@ ha-card { container-type: inline-size; }
 			e.destroyed || d.openPopup();
 		}, 350)), d;
 	}
-	renderAllVehicleMarkers(e, t, n) {
-		if (!this.card.hass) return;
-		let r = this.card.hass.states[e.entityId];
+	_addAllMarkers(e, t, n) {
+		let r = this.card.hass?.states[e.entityId];
 		if (!r?.attributes?.departures) return;
-		e.markers.forEach((t) => e.map.removeLayer(t)), e.markers = [], e.marker = null;
-		let i = r.attributes.departures || [], a = {};
-		for (let t of i) {
-			let r = W(t.vehicle_lat, t.vehicle_lng);
+		let i = r.attributes.departures || [], a = {}, o = i.find((t) => t.vehicle_code && t.vehicle_code === e.vehicleCode && W(t.vehicle_lat, t.vehicle_lng));
+		if (o) {
+			let r = W(o.vehicle_lat, o.vehicle_lng);
+			a[`${r[0].toFixed(4)}|${r[1].toFixed(4)}`] = 1, e.markers.push(this._createVehicleMarker(e, o, r, t, n));
+		}
+		for (let n of i) {
+			if (n === o) continue;
+			let r = W(n.vehicle_lat, n.vehicle_lng);
 			if (!r) continue;
 			let i = this._spreadPosition(r, a);
-			e.markers.push(this._createVehicleMarker(e, t, i, n, !0));
+			e.markers.push(this._createVehicleMarker(e, n, i, t));
 		}
-		if (e.markers.length > 1) {
-			let t = window.L.latLngBounds(e.markers.map((e) => e.getLatLng()));
-			e.map.fitBounds(t, {
-				padding: [30, 30],
-				maxZoom: 16
-			});
-		}
+		e.marker?.bringToFront?.();
+	}
+	renderAllVehicleMarkers(e, t, n) {
+		this.card.hass && (e.markers.forEach((t) => e.map.removeLayer(t)), e.markers = [], e.marker = null, this._addAllMarkers(e, n, !0));
 	}
 	updateAllVehiclePositions(e) {
 		if (e.destroyed || !e.entityId || !e.map || !this.card.hass) return;
-		let t = this.card.hass.states[e.entityId];
-		if (!t?.attributes?.departures) return;
-		let n = t.attributes.departures || [];
-		e.markers.forEach((t) => e.map.removeLayer(t)), e.markers = [], e.marker = null;
-		let r = window.innerWidth < 480, i = {};
-		for (let t of n) {
-			let n = W(t.vehicle_lat, t.vehicle_lng);
-			if (!n) continue;
-			let a = this._spreadPosition(n, i);
-			e.markers.push(this._createVehicleMarker(e, t, a, r));
-		}
+		let t = !!e.marker?.isPopupOpen?.();
+		e.markers.forEach((t) => e.map.removeLayer(t)), e.markers = [], e.marker = null, this._addAllMarkers(e, window.innerWidth < 480, !1), t && e.marker && e.marker.openPopup();
 	}
 	updateVehiclePosition(e) {
 		if (e.destroyed || !e.entityId || !e.marker || !this.card.hass) return;
@@ -2075,8 +2072,8 @@ ha-card { container-type: inline-size; }
 				e.marker.setIcon(window.L.divIcon({
 					className: "",
 					html: d,
-					iconSize: [u.size, u.arrowH],
-					iconAnchor: [u.size / 2, u.arrowH]
+					iconSize: [u.size, u.size],
+					iconAnchor: [u.size / 2, u.size / 2]
 				})), e.map.setView([r, i], e.map.getZoom(), { animate: !0 });
 				break;
 			}
@@ -2272,7 +2269,7 @@ ha-card { container-type: inline-size; }
 				if (t === null || t > d) return !1;
 			}
 			return !(i(e, "only_low_floor", t.only_low_floor) && !(e.wheelchair_accessible === !0 || e.floor_height && e.floor_height !== "Pojazd wysokopodłogowy") || i(e, "only_bike", t.only_bike) && e.bike_allowed !== !0 || i(e, "only_ac", t.only_ac) && e.air_conditioning !== !0 || i(e, "only_ticket_machine", t.only_ticket_machine) && e.ticket_machine !== !0);
-		}), t.highlight_mode) {
+		}), n = this._dedupeDepartures(n), t.highlight_mode) {
 			let e = {};
 			for (let t of n) {
 				let n = t.route + "|" + t.headsign;
@@ -2292,6 +2289,32 @@ ha-card { container-type: inline-size; }
 			key: e,
 			value: s
 		}, s;
+	}
+	_headsignsCompatible(e, t) {
+		let n = String(e || "").trim().toLowerCase(), r = String(t || "").trim().toLowerCase();
+		return !n || !r || n === r || n.startsWith(r) || r.startsWith(n);
+	}
+	_mergeDeparture(e, t) {
+		let n = e, r = t;
+		t.realtime && !e.realtime && (n = t, r = e);
+		let i = { ...n };
+		for (let [e, t] of Object.entries(r)) {
+			if (e === "headsign") continue;
+			let n = i[e];
+			(n == null || n === "") && t != null && t !== "" && (i[e] = t);
+		}
+		return String(t.headsign || "").length > String(n.headsign || "").length && (i.headsign = t.headsign), i;
+	}
+	_dedupeDepartures(e) {
+		let t = [];
+		for (let n of e) {
+			let e = String(n.theoretical_time || n.estimated_time || "").slice(0, 16), r = `${n._entityId || ""}|${n.route}|${e}`, i = t.find((e) => e.key === r && this._headsignsCompatible(e.base.headsign, n.headsign));
+			i ? i.base = this._mergeDeparture(i.base, n) : t.push({
+				key: r,
+				base: n
+			});
+		}
+		return t.map((e) => e.base);
 	}
 	_getAutoIcon() {
 		if (!this.hass || !this._config.entities?.length) return Ge;

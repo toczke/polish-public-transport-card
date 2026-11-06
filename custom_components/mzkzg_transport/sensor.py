@@ -163,14 +163,10 @@ class MzkzgAggregatedSensor(SensorEntity):
 
     def _merged_departures(self) -> list:
         all_deps = []
-        seen = set()
         for c in self._coordinators:
             if c.data:
-                for d in c.data.get("departures", []):
-                    key = (d.get("route"), d.get("headsign", ""), (d.get("estimated_time") or "")[:16])
-                    if key not in seen:
-                        seen.add(key)
-                        all_deps.append(d)
+                all_deps.extend(c.data.get("departures", []))
+        all_deps = MzkzgTransportCoordinator._deduplicate_prefer_rt(all_deps)
         all_deps.sort(key=lambda d: d.get("estimated_time") or "")
         return all_deps[:MAX_DEPARTURES]
 

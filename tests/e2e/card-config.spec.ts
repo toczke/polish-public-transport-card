@@ -60,6 +60,33 @@ test('global and per-sensor filters are applied', async ({ page }) => {
   expect(result.mapPins).toBe(0);
 });
 
+test('prefix headsign duplicates are merged in the card', async ({ page }) => {
+  await page.goto('about:blank');
+  await page.addScriptTag({ path: SCRIPT });
+  const time = '2026-11-06T21:22:00+01:00';
+  const departures = [
+    { route: '3', headsign: 'Brzeźno', estimated_time: time, theoretical_time: time, realtime: false, trip_id: 102, route_id_int: 3, vehicle_code: '' },
+    { route: '3', headsign: 'Brzeźno Dom Zdrojowy', estimated_time: time, theoretical_time: time, realtime: false },
+    { route: '3', headsign: 'Nowy Port', estimated_time: time, theoretical_time: time, realtime: false },
+  ];
+  const result = await page.evaluate(async ({ departures }) => {
+    const card: any = document.createElement('polish-transport-card');
+    card.setConfig({ entities: ['sensor.test'], hide_terminus: false });
+    document.body.appendChild(card);
+    card.hass = {
+      locale: { language: 'pl' },
+      states: { 'sensor.test': { attributes: { provider: 'ztm_gdansk', stop_name: 'Test', departures } } },
+    };
+    await card.updateComplete;
+    return {
+      rows: card.shadowRoot.querySelectorAll('.dep-row').length,
+      headsigns: [...card.shadowRoot.querySelectorAll('.headsign-text')].map((e: any) => e.textContent.trim()),
+    };
+  }, { departures });
+  expect(result.rows).toBe(2);
+  expect(result.headsigns).toEqual(['Brzeźno Dom Zdrojowy', 'Nowy Port']);
+});
+
 test('grouped view adds a line header per route and headsign', async ({ page }) => {
   await page.goto('about:blank');
   await page.addScriptTag({ path: SCRIPT });
