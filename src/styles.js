@@ -149,6 +149,38 @@ ha-card.compact .footer { display: none; }
 }
 .map-close:hover { background: #fff; }
 
+/* Home Assistant native look */
+ha-card.native {
+  background: var(--ha-card-background, var(--card-background-color));
+  color: var(--primary-text-color);
+  border-radius: var(--ha-card-border-radius, 12px);
+  box-shadow: var(--ha-card-box-shadow, none);
+}
+ha-card.native .header {
+  background: transparent !important;
+  color: var(--primary-text-color);
+  border-bottom: 1px solid var(--divider-color);
+  padding: 12px 16px;
+}
+ha-card.native .header-title { color: var(--primary-text-color); font-size: 16px; font-weight: 500; }
+ha-card.native .header-sub { color: var(--secondary-text-color); }
+ha-card.native .header-icon { color: var(--primary-color); }
+ha-card.native .header-icon svg { color: var(--primary-color); }
+ha-card.native .header-clock { color: var(--secondary-text-color); }
+ha-card.native .badge {
+  background: var(--secondary-background-color);
+  color: var(--primary-text-color);
+  border: 1px solid var(--divider-color);
+  font-weight: 600;
+}
+ha-card.native .dep-row { padding: 12px 16px; border-bottom: 1px solid var(--divider-color); }
+ha-card.native .dep-row:hover { background: var(--secondary-background-color); }
+ha-card.native .time-main { font-weight: 500; }
+ha-card.native .platform { background: var(--secondary-background-color); color: var(--secondary-text-color); }
+ha-card.native .tabs { border-bottom: 1px solid var(--divider-color); }
+ha-card.native .tab.active { color: var(--primary-color); border-bottom-color: var(--primary-color); }
+ha-card.native .footer { border-top: 1px solid var(--divider-color); }
+
 /* e-ink */
 ha-card.e-ink { background: #fff; color: #000; border: 0; border-radius: 0; box-shadow: none; }
 ha-card.e-ink .header { background: #fff !important; border-bottom: 2px solid #000; }

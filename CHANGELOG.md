@@ -3,9 +3,9 @@
 ## [1.7.0] - unreleased
 
 ### Added
-- **Theme controls** - `theme_mode: auto|light|dark` follows the active Home Assistant
-  theme by default; `header_style: provider|theme|custom` selects the header colour;
-  optional header clock and `time_format: auto|24h|12h`
+- **Card presets** - added `native` (Home Assistant look) next to `standard`,
+  `compact`, `minimal` and `e_ink`; optional header clock and
+  `time_format: auto|24h|12h`; `header_style: provider|theme|custom`
 - **Display modes** - added the `minimal` preset next to `standard`, `compact` and
   `e_ink`, plus row-level switches for countdown, vehicle number, platform/stand,
   accessibility icons, stop name, footer and last-update time

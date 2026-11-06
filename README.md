@@ -221,9 +221,8 @@ The card registers itself automatically. In the Lovelace UI: **Add Card → Poli
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `entities` | list | required | Sensor entity IDs (string or object with per-sensor overrides) |
-| `display_preset` | string | `standard` | `standard` / `compact` / `minimal` / `e_ink` |
+| `display_preset` | string | `standard` | `standard` / `compact` / `minimal` / `native` (HA look) / `e_ink` |
 | `view_mode` | string | `mixed` | `mixed` (merged timeline) / `tabs` (per-stop) |
-| `theme_mode` | string | `auto` | `auto` (follow HA), `light`, `dark` |
 | `header_style` | string | `provider` | `provider`, `theme` (HA primary), `custom` |
 | `header_color` | string | — | Custom header color (when `header_style: custom`) |
 | `show_header` | bool | `true` | Show the card header |
@@ -258,11 +257,17 @@ The card registers itself automatically. In the Lovelace UI: **Add Card → Poli
 All filters and `max_departures` can be overridden per sensor. The visual editor exposes
 both a global form and a **per-sensor override** form; the same structure is accepted in YAML.
 
-### Themes
+### Card presets
 
-`theme_mode: auto` uses the active Home Assistant theme. Use `light`/`dark` for kiosk or
-e-ink panels that must not follow the UI theme. `header_style: theme` makes the header use
-the HA primary colour; `provider` keeps the operator colour; `custom` uses `header_color`.
+- `standard` — full card with provider-coloured header
+- `compact` — denser rows, fewer secondary details
+- `minimal` — header/footer/accessibility hidden, very compact
+- `native` — Home Assistant-native look: transparent header, HA typography, dividers,
+  secondary-background hover and neutral chips; follows the active HA theme
+- `e_ink` — high-contrast, animation-free layout
+
+`header_style: theme` makes the header use the HA primary colour; `provider` keeps the
+operator colour; `custom` uses `header_color`.
 
 ### Per-sensor Overrides
 
@@ -281,7 +286,6 @@ entities:
     realtime_only: true
 filter_routes: ["N1"]
 min_departures: 5
-theme_mode: auto
 header_style: provider
 time_format: 24h
 show_clock: true

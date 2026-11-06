@@ -761,56 +761,40 @@ var Me = {
 	{
 		type: "grid",
 		name: "",
-		schema: [
-			{
-				name: "display_preset",
-				selector: Y([
-					{
-						value: "standard",
-						label: "Standard"
-					},
-					{
-						value: "compact",
-						label: "Compact"
-					},
-					{
-						value: "minimal",
-						label: "Minimal"
-					},
-					{
-						value: "e_ink",
-						label: "E-ink"
-					}
-				])
-			},
-			{
-				name: "view_mode",
-				selector: Y([{
-					value: "mixed",
-					label: "Mixed"
-				}, {
-					value: "tabs",
-					label: "Tabs"
-				}])
-			},
-			{
-				name: "theme_mode",
-				selector: Y([
-					{
-						value: "auto",
-						label: "Auto (Home Assistant)"
-					},
-					{
-						value: "light",
-						label: "Light"
-					},
-					{
-						value: "dark",
-						label: "Dark"
-					}
-				])
-			}
-		]
+		schema: [{
+			name: "display_preset",
+			selector: Y([
+				{
+					value: "standard",
+					label: "Standard"
+				},
+				{
+					value: "compact",
+					label: "Compact"
+				},
+				{
+					value: "minimal",
+					label: "Minimal"
+				},
+				{
+					value: "native",
+					label: "Home Assistant"
+				},
+				{
+					value: "e_ink",
+					label: "E-ink"
+				}
+			])
+		}, {
+			name: "view_mode",
+			selector: Y([{
+				value: "mixed",
+				label: "Mixed"
+			}, {
+				value: "tabs",
+				label: "Tabs"
+			}])
+		}]
 	},
 	{
 		type: "grid",
@@ -1208,7 +1192,6 @@ var Me = {
 			icon: "Ikona",
 			display_preset: "Motyw karty",
 			view_mode: "Widok",
-			theme_mode: "Motyw HA",
 			header_style: "Styl nagłówka",
 			header_color: "Kolor nagłówka",
 			show_header: "Pokaż nagłówek",
@@ -1249,7 +1232,6 @@ var Me = {
 			icon: "Icon",
 			display_preset: "Card theme",
 			view_mode: "View mode",
-			theme_mode: "HA theme",
 			header_style: "Header style",
 			header_color: "Header color",
 			show_header: "Show header",
@@ -1481,6 +1463,38 @@ ha-card.compact .footer { display: none; }
   color: #333; box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
 .map-close:hover { background: #fff; }
+
+/* Home Assistant native look */
+ha-card.native {
+  background: var(--ha-card-background, var(--card-background-color));
+  color: var(--primary-text-color);
+  border-radius: var(--ha-card-border-radius, 12px);
+  box-shadow: var(--ha-card-box-shadow, none);
+}
+ha-card.native .header {
+  background: transparent !important;
+  color: var(--primary-text-color);
+  border-bottom: 1px solid var(--divider-color);
+  padding: 12px 16px;
+}
+ha-card.native .header-title { color: var(--primary-text-color); font-size: 16px; font-weight: 500; }
+ha-card.native .header-sub { color: var(--secondary-text-color); }
+ha-card.native .header-icon { color: var(--primary-color); }
+ha-card.native .header-icon svg { color: var(--primary-color); }
+ha-card.native .header-clock { color: var(--secondary-text-color); }
+ha-card.native .badge {
+  background: var(--secondary-background-color);
+  color: var(--primary-text-color);
+  border: 1px solid var(--divider-color);
+  font-weight: 600;
+}
+ha-card.native .dep-row { padding: 12px 16px; border-bottom: 1px solid var(--divider-color); }
+ha-card.native .dep-row:hover { background: var(--secondary-background-color); }
+ha-card.native .time-main { font-weight: 500; }
+ha-card.native .platform { background: var(--secondary-background-color); color: var(--secondary-text-color); }
+ha-card.native .tabs { border-bottom: 1px solid var(--divider-color); }
+ha-card.native .tab.active { color: var(--primary-color); border-bottom-color: var(--primary-color); }
+ha-card.native .footer { border-top: 1px solid var(--divider-color); }
 
 /* e-ink */
 ha-card.e-ink { background: #fff; color: #000; border: 0; border-radius: 0; box-shadow: none; }
@@ -1775,7 +1789,8 @@ ha-card { container-type: inline-size; }
 			"standard",
 			"compact",
 			"e_ink",
-			"minimal"
+			"minimal",
+			"native"
 		].includes(e.display_preset) ? e.display_preset : "standard", n = [
 			"auto",
 			"light",
@@ -2179,7 +2194,7 @@ ha-card { container-type: inline-size; }
 		if (!this._config) return N;
 		let e = this._config;
 		return A`
-      <ha-card class="${e.display_preset === "e_ink" ? "e-ink" : e.display_preset === "compact" ? "compact" : e.display_preset === "minimal" ? "minimal" : ""}" data-theme="${e.theme_mode}" data-header="${e.header_style}">
+      <ha-card class="${e.display_preset === "e_ink" ? "e-ink" : e.display_preset === "compact" ? "compact" : e.display_preset === "minimal" ? "minimal" : e.display_preset === "native" ? "native" : ""}" data-theme="${e.theme_mode}" data-header="${e.header_style}">
         ${e.show_header ? A`
           <div class="header" style="background:${this._getHeaderColor()}">
             <span class="header-icon">${e.icon ? A`<ha-icon icon="${e.icon}" style="color:var(--mzkzg-header-text, #fff);--mdc-icon-size:20px"></ha-icon>` : this._getAutoIcon()}</span>

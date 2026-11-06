@@ -43,7 +43,7 @@ export class MzkzgTransportCard extends LitElement {
   setConfig(config) {
     if (!config) throw new Error("No configuration provided");
     if (config.entities && !Array.isArray(config.entities)) throw new Error("entities must be an array");
-    const preset = ["standard", "compact", "e_ink", "minimal"].includes(config.display_preset)
+    const preset = ["standard", "compact", "e_ink", "minimal", "native"].includes(config.display_preset)
       ? config.display_preset : "standard";
     const themeMode = ["auto", "light", "dark"].includes(config.theme_mode) ? config.theme_mode : "auto";
     const headerStyle = ["provider", "theme", "custom"].includes(config.header_style)
@@ -593,7 +593,8 @@ export class MzkzgTransportCard extends LitElement {
     const c = this._config;
     const cardClass = c.display_preset === "e_ink" ? "e-ink"
       : c.display_preset === "compact" ? "compact"
-      : c.display_preset === "minimal" ? "minimal" : "";
+      : c.display_preset === "minimal" ? "minimal"
+      : c.display_preset === "native" ? "native" : "";
 
     return html`
       <ha-card class="${cardClass}" data-theme="${c.theme_mode}" data-header="${c.header_style}">

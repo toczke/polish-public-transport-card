@@ -20,20 +20,18 @@ async function makeCard(page: any, config: any, hass: any) {
   }, { config, hass });
 }
 
-test('theme mode and header style are reflected in the card DOM', async ({ page }) => {
+test('native preset is reflected in the card DOM', async ({ page }) => {
   await page.goto('about:blank');
   await page.addScriptTag({ path: SCRIPT });
   const result = await makeCard(page, {
     entities: ['sensor.test'],
-    theme_mode: 'dark',
     header_style: 'theme',
-    display_preset: 'minimal',
+    display_preset: 'native',
   }, {
     locale: { language: 'pl', time_format: '24' },
     states: { 'sensor.test': { attributes: { departures: [], stop_name: 'Test' } } },
   });
-  expect(result.theme).toBe('dark');
-  expect(result.classes).toContain('minimal');
+  expect(result.classes).toContain('native');
 });
 
 test('global and per-sensor filters are applied', async ({ page }) => {
