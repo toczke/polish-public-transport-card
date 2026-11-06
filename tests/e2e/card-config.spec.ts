@@ -57,7 +57,7 @@ test('global and per-sensor filters are applied', async ({ page }) => {
     },
   });
   expect(result.routes).toEqual(['6', '6', '7']);
-  expect(result.mapPins).toBe(2);
+  expect(result.mapPins).toBe(0);
 });
 
 test('grouped view adds a line header per route and headsign', async ({ page }) => {

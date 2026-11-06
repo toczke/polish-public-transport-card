@@ -138,7 +138,7 @@ When a departure includes GPS coordinates, clicking the row opens a Leaflet map 
 
 ## What's New in 1.7.0
 
-- **Card UI overhaul** — theme modes (`auto`/`light`/`dark`), header style (provider/HA theme/custom), optional clock, `minimal` preset, row-density and visibility switches, per-sensor overrides in the GUI editor, new route/vehicle/provider filters and a map-pin hint on live rows
+- **Card UI overhaul** — theme modes (`auto`/`light`/`dark`), header style (provider/HA theme/custom), optional clock, `minimal` preset, row-density and visibility switches, per-sensor overrides in the GUI editor and new route/vehicle/provider filters
 - **Live vehicle markers cleaned up** - removed the overlapping vehicle-code badge; the map now shows a clean route circle with direction arrow and a white ring on the selected vehicle. Leaflet CSS is always loaded, fixing checkerboard tiles.
 - **Kraków on zbiorkom.live api6-open** — new stop picker (all tram platforms and agglomeration stops), brigade/next-stop GPS matching and automatic legacy stop-id migration
 - **Wrocław and 11 api6 feeds fixed** — Lublin, Kielce, Radom, Elbląg, Gorzów, Suwałki, Przemyśl, Rybnik, Kutno, Legnica and Leszno now use static + realtime api6 endpoints

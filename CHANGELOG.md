@@ -26,7 +26,7 @@
 - **Per-sensor editor** - the GUI editor now has a second form for per-sensor overrides
   (routes, destinations, vehicle type, provider, platform/track, max rows, realtime,
   highlight mode)
-- **Map discoverability** - rows with a live vehicle position show a map-pin icon
+- **Map discoverability** - rows with a live vehicle position open the map when clicked; the extra row pin icon was removed to keep rows compact
 - **YAML documentation** - README options table and example config updated with all
   global/per-sensor keys and theme examples
 

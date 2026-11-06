@@ -105,7 +105,6 @@ ha-card.e-ink .dep-row { transition: none; }
 .headsign-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 0 1 auto; min-width: 0; max-width: 100%; }
 .icons { display: inline-flex; gap: 3px; align-items: center; flex-shrink: 0; white-space: nowrap; flex-basis: 100%; width: 100%; margin-top: 1px; }
 .icons svg { color: var(--mzkzg-muted); opacity: 0.8; }
-.map-pin { display: inline-flex; align-items: center; color: var(--mzkzg-focus); opacity: 0.85; }
 .platform { display: inline-flex; align-items: center; justify-content: center; background: var(--mzkzg-chip-bg); color: var(--mzkzg-chip-text); border-radius: 6px; padding: 1px 6px; font-size: 10px; font-weight: 600; letter-spacing: 0.02em; white-space: nowrap; flex-shrink: 0; }
 .meta-row { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; width: 100%; margin-top: 1px; }
 .stop-name { display: block; font-size: 10px; color: var(--mzkzg-muted); font-weight: 400; margin-top: 1px; width: 100%; }
@@ -113,7 +112,6 @@ ha-card.minimal .header,
 ha-card.minimal .footer,
 ha-card.minimal .stop-name,
 ha-card.minimal .icons,
-ha-card.minimal .map-pin,
 ha-card.minimal .platform { display: none; }
 ha-card.minimal .dep-row { min-height: 34px; padding: 5px 10px; gap: 8px; }
 ha-card.minimal .badge { min-width: 32px; padding: 2px 5px; font-size: 11px; }
