@@ -486,6 +486,11 @@ export class MzkzgTransportCard extends LitElement {
       return;
     }
 
+    const tapAction = this._resolveActionConfig("tap").action || "none";
+    // Rows without a live vehicle position should behave like plain timetable
+    // text; never open the entity more-info dialog for them.
+    if (tapAction === "more-info") return;
+
     if (this._tapTimer) clearTimeout(this._tapTimer);
     this._tapTimer = setTimeout(() => this._handleRowAction("tap", d), 220);
   }
@@ -562,9 +567,13 @@ export class MzkzgTransportCard extends LitElement {
       }
       return html`<div class="state-msg"><span class="icon">⏳</span>${t("no_departures")}</div>`;
     }
-    const hasRowActions = ["none"].indexOf((this._config.tap_action?.action || "more-info")) === -1
-      || ["none"].indexOf((this._config.hold_action?.action || "none")) === -1
-      || ["none"].indexOf((this._config.double_tap_action?.action || "none")) === -1;
+    const tapAction = this._resolveActionConfig("tap").action || "none";
+    const holdAction = this._resolveActionConfig("hold").action || "none";
+    const doubleTapAction = this._resolveActionConfig("double").action || "none";
+    const hasExplicitActions =
+      (tapAction !== "none" && tapAction !== "more-info") ||
+      holdAction !== "none" ||
+      doubleTapAction !== "none";
 
     const renderRow = (d) => {
       const mins = minutesUntil(d.estimated_time);
@@ -631,7 +640,7 @@ export class MzkzgTransportCard extends LitElement {
         trainInfo = html`<span class="stop-name">${t("train_no")} ${d.train_number} - ${shortCarrier}</span>`;
       }
 
-      const isInteractive = hasRowActions || hasPos;
+      const isInteractive = hasPos || hasExplicitActions;
 
       return html`
         <div class="dep-row ${isInteractive ? 'interactive' : ''} ${imminent ? 'imminent' : ''} ${d._dimmed ? 'dimmed' : ''} ${cancelled ? 'cancelled' : ''}"

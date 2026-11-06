@@ -2464,7 +2464,7 @@ ha-card { container-type: inline-size; }
 			});
 			return;
 		}
-		this._tapTimer && clearTimeout(this._tapTimer), this._tapTimer = setTimeout(() => this._handleRowAction("tap", t), 220);
+		(this._resolveActionConfig("tap").action || "none") !== "more-info" && (this._tapTimer && clearTimeout(this._tapTimer), this._tapTimer = setTimeout(() => this._handleRowAction("tap", t), 220));
 	}
 	_onRowDblClick(e, t) {
 		this._tapTimer && clearTimeout(this._tapTimer), this._handleRowAction("double", t);
@@ -2525,13 +2525,13 @@ ha-card { container-type: inline-size; }
 			}
 			return A`<div class="state-msg"><span class="icon">⏳</span>${H("no_departures")}</div>`;
 		}
-		let n = ["none"].indexOf(this._config.tap_action?.action || "more-info") === -1 || ["none"].indexOf(this._config.hold_action?.action || "none") === -1 || ["none"].indexOf(this._config.double_tap_action?.action || "none") === -1, r = (t) => {
-			let r = Oe(t.estimated_time), i = t.realtime && r !== null && r <= 2, a = Math.round((t.delay_seconds || 0) / 60), o = e.show_delays && t.realtime && Math.abs(a) >= 1, s = t.cancelled === !0, c;
+		let n = this._resolveActionConfig("tap").action || "none", r = this._resolveActionConfig("hold").action || "none", i = this._resolveActionConfig("double").action || "none", a = n !== "none" && n !== "more-info" || r !== "none" || i !== "none", o = (t) => {
+			let n = Oe(t.estimated_time), r = t.realtime && n !== null && n <= 2, i = Math.round((t.delay_seconds || 0) / 60), o = e.show_delays && t.realtime && Math.abs(i) >= 1, s = t.cancelled === !0, c;
 			if (s) c = A`<div class="time-main cancelled">${H("cancelled")}</div>`;
 			else if (e.display_preset === "e_ink") c = A`<div class="time-main">${G(t.estimated_time || t.theoretical_time)}</div>`;
 			else if (t.realtime) {
-				let n = o ? A` <span class="delay-badge ${a > 0 ? "late" : "early"}">${a > 0 ? "+" : ""}${a}min</span>` : N, i = o ? A`<span class="time-struck">${G(t.theoretical_time || t.estimated_time)}</span> ${G(t.estimated_time)}` : G(t.estimated_time), s = r !== null && r <= 0 ? H("departing") : ke(r);
-				c = e.show_countdown ? A`<div class="time-main">${i}</div><div class="time-sub"><span class="dot">●</span> ${s}${n}</div>` : A`<div class="time-main">${i}${n}</div>`;
+				let r = o ? A` <span class="delay-badge ${i > 0 ? "late" : "early"}">${i > 0 ? "+" : ""}${i}min</span>` : N, a = o ? A`<span class="time-struck">${G(t.theoretical_time || t.estimated_time)}</span> ${G(t.estimated_time)}` : G(t.estimated_time), s = n !== null && n <= 0 ? H("departing") : ke(n);
+				c = e.show_countdown ? A`<div class="time-main">${a}</div><div class="time-sub"><span class="dot">●</span> ${s}${r}</div>` : A`<div class="time-main">${a}${r}</div>`;
 			} else c = A`<div class="time-main">${G(t.theoretical_time || t.estimated_time)}</div>`;
 			let l = N;
 			e.show_platform && t._provider === "plk_rail" && (l = A`
@@ -2547,9 +2547,9 @@ ha-card { container-type: inline-size; }
 				let e = (t.carrier || "").replace(/^[„""'\s]+/, "").replace(/PKP\s*Szybka\s*Kolej\s*Miejska.*/i, "SKM").replace(/PKP\s*Intercity.*/i, "IC").replace(/POLREGIO.*/i, "Polregio").replace(/\s*sp\.?\s*z\s*o\.?\s*o\.?.*/i, "");
 				h = A`<span class="stop-name">${H("train_no")} ${t.train_number} - ${e}</span>`;
 			}
-			let g = n || ee;
+			let g = ee || a;
 			return A`
-        <div class="dep-row ${g ? "interactive" : ""} ${i ? "imminent" : ""} ${t._dimmed ? "dimmed" : ""} ${s ? "cancelled" : ""}"
+        <div class="dep-row ${g ? "interactive" : ""} ${r ? "imminent" : ""} ${t._dimmed ? "dimmed" : ""} ${s ? "cancelled" : ""}"
              tabindex=${g ? "0" : "-1"}
              @click=${(e) => this._onRowClick(e, t)}
              @dblclick=${(e) => this._onRowDblClick(e, t)}
@@ -2566,7 +2566,7 @@ ha-card { container-type: inline-size; }
           <div class="time-col">${c}</div>
         </div>
       `;
-		}, i = [];
+		}, s = [];
 		if (e.group_by_provider) {
 			let e = {};
 			t.forEach((t) => {
@@ -2575,7 +2575,7 @@ ha-card { container-type: inline-size; }
 			});
 			for (let t in e) {
 				let n;
-				n = t === "plk_rail" ? H("trains") : t === "Inne" ? H("other") : Fe(t), i.push(A`<div class="provider-header">${n}</div>`), e[t].forEach((e) => i.push(r(e)));
+				n = t === "plk_rail" ? H("trains") : t === "Inne" ? H("other") : Fe(t), s.push(A`<div class="provider-header">${n}</div>`), e[t].forEach((e) => s.push(o(e)));
 			}
 		} else if (e.view_mode === "grouped") {
 			let e = /* @__PURE__ */ new Map();
@@ -2585,15 +2585,15 @@ ha-card { container-type: inline-size; }
 			}
 			for (let [, t] of e) {
 				let e = t[0];
-				i.push(A`<div class="provider-header line-header">${e.route} → ${e.headsign || "—"}</div>`), t.forEach((e) => i.push(r(e)));
+				s.push(A`<div class="provider-header line-header">${e.route} → ${e.headsign || "—"}</div>`), t.forEach((e) => s.push(o(e)));
 			}
-		} else t.forEach((e) => i.push(r(e)));
-		let a = this._config.min_departures === void 0 ? 0 : parseInt(this._config.min_departures), o = t.length;
-		if (o > 0 && o < a) {
-			let e = a - o;
-			for (let t = 0; t < e; t++) i.push(A`<div class="dep-row" style="visibility:hidden">&nbsp;</div>`);
+		} else t.forEach((e) => s.push(o(e)));
+		let c = this._config.min_departures === void 0 ? 0 : parseInt(this._config.min_departures), l = t.length;
+		if (l > 0 && l < c) {
+			let e = c - l;
+			for (let t = 0; t < e; t++) s.push(A`<div class="dep-row" style="visibility:hidden">&nbsp;</div>`);
 		}
-		return i;
+		return s;
 	}
 	render() {
 		if (!this._config) return N;

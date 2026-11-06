@@ -60,6 +60,45 @@ test('global and per-sensor filters are applied', async ({ page }) => {
   expect(result.mapPins).toBe(0);
 });
 
+test('rows without live position are not clickable', async ({ page }) => {
+  await page.goto('about:blank');
+  await page.addScriptTag({ path: SCRIPT });
+  const soon = new Date(Date.now() + 300000).toISOString();
+  const departures = [
+    { route: '6', headsign: 'Live', estimated_time: soon, theoretical_time: soon, realtime: true, vehicle_lat: 54.4, vehicle_lng: 18.6, vehicle_code: '100' },
+    { route: '7', headsign: 'Static', estimated_time: soon, theoretical_time: soon, realtime: false },
+  ];
+  const result = await page.evaluate(async ({ departures }) => {
+    const card: any = document.createElement('polish-transport-card');
+    card.setConfig({ entities: ['sensor.test'] });
+    document.body.appendChild(card);
+    card.hass = {
+      locale: { language: 'pl' },
+      states: { 'sensor.test': { attributes: { provider: 'ztm_gdansk', stop_name: 'Test', departures } } },
+    };
+    await card.updateComplete;
+    let moreInfo = 0;
+    card.addEventListener('hass-more-info', () => { moreInfo += 1; });
+    const rows = [...card.shadowRoot.querySelectorAll('.dep-row')] as HTMLElement[];
+    const staticRow = rows.find((r) => r.textContent.includes('Static')) as HTMLElement;
+    const liveRow = rows.find((r) => r.textContent.includes('Live')) as HTMLElement;
+    staticRow.click();
+    await new Promise((r) => setTimeout(r, 300));
+    return {
+      moreInfo,
+      staticInteractive: staticRow.classList.contains('interactive'),
+      staticTabindex: staticRow.getAttribute('tabindex'),
+      liveInteractive: liveRow.classList.contains('interactive'),
+      liveTabindex: liveRow.getAttribute('tabindex'),
+    };
+  }, { departures });
+  expect(result.moreInfo).toBe(0);
+  expect(result.staticInteractive).toBe(false);
+  expect(result.staticTabindex).toBe('-1');
+  expect(result.liveInteractive).toBe(true);
+  expect(result.liveTabindex).toBe('0');
+});
+
 test('prefix headsign duplicates are merged in the card', async ({ page }) => {
   await page.goto('about:blank');
   await page.addScriptTag({ path: SCRIPT });

@@ -31,6 +31,9 @@
   global/per-sensor keys and theme examples
 
 ### Fixed
+- **Static rows** - departures without a live vehicle position are no longer
+  clickable and no longer open the entity more-info dialog; only rows with GPS or
+  an explicitly configured action are interactive
 - **Duplicate departures** - schedule and realtime rows for the same route and time
   are now merged when one headsign is a prefix of the other (for example
   `Brzeźno` and `Brzeźno Dom Zdrojowy`); the more specific terminus and the richer
