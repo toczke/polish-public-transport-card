@@ -18,9 +18,10 @@
       },
       "stop": {
         "title": "Wybierz przystanek — {provider}",
-        "description": "Wybierz przystanek z listy lub wpisz ID ręcznie.",
+        "description": "Wybierz przystanek z listy lub wpisz ID ręcznie. Przy dużych listach wpisz nazwę lub ID i zatwierdź, aby zawęzić wyniki.",
         "data": {
           "stop_id": "Przystanek",
+          "stop_query": "Szukaj przystanku (nazwa lub ID)",
           "name": "Własna nazwa (opcjonalnie)"
         }
       },
@@ -41,6 +42,7 @@
     },
     "error": {
       "invalid_stop_id": "Wprowadź poprawny identyfikator przystanku",
+      "no_stops_found": "Brak przystanków pasujących do wyszukiwania — spróbuj innej nazwy lub ID",
       "api_key_required": "Klucz API PLK jest wymagany",
       "invalid_group": "Wybrano nieprawidłową grupę przystanków"
     },

@@ -9,6 +9,9 @@ import logging
 import re
 
 
+import unicodedata
+
+
 import aiohttp
 
 
@@ -184,6 +187,33 @@ from .const import (
 
 _LOGGER = logging.getLogger(__name__)
 
+MAX_STOP_OPTIONS = 3000
+MAX_STOP_RESULTS = 500
+STOP_QUERY = "stop_query"
+
+
+def _normalize_stop_search(value: object) -> str:
+    """Case- and accent-insensitive stop search text."""
+    text = str(value or "").replace("ł", "l").replace("Ł", "L")
+    text = unicodedata.normalize("NFKD", text)
+    return "".join(ch for ch in text if not unicodedata.combining(ch)).casefold()
+
+
+def _match_stops(stops: list[dict], query: str, limit: int = MAX_STOP_RESULTS) -> list[dict]:
+    """Return stops matching every word in the query (name or ID)."""
+    words = [word for word in _normalize_stop_search(query).split() if word]
+    if not words:
+        return []
+    matches: list[dict] = []
+    for stop in stops:
+        haystack = _normalize_stop_search(f"{stop.get('name', '')} {stop.get('id', '')}")
+        if all(word in haystack for word in words):
+            matches.append(stop)
+            if len(matches) >= limit:
+                break
+    return matches
+
+
 
 PROVIDER_OPTIONS = {
     PROVIDER_ZTM: "ZTM Gda\u0144sk",
@@ -276,6 +306,9 @@ class MzkzgTransportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self._stops: list[dict] = []
 
 
+        self._stop_query: str = ""
+
+
         self._api_key: str = ""
 
 
@@ -292,6 +325,9 @@ class MzkzgTransportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
 
             self._provider = user_input[CONF_PROVIDER]
+
+
+            self._stop_query = ""
 
 
             if self._provider == PROVIDER_LODZ:
@@ -565,19 +601,45 @@ class MzkzgTransportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors = {}
 
 
+        large_list = len(self._stops) > MAX_STOP_OPTIONS
+
+
+        matches: list[dict] = []
+
+
         if user_input is not None:
 
 
-            stop_id = str(user_input[CONF_STOP_ID]).strip()
+            query = str(user_input.get(STOP_QUERY, "") or "").strip()
 
 
-            name = user_input.get(CONF_NAME, "").strip()
+            stop_id = str(user_input.get(CONF_STOP_ID, "") or "").strip()
+
+
+            name = str(user_input.get(CONF_NAME, "") or "").strip()
+
+
+            # Large providers are not rendered as one huge dropdown. The first
+            # submit narrows the list by name/ID, then the user picks a match.
+            if large_list and query and not stop_id:
+
+
+                self._stop_query = query
+
+
+                return await self.async_step_stop()
 
 
             if not stop_id or not re.match(STOP_ID_PATTERN, stop_id):
 
 
                 errors[CONF_STOP_ID] = "invalid_stop_id"
+
+
+                if query:
+
+
+                    self._stop_query = query
 
 
             else:
@@ -638,7 +700,7 @@ class MzkzgTransportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
 
         # Build stop options as dict for selector
-        if self._stops and len(self._stops) <= 3000:
+        if self._stops and not large_list:
             from homeassistant.helpers.selector import (
                 SelectOptionDict,
                 SelectSelector,
@@ -664,40 +726,50 @@ class MzkzgTransportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     vol.Optional(CONF_NAME, default=""): str,
                 }
             )
+        elif large_list:
+            from homeassistant.helpers.selector import (
+                SelectOptionDict,
+                SelectSelector,
+                SelectSelectorConfig,
+                SelectSelectorMode,
+            )
+
+            matches = _match_stops(self._stops, self._stop_query)
+            fields = {
+                vol.Optional(STOP_QUERY, default=self._stop_query): str,
+            }
+            if matches:
+                fields[vol.Optional(CONF_STOP_ID, default="")] = SelectSelector(
+                    SelectSelectorConfig(
+                        options=[
+                            SelectOptionDict(value=str(s["id"]), label=f"{s['name']} ({s['id']})")
+                            for s in matches
+                        ],
+                        mode=SelectSelectorMode.DROPDOWN,
+                        custom_value=True,
+                        sort=False,
+                    )
+                )
+            else:
+                fields[vol.Optional(CONF_STOP_ID, default="")] = str
+                if self._stop_query:
+                    errors[STOP_QUERY] = "no_stops_found"
+            fields[vol.Optional(CONF_NAME, default="")] = str
+            schema = vol.Schema(fields)
         else:
             schema = vol.Schema(
-
-
                 {
-
-
                     vol.Required(CONF_STOP_ID): str,
-
-
                     vol.Optional(CONF_NAME, default=""): str,
-
-
                 }
-
-
             )
 
 
         return self.async_show_form(
-
-
             step_id="stop",
-
-
             data_schema=schema,
-
-
             errors=errors,
-
-
             description_placeholders={"provider": PROVIDER_OPTIONS.get(self._provider, "")},
-
-
         )
 
 

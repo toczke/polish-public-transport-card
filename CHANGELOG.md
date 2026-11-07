@@ -45,6 +45,11 @@
   global/per-sensor keys and theme examples
 
 ### Fixed
+- **Large stop lists** - providers with more than 3000 stops (for example ZTP
+  Kraków with 3808 stops) no longer fall back to a bare stop-ID field. The config
+  flow now asks for a name/ID search, narrows the list (accent- and case-insensitive)
+  and shows a selectable dropdown, while keeping the 3000-option cap that prevents
+  the Home Assistant frontend memory crash from #20
 - **Static rows** - departures without a live vehicle position are no longer
   clickable and no longer open the entity more-info dialog; only rows with GPS or
   an explicitly configured action are interactive

@@ -62,7 +62,10 @@ test('map marker uses one compact popup and no tooltip', async ({ page }) => {
     card.vehicleMap.showVehicleMap(54.35, 18.65, {
       entityId: 'sensor.x', code: '100', route: '6', headsign: 'Jelitkowo', provider: 'ztm_gdansk',
     });
-    await new Promise((r) => setTimeout(r, 300));
+    for (let i = 0; i < 100; i += 1) {
+      if (document.querySelector('[role="dialog"]') && state.handlers.click) break;
+      await new Promise((r) => setTimeout(r, 50));
+    }
 
     const beforeClick = { ...state };
     state.handlers.click?.({ originalEvent: null });

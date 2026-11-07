@@ -175,7 +175,9 @@ Restart Home Assistant.
 
 1. **Settings → Devices & Services → Add Integration → Polish Public Transport**
 2. Choose your provider from the dropdown
-3. Search or type a stop ID
+3. Search or type a stop ID. Providers with more than 3000 stops (for example
+   ZTP Kraków) show a search field first; submit a name or ID, then pick from the
+   narrowed list.
 4. **Łódź only**: choose between "Single Stop" or "Bus Stop Group" (transfer hub) — the latter expands into one aggregated sensor covering all platforms
 5. For PKP/PLK: enter your API key from [dane.plk-sa.pl](https://dane.plk-sa.pl)
 

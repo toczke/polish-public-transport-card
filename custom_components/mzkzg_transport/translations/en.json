@@ -18,9 +18,10 @@
       },
       "stop": {
         "title": "Select stop - {provider}",
-        "description": "Choose a stop from the list or type the ID manually.",
+        "description": "Choose a stop from the list or type the ID manually. For large lists, type a name or ID and submit to narrow the results.",
         "data": {
           "stop_id": "Stop",
+          "stop_query": "Search stops (name or ID)",
           "name": "Custom name (optional)"
         }
       },
@@ -41,6 +42,7 @@
     },
     "error": {
       "invalid_stop_id": "Enter a valid stop ID",
+      "no_stops_found": "No stops match your search - try another name or ID",
       "api_key_required": "PLK API key is required",
       "invalid_group": "Invalid bus stop group selected"
     },
