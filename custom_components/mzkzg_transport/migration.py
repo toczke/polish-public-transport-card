@@ -111,7 +111,7 @@ async def _migrate_group(
         if not data.get(CONF_PLK_TIER) and entry.data.get(CONF_PLK_TIER):
             data[CONF_PLK_TIER] = entry.data[CONF_PLK_TIER]
 
-    await hass.config_entries.async_update_entry(
+    hass.config_entries.async_update_entry(
         hub,
         data=data,
         options=_merge_options(group),
@@ -232,6 +232,7 @@ async def async_migrate_entries(hass: HomeAssistant) -> None:
             if provider:
                 groups[provider].append(entry)
 
+        failed = False
         for provider, group in groups.items():
             if not any(entry.version < CONFIG_ENTRY_VERSION for entry in group):
                 continue
@@ -243,6 +244,7 @@ async def async_migrate_entries(hass: HomeAssistant) -> None:
             try:
                 await _migrate_group(hass, provider, group)
             except Exception as err:  # noqa: BLE001
+                failed = True
                 _LOGGER.exception("2.0 migration failed for %s: %s", provider, err)
 
-        hass.data[DOMAIN]["_migrated_2_0"] = True
+        hass.data[DOMAIN]["_migrated_2_0"] = not failed
