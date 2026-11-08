@@ -1,6 +1,6 @@
 """2.0 config-entry and entity migration.
 
-The integration keeps the legacy technical domain ``mzkzg_transport`` so Home
+The integration keeps the legacy technical domain so Home
 Assistant can load existing config entries and migrate them in place. All user
 visible and entity identifiers use the ``polish_transport`` prefix.
 """

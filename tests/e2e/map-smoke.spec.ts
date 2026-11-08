@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+﻿import { test, expect } from '@playwright/test';
 import * as path from 'path';
 
 test('map opens and closes', async ({ page }) => {
@@ -7,7 +7,7 @@ test('map opens and closes', async ({ page }) => {
   await page.addScriptTag({ path: scriptPath });
 
   const result = await page.evaluate(async () => {
-    const card = document.createElement('mzkzg-transport-card') as any;
+    const card = document.createElement('polish-transport-card') as any;
     card.hass = {
       states: { 'sensor.x': { attributes: { departures: [] } } },
       callWS: async () => ({ token: null }),

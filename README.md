@@ -361,7 +361,7 @@ npm run build
 npx playwright test
 ```
 
-**170 Python tests** cover GTFS-RT parsing, calendar filtering, position matching,
+**174 Python tests** cover GTFS-RT parsing, calendar filtering, position matching,
 route fallback, speed normalization, deduplication and provider-specific integration.
 **21 Playwright tests** cover card config, filters, the editor, the live-map popup,
 accessibility and visual snapshots for all five presets. Update visual baselines with

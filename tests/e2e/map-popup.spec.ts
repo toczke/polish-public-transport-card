@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+﻿import { test, expect } from '@playwright/test';
 import * as path from 'path';
 
 test('map marker uses one compact popup and no tooltip', async ({ page }) => {
@@ -44,7 +44,7 @@ test('map marker uses one compact popup and no tooltip', async ({ page }) => {
       marker: () => marker,
       DomEvent: { stopPropagation() {} },
     };
-    const card = document.createElement('mzkzg-transport-card') as any;
+    const card = document.createElement('polish-transport-card') as any;
     card.hass = {
       states: {
         'sensor.x': {
