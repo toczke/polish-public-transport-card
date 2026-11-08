@@ -30,6 +30,7 @@ from .const import (
     DOMAIN,
     ENTITY_UNIQUE_PREFIX,
     PROVIDER_LABELS,
+    PROVIDER_PLK,
 )
 
 _LOGGER = logging.getLogger(__name__)
