@@ -16,6 +16,19 @@ TIMETABLE_MAX_ROWS_PER_LINE = 500
 TIMETABLE_MAX_CACHE_ENTRIES = 500
 
 
+def _prune_timetable_cache(cache: dict, now_monotonic: float) -> None:
+    """Drop expired timetable rows and cap the cache size."""
+    for cache_key in list(cache):
+        if now_monotonic - cache[cache_key].get("_ts", 0) >= TIMETABLE_CACHE_TTL:
+            cache.pop(cache_key, None)
+    if len(cache) > TIMETABLE_MAX_CACHE_ENTRIES:
+        oldest = sorted(
+            cache.items(), key=lambda item: item[1].get("_ts", 0)
+        )[: len(cache) - TIMETABLE_MAX_CACHE_ENTRIES]
+        for cache_key, _ in oldest:
+            cache.pop(cache_key, None)
+
+
 async def fetch(coord: "PolishTransportCoordinator") -> dict:
     """Fetch departures from kiedyPrzyjedzie carriers."""
     session = await coord._get_session()
@@ -120,16 +133,7 @@ async def _fetch_timetable(coord, session, base_url: str, now: datetime) -> dict
     )
     # Long-running installs would otherwise keep every stop/line/day combination
     # forever. Drop expired rows and cap the cache so memory stays flat.
-    now_monotonic = time.monotonic()
-    for cache_key in list(cache):
-        if now_monotonic - cache[cache_key].get("_ts", 0) >= TIMETABLE_CACHE_TTL:
-            cache.pop(cache_key, None)
-    if len(cache) > TIMETABLE_MAX_CACHE_ENTRIES:
-        oldest = sorted(
-            cache.items(), key=lambda item: item[1].get("_ts", 0)
-        )[: len(cache) - TIMETABLE_MAX_CACHE_ENTRIES]
-        for cache_key, _ in oldest:
-            cache.pop(cache_key, None)
+    _prune_timetable_cache(cache, time.monotonic())
     cache_key_prefix = (coord.provider, coord.stop_id)
     result = {"lines": lines, "today": [], "tomorrow": []}
     today = now.replace(hour=0, minute=0, second=0, microsecond=0)

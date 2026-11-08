@@ -526,6 +526,7 @@ var Ee = "2.0.1", H = {
 		bike: "Rower",
 		wheelchair: "Wózek",
 		ac: "Klimatyzacja",
+		ticket_machine: "Biletomat",
 		platform: "peron",
 		last_update: "Odświeżono",
 		refresh: "Odśwież",
@@ -562,6 +563,7 @@ var Ee = "2.0.1", H = {
 		bike: "Bike",
 		wheelchair: "Wheelchair",
 		ac: "A/C",
+		ticket_machine: "Ticket machine",
 		platform: "platform",
 		last_update: "Updated",
 		refresh: "Refresh",
@@ -601,7 +603,7 @@ function G(e, t) {
 	let n = Number(e), r = Number(t);
 	return !Number.isFinite(n) || !Number.isFinite(r) || n < -90 || n > 90 || r < -180 || r > 180 ? null : [n, r];
 }
-function K(e) {
+function De(e) {
 	if (!e) return null;
 	let t;
 	if (/^\d{1,2}:\d{2}/.test(e)) {
@@ -610,13 +612,13 @@ function K(e) {
 	} else t = new Date(e);
 	return isNaN(t.getTime()) ? null : Math.round((t - Date.now()) / 6e4);
 }
-function q(e, t = null) {
+function K(e, t = null) {
 	return e ? /^\d{1,2}:\d{2}/.test(e) ? e.slice(0, 5) : new Date(e).toLocaleTimeString(t || document.documentElement.lang || "pl-PL", {
 		hour: "2-digit",
 		minute: "2-digit"
 	}) : "—";
 }
-function De(e) {
+function Oe(e) {
 	if (e === null || e < 0) return "";
 	if (e === 0) return "&lt;1 min";
 	if (e >= 60) {
@@ -625,7 +627,7 @@ function De(e) {
 	}
 	return `${e} min`;
 }
-function J(e, t, n = null) {
+function q(e, t, n = null) {
 	if (n) return n;
 	let r = String(e || "");
 	if (/^[Nn]/.test(r)) return "#1e293b";
@@ -680,30 +682,30 @@ function J(e, t, n = null) {
 		let e = parseInt(r, 10);
 		return !isNaN(e) && e <= 20 ? "#ad1457" : "#c62828";
 	}
-	return je[t] ? je[t] : "#005eb8";
+	return Me[t] ? Me[t] : "#005eb8";
 }
-function Y(e) {
+function J(e) {
 	return Array.isArray(e) ? e.map((e) => String(e).trim()).filter(Boolean) : e == null ? [] : String(e).split(",").map((e) => e.trim()).filter(Boolean);
 }
-function Oe(e) {
+function ke(e) {
 	if (typeof e == "string") return { entity: e };
 	if (!e || typeof e != "object" || typeof e.entity != "string") return null;
 	let t = { entity: e.entity };
-	return "filter_routes" in e && (t.filter_routes = Y(e.filter_routes)), "exclude_routes" in e && (t.exclude_routes = Y(e.exclude_routes)), "max_departures" in e && (t.max_departures = Math.max(1, Math.min(100, parseInt(e.max_departures) || 0)) || null), "destination_filter" in e && (t.destination_filter = Y(e.destination_filter)), "exclude_destinations" in e && (t.exclude_destinations = Y(e.exclude_destinations)), "filter_vehicle_types" in e && (t.filter_vehicle_types = Y(e.filter_vehicle_types).map((e) => e.toLowerCase())), "filter_providers" in e && (t.filter_providers = Y(e.filter_providers)), "filter_platform" in e && (t.filter_platform = e.filter_platform == null ? "" : String(e.filter_platform)), "filter_track" in e && (t.filter_track = e.filter_track == null ? "" : String(e.filter_track)), "realtime_only" in e && (t.realtime_only = e.realtime_only === !0), "hide_terminus" in e && (t.hide_terminus = e.hide_terminus === !0), "hide_cancelled" in e && (t.hide_cancelled = e.hide_cancelled === !0), "max_minutes" in e && (t.max_minutes = Math.max(0, Math.min(1440, parseInt(e.max_minutes) || 0))), "hide_departed" in e && (t.hide_departed = e.hide_departed === !0), "departed_grace_minutes" in e && (t.departed_grace_minutes = Math.max(0, Math.min(60, parseInt(e.departed_grace_minutes) || 0))), "only_low_floor" in e && (t.only_low_floor = e.only_low_floor === !0), "only_bike" in e && (t.only_bike = e.only_bike === !0), "only_ac" in e && (t.only_ac = e.only_ac === !0), "only_ticket_machine" in e && (t.only_ticket_machine = e.only_ticket_machine === !0), "highlight_mode" in e && (t.highlight_mode = e.highlight_mode === !0), t;
+	return "filter_routes" in e && (t.filter_routes = J(e.filter_routes)), "exclude_routes" in e && (t.exclude_routes = J(e.exclude_routes)), "max_departures" in e && (t.max_departures = Math.max(1, Math.min(100, parseInt(e.max_departures) || 0)) || null), "destination_filter" in e && (t.destination_filter = J(e.destination_filter)), "exclude_destinations" in e && (t.exclude_destinations = J(e.exclude_destinations)), "filter_vehicle_types" in e && (t.filter_vehicle_types = J(e.filter_vehicle_types).map((e) => e.toLowerCase())), "filter_providers" in e && (t.filter_providers = J(e.filter_providers)), "filter_platform" in e && (t.filter_platform = e.filter_platform == null ? "" : String(e.filter_platform)), "filter_track" in e && (t.filter_track = e.filter_track == null ? "" : String(e.filter_track)), "realtime_only" in e && (t.realtime_only = e.realtime_only === !0), "hide_terminus" in e && (t.hide_terminus = e.hide_terminus === !0), "hide_cancelled" in e && (t.hide_cancelled = e.hide_cancelled === !0), "max_minutes" in e && (t.max_minutes = Math.max(0, Math.min(1440, parseInt(e.max_minutes) || 0))), "hide_departed" in e && (t.hide_departed = e.hide_departed === !0), "departed_grace_minutes" in e && (t.departed_grace_minutes = Math.max(0, Math.min(60, parseInt(e.departed_grace_minutes) || 0))), "only_low_floor" in e && (t.only_low_floor = e.only_low_floor === !0), "only_bike" in e && (t.only_bike = e.only_bike === !0), "only_ac" in e && (t.only_ac = e.only_ac === !0), "only_ticket_machine" in e && (t.only_ticket_machine = e.only_ticket_machine === !0), "highlight_mode" in e && (t.highlight_mode = e.highlight_mode === !0), t;
 }
-function X(e, t = "none") {
+function Y(e, t = "none") {
 	if (!e || typeof e != "object") return { action: t };
 	let n = { action: String(e.action || t).toLowerCase() };
 	return e.navigation_path && (n.navigation_path = String(e.navigation_path)), e.url_path && (n.url_path = String(e.url_path)), e.perform_action && (n.perform_action = String(e.perform_action)), e.service && (n.service = String(e.service)), e.data && typeof e.data == "object" && (n.data = e.data), e.target && typeof e.target == "object" && (n.target = e.target), n;
 }
-function ke(e, t, n = {}) {
+function Ae(e, t, n = {}) {
 	e.dispatchEvent(new CustomEvent(t, {
 		detail: n,
 		bubbles: !0,
 		composed: !0
 	}));
 }
-var Ae = {
+var je = {
 	kiedyprzyjedzie_pks_gdansk: "#475569",
 	kiedyprzyjedzie_albatros: "#166534",
 	kiedyprzyjedzie_gryf: "#2f2f2f",
@@ -740,7 +742,7 @@ var Ae = {
 	gtfs_rzeszow: "#4338ca",
 	gtfs_leszno: "#0f766e",
 	mpk_lodz: "#e11d48"
-}, je = {
+}, Me = {
 	kiedyprzyjedzie_pks_gdansk: "#0f766e",
 	kiedyprzyjedzie_albatros: "#22c55e",
 	kiedyprzyjedzie_gryf: "#facc15",
@@ -777,7 +779,7 @@ var Ae = {
 	gtfs_rzeszow: "#8b5cf6",
 	gtfs_leszno: "#14b8a6",
 	mpk_lodz: "#fb7185"
-}, Me = {
+}, Ne = {
 	ztm_gdansk: "ZTM Gdańsk",
 	zkm_gdynia: "ZKM Gdynia",
 	mzk_wejherowo: "MZK Wejherowo",
@@ -841,18 +843,18 @@ var Ae = {
 	zbiorkom_krakow: "ZTP Kraków",
 	mpk_lodz: "MPK Łódź"
 };
-function Ne(e) {
-	return Me[e] || String(e || "").replaceAll("_", " ");
+function Pe(e) {
+	return Ne[e] || String(e || "").replaceAll("_", " ");
 }
 //#endregion
 //#region src/editor.js
-var Z = (e) => ({ select: { options: e } }), Pe = (e) => ({ select: {
+var X = (e) => ({ select: { options: e } }), Fe = (e) => ({ select: {
 	multiple: !0,
 	options: e
-} }), Fe = Object.entries(Me).map(([e, t]) => ({
+} }), Ie = Object.entries(Ne).map(([e, t]) => ({
 	value: e,
 	label: t
-})).sort((e, t) => e.label.localeCompare(t.label, "pl")), Ie = [
+})).sort((e, t) => e.label.localeCompare(t.label, "pl")), Le = [
 	{
 		name: "entities",
 		selector: { entity: {
@@ -877,7 +879,7 @@ var Z = (e) => ({ select: { options: e } }), Pe = (e) => ({ select: {
 		schema: [
 			{
 				name: "display_preset",
-				selector: Z([
+				selector: X([
 					{
 						value: "standard",
 						label: "preset_standard"
@@ -902,7 +904,7 @@ var Z = (e) => ({ select: { options: e } }), Pe = (e) => ({ select: {
 			},
 			{
 				name: "view_mode",
-				selector: Z([
+				selector: X([
 					{
 						value: "mixed",
 						label: "view_mixed"
@@ -933,7 +935,7 @@ var Z = (e) => ({ select: { options: e } }), Pe = (e) => ({ select: {
 		schema: [
 			{
 				name: "header_style",
-				selector: Z([
+				selector: X([
 					{
 						value: "provider",
 						label: "header_provider"
@@ -997,7 +999,7 @@ var Z = (e) => ({ select: { options: e } }), Pe = (e) => ({ select: {
 			},
 			{
 				name: "time_format",
-				selector: Z([
+				selector: X([
 					{
 						value: "auto",
 						label: "time_auto"
@@ -1094,7 +1096,7 @@ var Z = (e) => ({ select: { options: e } }), Pe = (e) => ({ select: {
 			},
 			{
 				name: "filter_providers",
-				selector: Pe(Fe)
+				selector: Fe(Ie)
 			},
 			{
 				name: "filter_platform",
@@ -1178,7 +1180,7 @@ var Z = (e) => ({ select: { options: e } }), Pe = (e) => ({ select: {
 			}
 		]
 	}
-], Le = [{
+], Re = [{
 	type: "grid",
 	name: "",
 	schema: [{
@@ -1215,7 +1217,7 @@ var Z = (e) => ({ select: { options: e } }), Pe = (e) => ({ select: {
 		},
 		{
 			name: "filter_providers",
-			selector: Pe(Fe)
+			selector: Fe(Ie)
 		},
 		{
 			name: "filter_platform",
@@ -1280,14 +1282,14 @@ var Z = (e) => ({ select: { options: e } }), Pe = (e) => ({ select: {
 			selector: { boolean: {} }
 		}
 	]
-}], Re = /* @__PURE__ */ new Set([
+}], ze = /* @__PURE__ */ new Set([
 	"filter_routes",
 	"exclude_routes",
 	"destination_filter",
 	"exclude_destinations",
 	"filter_vehicle_types",
 	"filter_providers"
-]), ze = class extends V {
+]), Be = class extends V {
 	static get properties() {
 		return {
 			hass: { type: Object },
@@ -1408,7 +1410,7 @@ var Z = (e) => ({ select: { options: e } }), Pe = (e) => ({ select: {
 		if (!this._config || !this.hass) return;
 		let t = { ...e.detail.value };
 		Array.isArray(t.entities) && (t.entities = this._mergeEntitySelection(t.entities));
-		for (let e of Re) e in t && (t[e] = Y(t[e]));
+		for (let e of ze) e in t && (t[e] = J(t[e]));
 		this._config = {
 			...this._config,
 			...t
@@ -1454,7 +1456,7 @@ var Z = (e) => ({ select: { options: e } }), Pe = (e) => ({ select: {
 	_overrideChanged(e) {
 		if (!this._config || !this._targetEntity) return;
 		let t = { ...e.detail.value };
-		for (let e of Re) e in t && (t[e] = Y(t[e]));
+		for (let e of ze) e in t && (t[e] = J(t[e]));
 		let n = this._entries().map((e) => {
 			if (e.entity !== this._targetEntity) return e;
 			let n = {
@@ -1462,7 +1464,7 @@ var Z = (e) => ({ select: { options: e } }), Pe = (e) => ({ select: {
 				...t,
 				entity: e.entity
 			};
-			return Object.keys(n).length > 1 ? Oe(n) : e.entity;
+			return Object.keys(n).length > 1 ? ke(n) : e.entity;
 		});
 		this._config = {
 			...this._config,
@@ -1478,7 +1480,7 @@ var Z = (e) => ({ select: { options: e } }), Pe = (e) => ({ select: {
 	}
 	render() {
 		if (!this.hass || !this._config) return P;
-		let e = this._entries(), t = this._validation(), n = this._preview(), r = this._localizeSchema(Ie), i = this._localizeSchema(Le), a = e.findIndex((e) => e.entity === this._targetEntity);
+		let e = this._entries(), t = this._validation(), n = this._preview(), r = this._localizeSchema(Le), i = this._localizeSchema(Re), a = e.findIndex((e) => e.entity === this._targetEntity);
 		return j`
       <div class="editor">
         ${t.length ? j`
@@ -1677,20 +1679,20 @@ var Z = (e) => ({ select: { options: e } }), Pe = (e) => ({ select: {
 		})[e] || e;
 	}
 };
-customElements.define("polish-transport-card-editor", ze);
+customElements.define("polish-transport-card-editor", Be);
 //#endregion
 //#region node_modules/lit-html/directive.js
-var Be = {
+var Ve = {
 	ATTRIBUTE: 1,
 	CHILD: 2,
 	PROPERTY: 3,
 	BOOLEAN_ATTRIBUTE: 4,
 	EVENT: 5,
 	ELEMENT: 6
-}, Ve = (e) => (...t) => ({
+}, He = (e) => (...t) => ({
 	_$litDirective$: e,
 	values: t
-}), He = class {
+}), Ue = class {
 	constructor(e) {}
 	get _$AU() {
 		return this._$AM._$AU;
@@ -1704,9 +1706,9 @@ var Be = {
 	update(e, t) {
 		return this.render(...t);
 	}
-}, Ue = class extends He {
+}, We = class extends Ue {
 	constructor(e) {
-		if (super(e), this.it = P, e.type !== Be.CHILD) throw Error(this.constructor.directiveName + "() can only be used in child bindings");
+		if (super(e), this.it = P, e.type !== Ve.CHILD) throw Error(this.constructor.directiveName + "() can only be used in child bindings");
 	}
 	render(e) {
 		if (e === P || e == null) return this._t = void 0, this.it = e;
@@ -1722,8 +1724,8 @@ var Be = {
 		};
 	}
 };
-Ue.directiveName = "unsafeHTML", Ue.resultType = 1;
-var We = Ve(Ue), Ge = o`
+We.directiveName = "unsafeHTML", We.resultType = 1;
+var Z = He(We), Ge = o`
 :host {
   display: block;
   --ptc-bg: var(--card-background-color, #fff);
@@ -2109,7 +2111,7 @@ var Q = null, qe = null, Je = class {
 			let n = t[0], r = t[t.length - 1];
 			e.shiftKey && document.activeElement === n ? (e.preventDefault(), r.focus()) : !e.shiftKey && document.activeElement === r && (e.preventDefault(), n.focus());
 		}, document.addEventListener("keydown", f.onKeyDown);
-		let p = J(n.route, n.provider || "", n.route_color);
+		let p = q(n.route, n.provider || "", n.route_color);
 		this.preloadLeaflet().then(() => {
 			requestAnimationFrame(() => {
 				if (f.destroyed) return;
@@ -2128,7 +2130,7 @@ var Q = null, qe = null, Je = class {
 					let e = `https://ckan2.multimediagdansk.pl/shapes?date=${(/* @__PURE__ */ new Date()).toISOString().split("T")[0]}&routeId=${n.route_id_int}&tripId=${n.trip_id}`;
 					fetch(e).then((e) => e.json()).then((e) => {
 						if (!(f.destroyed || !f.map) && e && e.coordinates && Array.isArray(e.coordinates)) {
-							let t = e.coordinates.map((e) => [e[1], e[0]]), r = J(n.route, n.provider) || "#e53935";
+							let t = e.coordinates.map((e) => [e[1], e[0]]), r = q(n.route, n.provider) || "#e53935";
 							window.L.polyline(t, {
 								color: r,
 								weight: 4,
@@ -2182,7 +2184,7 @@ var Q = null, qe = null, Je = class {
 		return [e[0] + Math.sin(i) * a, e[1] + Math.cos(i) * a];
 	}
 	_createVehicleMarker(e, t, n, r) {
-		let i = !!(t.vehicle_code && t.vehicle_code === e.vehicleCode), a = J(t.route, t._provider || t.provider || "", t.route_color), o = t.vehicle_direction || t.direction || 0, s = this.buildVehicleMarker(o, a, t.route || "?", t.vehicle_type || "bus", t, r), c = `<div class="zm-arrow" style="opacity:${i ? 1 : .72}">${s.svg}</div>`, l = window.L.divIcon({
+		let i = !!(t.vehicle_code && t.vehicle_code === e.vehicleCode), a = q(t.route, t._provider || t.provider || "", t.route_color), o = t.vehicle_direction || t.direction || 0, s = this.buildVehicleMarker(o, a, t.route || "?", t.vehicle_type || "bus", t, r), c = `<div class="zm-arrow" style="opacity:${i ? 1 : .72}">${s.svg}</div>`, l = window.L.divIcon({
 			className: "",
 			html: c,
 			iconSize: [s.size, s.size],
@@ -2235,7 +2237,7 @@ var Q = null, qe = null, Je = class {
 				let [r, i] = t, a = e.marker.getLatLng();
 				if (Math.abs(a.lat - r) < 1e-5 && Math.abs(a.lng - i) < 1e-5) return;
 				e.marker.setLatLng([r, i]);
-				let o = n.vehicle_direction || n.direction || 0, s = J(n.route, n._provider || n.provider || "", n.route_color), c = n.vehicle_type || "bus", l = window.innerWidth < 480, u = this.buildVehicleMarker(o, s, n.route, c, n, l), d = `<div class="zm-arrow">${u.svg}</div>`;
+				let o = n.vehicle_direction || n.direction || 0, s = q(n.route, n._provider || n.provider || "", n.route_color), c = n.vehicle_type || "bus", l = window.innerWidth < 480, u = this.buildVehicleMarker(o, s, n.route, c, n, l), d = `<div class="zm-arrow">${u.svg}</div>`;
 				e.marker.setIcon(window.L.divIcon({
 					className: "",
 					html: d,
@@ -2246,7 +2248,7 @@ var Q = null, qe = null, Je = class {
 			}
 		}
 	}
-}, Ye = M`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 16.01L16.01 15.99"/><path d="M6 16.01L6.01 15.99"/><path d="M20 22V15V8M20 8H18V2H22V8H20Z"/><path d="M4 20V22H6V20H4Z" fill="currentColor"/><path d="M14 20V22H16V20H14Z" fill="currentColor"/><path d="M16 20H2.6A.6.6 0 012 19.4V12.6c0-.33.27-.6.6-.6H16"/><path d="M14 8H6M14 2H6C3.79 2 2 3.79 2 6V8"/></svg>`, Xe = M`<svg viewBox="0 0 24 24" width="20" height="20" style="color:#fff"><path fill="currentColor" d="M12,2C8,2 4,2.5 4,6V15.5A3.5,3.5 0 0,0 7.5,19L6,20.5V21H18V20.5L16.5,19A3.5,3.5 0 0,0 20,15.5V6C20,2.5 16,2 12,2M7.5,17A1.5,1.5 0 0,1 6,15.5A1.5,1.5 0 0,1 7.5,14A1.5,1.5 0 0,1 9,15.5A1.5,1.5 0 0,1 7.5,17M11,10H6V7H11V10M13,10V7H18V10H13M16.5,17A1.5,1.5 0 0,1 15,15.5A1.5,1.5 0 0,1 16.5,14A1.5,1.5 0 0,1 18,15.5A1.5,1.5 0 0,1 16.5,17Z"/></svg>`, Ze = M`<svg viewBox="0 0 24 24" width="20" height="20" style="color:#fff"><path fill="currentColor" d="M14,14A2,2 0 0,1 12,16A2,2 0 0,1 10,14A2,2 0 0,1 12,12A2,2 0 0,1 14,14M12,19C10.74,19 9.38,18.42 8.44,17.44L10,15.93C10.55,16.29 11.23,16.5 12,16.5C12.77,16.5 13.45,16.29 14,15.93L15.56,17.44C14.62,18.42 13.26,19 12,19M20,6C20,4.89 19.11,4 18,4H6C4.89,4 4,4.89 4,6V18C4,19.11 4.89,20 6,20H18C19.11,20 20,19.11 20,18V6M12,10A4,4 0 0,0 8,14A4,4 0 0,0 12,18A4,4 0 0,0 16,14A4,4 0 0,0 12,10M17.5,7C17.22,7 17,6.78 17,6.5C17,6.22 17.22,6 17.5,6C17.78,6 18,6.22 18,6.5C18,6.78 17.78,7 17.5,7M15,7C14.72,7 14.5,6.78 14.5,6.5C14.5,6.22 14.72,6 15,6C15.28,6 15.5,6.22 15.5,6.5C15.5,6.78 15.28,7 15,7Z"/></svg>`, Qe = "<svg viewBox=\"0 0 24 24\" width=\"14\" height=\"14\"><path fill=\"currentColor\" d=\"M5,20.5A3.5,3.5 0 0,1 1.5,17A3.5,3.5 0 0,1 5,13.5A3.5,3.5 0 0,1 8.5,17A3.5,3.5 0 0,1 5,20.5M5,12A5,5 0 0,0 0,17A5,5 0 0,0 5,22A5,5 0 0,0 10,17A5,5 0 0,0 5,12M14.8,10H19V8.2H15.8L13.86,4.93C13.57,4.43 13,4.1 12.4,4.1C11.93,4.1 11.5,4.29 11.2,4.6L7.5,8.29C7.19,8.6 7,9 7,9.5C7,10.13 7.33,10.66 7.85,10.97L11.2,13V18H13V11.5L10.75,9.85L13.07,7.5M19,20.5A3.5,3.5 0 0,1 15.5,17A3.5,3.5 0 0,1 19,13.5A3.5,3.5 0 0,1 22.5,17A3.5,3.5 0 0,1 19,20.5M19,12A5,5 0 0,0 14,17A5,5 0 0,0 19,22A5,5 0 0,0 24,17A5,5 0 0,0 19,12M16,4.8C17,4.8 17.8,4 17.8,3C17.8,2 17,1.2 16,1.2C15,1.2 14.2,2 14.2,3C14.2,4 15,4.8 16,4.8Z\"/></svg>", $e = "<svg viewBox=\"0 0 24 24\" width=\"14\" height=\"14\"><path fill=\"currentColor\" d=\"M18.4,11.2L14.3,11.4L16.6,8.8C16.8,8.5 16.9,8 16.8,7.5C16.7,7.2 16.6,6.9 16.3,6.7L10.9,3.5C10.5,3.2 9.9,3.3 9.5,3.6L6.8,6.1C6.3,6.6 6.2,7.3 6.7,7.8C7.1,8.3 7.9,8.3 8.4,7.9L10.4,6.1L12.3,7.2L8.1,11.5C8,11.6 8,11.7 7.9,11.7C7.4,11.9 6.9,12.1 6.5,12.4L8,13.9C8.5,13.7 9,13.5 9.5,13.5C11.4,13.5 13,15.1 13,17C13,17.6 12.9,18.1 12.6,18.5L14.1,20C14.7,19.1 15,18.1 15,17C15,15.8 14.6,14.6 13.9,13.7L17.2,13.4L17,18.2C16.9,18.9 17.4,19.4 18.1,19.5H18.2C18.8,19.5 19.3,19 19.4,18.4L19.6,12.5C19.6,12.2 19.5,11.8 19.3,11.6C19,11.3 18.7,11.2 18.4,11.2M18,5.5A2,2 0 0,0 20,3.5A2,2 0 0,0 18,1.5A2,2 0 0,0 16,3.5A2,2 0 0,0 18,5.5M12.5,21.6C11.6,22.2 10.6,22.5 9.5,22.5C6.5,22.5 4,20 4,17C4,15.9 4.3,14.9 4.9,14L6.4,15.5C6.2,16 6,16.5 6,17C6,18.9 7.6,20.5 9.5,20.5C10.1,20.5 10.6,20.4 11,20.1L12.5,21.6Z\"/></svg>", et = "<svg viewBox=\"0 0 24 24\" width=\"14\" height=\"14\"><path fill=\"currentColor\" d=\"M20.79,13.95L18.46,14.57L16.46,13.44V10.56L18.46,9.43L20.79,10.05L21.31,8.12L19.54,7.65L20,5.88L18.07,5.36L17.45,7.69L15.45,8.82L13,7.38V5.12L14.71,3.41L13.29,2L12,3.29L10.71,2L9.29,3.41L11,5.12V7.38L8.5,8.82L6.5,7.69L5.92,5.36L4,5.88L4.47,7.65L2.7,8.12L3.22,10.05L5.55,9.43L7.55,10.56V13.45L5.55,14.58L3.22,13.96L2.7,15.89L4.47,16.36L4,18.12L5.93,18.64L6.55,16.31L8.55,15.18L11,16.62V18.88L9.29,20.59L10.71,22L12,20.71L13.29,22L14.7,20.59L13,18.88V16.62L15.5,15.17L17.5,16.3L18.12,18.63L20,18.12L19.53,16.35L21.3,15.88L20.79,13.95M9.5,10.56L12,9.11L14.5,10.56V13.44L12,14.89L9.5,13.44V10.56Z\"/></svg>", $ = (e) => j`<ha-icon class="state-icon" icon=${e}></ha-icon>`, tt = class extends V {
+}, Ye = M`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 16.01L16.01 15.99"/><path d="M6 16.01L6.01 15.99"/><path d="M20 22V15V8M20 8H18V2H22V8H20Z"/><path d="M4 20V22H6V20H4Z" fill="currentColor"/><path d="M14 20V22H16V20H14Z" fill="currentColor"/><path d="M16 20H2.6A.6.6 0 012 19.4V12.6c0-.33.27-.6.6-.6H16"/><path d="M14 8H6M14 2H6C3.79 2 2 3.79 2 6V8"/></svg>`, Xe = M`<svg viewBox="0 0 24 24" width="20" height="20" style="color:#fff"><path fill="currentColor" d="M12,2C8,2 4,2.5 4,6V15.5A3.5,3.5 0 0,0 7.5,19L6,20.5V21H18V20.5L16.5,19A3.5,3.5 0 0,0 20,15.5V6C20,2.5 16,2 12,2M7.5,17A1.5,1.5 0 0,1 6,15.5A1.5,1.5 0 0,1 7.5,14A1.5,1.5 0 0,1 9,15.5A1.5,1.5 0 0,1 7.5,17M11,10H6V7H11V10M13,10V7H18V10H13M16.5,17A1.5,1.5 0 0,1 15,15.5A1.5,1.5 0 0,1 16.5,14A1.5,1.5 0 0,1 18,15.5A1.5,1.5 0 0,1 16.5,17Z"/></svg>`, Ze = M`<svg viewBox="0 0 24 24" width="20" height="20" style="color:#fff"><path fill="currentColor" d="M14,14A2,2 0 0,1 12,16A2,2 0 0,1 10,14A2,2 0 0,1 12,12A2,2 0 0,1 14,14M12,19C10.74,19 9.38,18.42 8.44,17.44L10,15.93C10.55,16.29 11.23,16.5 12,16.5C12.77,16.5 13.45,16.29 14,15.93L15.56,17.44C14.62,18.42 13.26,19 12,19M20,6C20,4.89 19.11,4 18,4H6C4.89,4 4,4.89 4,6V18C4,19.11 4.89,20 6,20H18C19.11,20 20,19.11 20,18V6M12,10A4,4 0 0,0 8,14A4,4 0 0,0 12,18A4,4 0 0,0 16,14A4,4 0 0,0 12,10M17.5,7C17.22,7 17,6.78 17,6.5C17,6.22 17.22,6 17.5,6C17.78,6 18,6.22 18,6.5C18,6.78 17.78,7 17.5,7M15,7C14.72,7 14.5,6.78 14.5,6.5C14.5,6.22 14.72,6 15,6C15.28,6 15.5,6.22 15.5,6.5C15.5,6.78 15.28,7 15,7Z"/></svg>`, Qe = "<svg viewBox=\"0 0 24 24\" width=\"14\" height=\"14\"><path fill=\"currentColor\" d=\"M5,20.5A3.5,3.5 0 0,1 1.5,17A3.5,3.5 0 0,1 5,13.5A3.5,3.5 0 0,1 8.5,17A3.5,3.5 0 0,1 5,20.5M5,12A5,5 0 0,0 0,17A5,5 0 0,0 5,22A5,5 0 0,0 10,17A5,5 0 0,0 5,12M14.8,10H19V8.2H15.8L13.86,4.93C13.57,4.43 13,4.1 12.4,4.1C11.93,4.1 11.5,4.29 11.2,4.6L7.5,8.29C7.19,8.6 7,9 7,9.5C7,10.13 7.33,10.66 7.85,10.97L11.2,13V18H13V11.5L10.75,9.85L13.07,7.5M19,20.5A3.5,3.5 0 0,1 15.5,17A3.5,3.5 0 0,1 19,13.5A3.5,3.5 0 0,1 22.5,17A3.5,3.5 0 0,1 19,20.5M19,12A5,5 0 0,0 14,17A5,5 0 0,0 19,22A5,5 0 0,0 24,17A5,5 0 0,0 19,12M16,4.8C17,4.8 17.8,4 17.8,3C17.8,2 17,1.2 16,1.2C15,1.2 14.2,2 14.2,3C14.2,4 15,4.8 16,4.8Z\"/></svg>", $e = "<svg viewBox=\"0 0 24 24\" width=\"14\" height=\"14\"><path fill=\"currentColor\" d=\"M18.4,11.2L14.3,11.4L16.6,8.8C16.8,8.5 16.9,8 16.8,7.5C16.7,7.2 16.6,6.9 16.3,6.7L10.9,3.5C10.5,3.2 9.9,3.3 9.5,3.6L6.8,6.1C6.3,6.6 6.2,7.3 6.7,7.8C7.1,8.3 7.9,8.3 8.4,7.9L10.4,6.1L12.3,7.2L8.1,11.5C8,11.6 8,11.7 7.9,11.7C7.4,11.9 6.9,12.1 6.5,12.4L8,13.9C8.5,13.7 9,13.5 9.5,13.5C11.4,13.5 13,15.1 13,17C13,17.6 12.9,18.1 12.6,18.5L14.1,20C14.7,19.1 15,18.1 15,17C15,15.8 14.6,14.6 13.9,13.7L17.2,13.4L17,18.2C16.9,18.9 17.4,19.4 18.1,19.5H18.2C18.8,19.5 19.3,19 19.4,18.4L19.6,12.5C19.6,12.2 19.5,11.8 19.3,11.6C19,11.3 18.7,11.2 18.4,11.2M18,5.5A2,2 0 0,0 20,3.5A2,2 0 0,0 18,1.5A2,2 0 0,0 16,3.5A2,2 0 0,0 18,5.5M12.5,21.6C11.6,22.2 10.6,22.5 9.5,22.5C6.5,22.5 4,20 4,17C4,15.9 4.3,14.9 4.9,14L6.4,15.5C6.2,16 6,16.5 6,17C6,18.9 7.6,20.5 9.5,20.5C10.1,20.5 10.6,20.4 11,20.1L12.5,21.6Z\"/></svg>", et = "<svg viewBox=\"0 0 24 24\" width=\"14\" height=\"14\"><path fill=\"currentColor\" d=\"M20.79,13.95L18.46,14.57L16.46,13.44V10.56L18.46,9.43L20.79,10.05L21.31,8.12L19.54,7.65L20,5.88L18.07,5.36L17.45,7.69L15.45,8.82L13,7.38V5.12L14.71,3.41L13.29,2L12,3.29L10.71,2L9.29,3.41L11,5.12V7.38L8.5,8.82L6.5,7.69L5.92,5.36L4,5.88L4.47,7.65L2.7,8.12L3.22,10.05L5.55,9.43L7.55,10.56V13.45L5.55,14.58L3.22,13.96L2.7,15.89L4.47,16.36L4,18.12L5.93,18.64L6.55,16.31L8.55,15.18L11,16.62V18.88L9.29,20.59L10.71,22L12,20.71L13.29,22L14.7,20.59L13,18.88V16.62L15.5,15.17L17.5,16.3L18.12,18.63L20,18.12L19.53,16.35L21.3,15.88L20.79,13.95M9.5,10.56L12,9.11L14.5,10.56V13.44L12,14.89L9.5,13.44V10.56Z\"/></svg>", tt = "<svg viewBox=\"0 0 24 24\" width=\"14\" height=\"14\"><path fill=\"currentColor\" d=\"M22,10V6A2,2 0 0,0 20,4H4A2,2 0 0,0 2,6V10A2,2 0 0,1 4,12A2,2 0 0,1 2,14V18A2,2 0 0,0 4,20H20A2,2 0 0,0 22,18V14A2,2 0 0,1 20,12A2,2 0 0,1 22,10M13,17H11V15H13V17M13,13H11V11H13V13M13,9H11V7H13V9Z\"/></svg>", $ = (e) => j`<ha-icon class="state-icon" icon=${e}></ha-icon>`, nt = class extends V {
 	static get properties() {
 		return {
 			hass: { type: Object },
@@ -2294,7 +2296,7 @@ var Q = null, qe = null, Je = class {
 		].includes(e.header_style) ? e.header_style : e.header_color ? "custom" : "provider";
 		this._config = {
 			...e,
-			entities: (Array.isArray(e.entities) ? e.entities : []).map(Oe).filter(Boolean),
+			entities: (Array.isArray(e.entities) ? e.entities : []).map(ke).filter(Boolean),
 			max_departures: Math.max(1, Math.min(100, parseInt(e.max_departures) || 10)),
 			min_departures: Math.min(Math.max(1, Math.min(100, parseInt(e.max_departures) || 10)), Math.max(0, Math.min(100, parseInt(e.min_departures) || 0))),
 			refresh_interval: Math.max(5, Math.min(600, parseInt(e.refresh_interval) || 60)),
@@ -2332,12 +2334,12 @@ var Q = null, qe = null, Je = class {
 			only_bike: e.only_bike === !0,
 			only_ac: e.only_ac === !0,
 			only_ticket_machine: e.only_ticket_machine === !0,
-			filter_routes: Y(e.filter_routes),
-			exclude_routes: Y(e.exclude_routes),
-			destination_filter: Y(e.destination_filter),
-			exclude_destinations: Y(e.exclude_destinations),
-			filter_vehicle_types: Y(e.filter_vehicle_types).map((e) => e.toLowerCase()),
-			filter_providers: Y(e.filter_providers),
+			filter_routes: J(e.filter_routes),
+			exclude_routes: J(e.exclude_routes),
+			destination_filter: J(e.destination_filter),
+			exclude_destinations: J(e.exclude_destinations),
+			filter_vehicle_types: J(e.filter_vehicle_types).map((e) => e.toLowerCase()),
+			filter_providers: J(e.filter_providers),
 			filter_platform: e.filter_platform || "",
 			filter_track: e.filter_track || "",
 			time_format: [
@@ -2347,9 +2349,9 @@ var Q = null, qe = null, Je = class {
 			].includes(e.time_format) ? e.time_format : "auto",
 			icon: e.icon || "",
 			show_footer: e.show_footer !== !1,
-			tap_action: X(e.tap_action, "more-info"),
-			hold_action: X(e.hold_action, "none"),
-			double_tap_action: X(e.double_tap_action, "none")
+			tap_action: Y(e.tap_action, "more-info"),
+			hold_action: Y(e.hold_action, "none"),
+			double_tap_action: Y(e.double_tap_action, "none")
 		}, this._depCache = null;
 	}
 	getCardSize() {
@@ -2434,12 +2436,12 @@ var Q = null, qe = null, Je = class {
 			if (u && String(e.track || "") !== String(u) || i(e, "hide_terminus", t.hide_terminus) && e.headsign && e._stopName && e.headsign.toLowerCase() === e._stopName.toLowerCase() || i(e, "hide_cancelled", t.hide_cancelled) && e.cancelled) return !1;
 			let d = parseInt(i(e, "max_minutes", t.max_minutes), 10) || 0;
 			if (d > 0) {
-				let t = K(e.estimated_time || e.theoretical_time);
+				let t = De(e.estimated_time || e.theoretical_time);
 				if (t === null || t > d) return !1;
 			}
 			if (i(e, "only_low_floor", t.only_low_floor) && !(e.wheelchair_accessible === !0 || e.floor_height && e.floor_height !== "Pojazd wysokopodłogowy") || i(e, "only_bike", t.only_bike) && e.bike_allowed !== !0 || i(e, "only_ac", t.only_ac) && e.air_conditioning !== !0 || i(e, "only_ticket_machine", t.only_ticket_machine) && e.ticket_machine !== !0) return !1;
 			if (i(e, "hide_departed", t.hide_departed)) {
-				let n = K(e.estimated_time || e.theoretical_time), r = parseInt(i(e, "departed_grace_minutes", t.departed_grace_minutes), 10);
+				let n = De(e.estimated_time || e.theoretical_time), r = parseInt(i(e, "departed_grace_minutes", t.departed_grace_minutes), 10);
 				if (n !== null && n < -(Number.isFinite(r) ? r : 1)) return !1;
 			}
 			return !0;
@@ -2514,7 +2516,7 @@ var Q = null, qe = null, Je = class {
 			zkm_gdynia: "#005eb8",
 			mzk_wejherowo: "#478AC9",
 			plk_rail: "#1a1a2e",
-			...Ae
+			...je
 		}, t = /* @__PURE__ */ new Set();
 		if (this.hass && this._config.entities?.length) for (let e of this._getEntityIds()) {
 			let n = this.hass.states[e];
@@ -2541,7 +2543,7 @@ var Q = null, qe = null, Je = class {
 			let n = this.hass.states[t];
 			n?.attributes?.provider && e.add(n.attributes.provider);
 		}
-		return [...e].map(Ne).join(" • ") || "Polish Transport";
+		return [...e].map(Pe).join(" • ") || "Polish Transport";
 	}
 	_getClock() {
 		let e = this.hass?.locale?.language || document.documentElement.lang || "pl-PL", t = this._config.time_format, n = t === "12h" || t === "auto" && this.hass?.locale?.time_format === "12";
@@ -2582,20 +2584,20 @@ var Q = null, qe = null, Je = class {
 	}
 	_resolveActionConfig(e) {
 		let t = this._config || {};
-		return e === "tap" ? X(t.tap_action, "more-info") : X(e === "hold" ? t.hold_action : t.double_tap_action, "none");
+		return e === "tap" ? Y(t.tap_action, "more-info") : Y(e === "hold" ? t.hold_action : t.double_tap_action, "none");
 	}
 	async _handleRowAction(e, t) {
 		let n = this._resolveActionConfig(e), r = n.action || "none";
 		if (r === "none") return;
 		let i = t._entityId || this._config.entities[0];
 		if (r === "more-info") {
-			ke(this, "hass-more-info", { entityId: i });
+			Ae(this, "hass-more-info", { entityId: i });
 			return;
 		}
 		if (r === "navigate") {
 			let e = n.navigation_path || "";
 			if (!e) return;
-			history.pushState(null, "", e), ke(window, "location-changed", { replace: !1 });
+			history.pushState(null, "", e), Ae(window, "location-changed", { replace: !1 });
 			return;
 		}
 		if (r === "url") {
@@ -2699,19 +2701,19 @@ var Q = null, qe = null, Je = class {
 			}
 			let n = this._getAllDepartures();
 			if (n.length) {
-				let e = n[0], t = e.estimated_time ? q(e.estimated_time) : "";
+				let e = n[0], t = e.estimated_time ? K(e.estimated_time) : "";
 				return j`<div class="state-msg">${$("mdi:clock-outline")}${U("no_departures")}<br><small>${t ? `${U("next")}: ${e.route} → ${e.headsign} ${t}` : ""}</small></div>`;
 			}
 			return j`<div class="state-msg">${$("mdi:timer-sand-empty")}${U("no_departures")}</div>`;
 		}
 		let n = this._resolveActionConfig("tap").action || "none", r = this._resolveActionConfig("hold").action || "none", i = this._resolveActionConfig("double").action || "none", a = n !== "none" && n !== "more-info" || r !== "none" || i !== "none", o = (t) => {
-			let n = K(t.estimated_time), r = t.realtime && n !== null && n <= 2, i = Math.round((t.delay_seconds || 0) / 60), o = e.show_delays && t.realtime && Math.abs(i) >= 1, s = t.cancelled === !0, c;
+			let n = De(t.estimated_time), r = t.realtime && n !== null && n <= 2, i = Math.round((t.delay_seconds || 0) / 60), o = e.show_delays && t.realtime && Math.abs(i) >= 1, s = t.cancelled === !0, c;
 			if (s) c = j`<div class="time-main cancelled">${U("cancelled")}</div>`;
-			else if (e.display_preset === "e_ink") c = j`<div class="time-main">${q(t.estimated_time || t.theoretical_time)}</div>`;
+			else if (e.display_preset === "e_ink") c = j`<div class="time-main">${K(t.estimated_time || t.theoretical_time)}</div>`;
 			else if (t.realtime) {
-				let r = o ? j` <span class="delay-badge ${i > 0 ? "late" : "early"}">${i > 0 ? "+" : ""}${i}min</span>` : P, a = o && q(t.theoretical_time || t.estimated_time) !== q(t.estimated_time) ? j`<span class="time-struck">${q(t.theoretical_time || t.estimated_time)}</span> ${q(t.estimated_time)}` : q(t.estimated_time), s = n === null ? "" : n <= 0 ? U("departing") : `${U("in")} ${De(n)}`;
+				let r = o ? j` <span class="delay-badge ${i > 0 ? "late" : "early"}">${i > 0 ? "+" : ""}${i}min</span>` : P, a = o && K(t.theoretical_time || t.estimated_time) !== K(t.estimated_time) ? j`<span class="time-struck">${K(t.theoretical_time || t.estimated_time)}</span> ${K(t.estimated_time)}` : K(t.estimated_time), s = n === null ? "" : n <= 0 ? U("departing") : `${U("in")} ${Oe(n)}`;
 				c = e.show_countdown ? j`<div class="time-main">${a}</div><div class="time-sub"><span class="dot">●</span> ${s}${r}</div>` : j`<div class="time-main">${a}${r}</div>`;
-			} else c = j`<div class="time-main">${q(t.theoretical_time || t.estimated_time)}</div>`;
+			} else c = j`<div class="time-main">${K(t.theoretical_time || t.estimated_time)}</div>`;
 			let l = [];
 			e.show_platform && t._provider === "plk_rail" && (t.platform && l.push(`${U("platform")} ${t.platform}`), t.track && l.push(`${U("track")} ${t.track}`));
 			let u = [];
@@ -2720,13 +2722,13 @@ var Q = null, qe = null, Je = class {
 				u.push(`${U("train_no")} ${t.train_number}`), e && u.push(e);
 			}
 			let d = [];
-			e.show_accessibility && (e.show_bike && t.bike_allowed === !0 && d.push(j`<span title=${U("bike")}>${We(Qe)}</span>`), e.show_wheelchair && t.wheelchair_accessible === !0 && d.push(j`<span title=${U("wheelchair")}>${We($e)}</span>`), e.show_ac && t.air_conditioning === !0 && d.push(j`<span title=${U("ac")}>${We(et)}</span>`));
+			e.show_accessibility && (e.show_bike && t.bike_allowed === !0 && d.push(j`<span title=${U("bike")}>${Z(Qe)}</span>`), e.show_wheelchair && t.wheelchair_accessible === !0 && d.push(j`<span title=${U("wheelchair")}>${Z($e)}</span>`), e.show_ac && t.air_conditioning === !0 && d.push(j`<span title=${U("ac")}>${Z(et)}</span>`), e.show_ticket_machine && t.ticket_machine === !0 && d.push(j`<span title=${U("ticket_machine")}>${Z(tt)}</span>`));
 			let f = e.show_vehicle && t._provider !== "plk_rail" && t.vehicle_code && t.realtime ? j`<span class="vehicle-no" title=${U("show_vehicle")}>#${t.vehicle_code}</span>` : P, p = e.show_platform && t.platform && t._provider !== "plk_rail" ? j`<span class="platform" title=${U("platform")}>${t.platform}</span>` : P, m = G(t.vehicle_lat, t.vehicle_lng) !== null, h = [];
 			l.length && h.push(j`<span class="meta-pill">${l.join(" · ")}</span>`), p !== P && h.push(p);
 			let g = u.length ? j`<span class="train-info">${u.join(" · ")}</span>` : P, ee = d.length > 0 || h.length > 0 || g !== P ? j`<span class="meta-row">
             ${d.length ? j`<span class="icons">${d}</span>` : P}
             ${h.length || g !== P ? j`<span class="meta-chips">${h}${g}</span>` : P}
-          </span>` : P, te = e.show_stop_name && e.entities.length > 1 && e.view_mode !== "tabs" && t._stopName, _ = (t._stopName || "").replace(/\s*\(?(bus|tramwaj|tram|train|skm)\)?\s*/gi, " ").trim(), v = m || a, y = q(t.estimated_time || t.theoretical_time), b = `${t.route} → ${t.headsign || ""}${y ? `, ${y}` : ""}${m ? `, ${U("show_on_map")}` : ""}`;
+          </span>` : P, te = e.show_stop_name && e.entities.length > 1 && e.view_mode !== "tabs" && t._stopName, _ = (t._stopName || "").replace(/\s*\(?(bus|tramwaj|tram|train|skm)\)?\s*/gi, " ").trim(), v = m || a, y = K(t.estimated_time || t.theoretical_time), b = `${t.route} → ${t.headsign || ""}${y ? `, ${y}` : ""}${m ? `, ${U("show_on_map")}` : ""}`;
 			return j`
         <div class="dep-row ${v ? "interactive" : ""} ${r ? "imminent" : ""} ${t._dimmed ? "dimmed" : ""} ${s ? "cancelled" : ""}"
              tabindex=${v ? "0" : "-1"}
@@ -2738,7 +2740,7 @@ var Q = null, qe = null, Je = class {
              @keydown=${(e) => {
 				(e.key === "Enter" || e.key === " ") && (e.preventDefault(), this._onRowClick(e, t));
 			}}>
-          <span class="badge" style="background:${J(t.route, t._provider || t.provider, t.route_color)}">${t.route}</span>
+          <span class="badge" style="background:${q(t.route, t._provider || t.provider, t.route_color)}">${t.route}</span>
           <span class="headsign">
             <span class="head-main"><span class="headsign-text" title=${t.headsign}>${t.headsign}</span>${f}</span>
             ${ee}
@@ -2756,7 +2758,7 @@ var Q = null, qe = null, Je = class {
 			});
 			for (let t in e) {
 				let n;
-				n = t === "plk_rail" ? U("trains") : t === "Inne" ? U("other") : Ne(t), s.push(j`<div class="provider-header">${n}</div>`), e[t].forEach((e) => s.push(o(e)));
+				n = t === "plk_rail" ? U("trains") : t === "Inne" ? U("other") : Pe(t), s.push(j`<div class="provider-header">${n}</div>`), e[t].forEach((e) => s.push(o(e)));
 			}
 		} else if (e.view_mode === "grouped") {
 			let e = /* @__PURE__ */ new Map();
@@ -2801,7 +2803,7 @@ var Q = null, qe = null, Je = class {
     `;
 	}
 };
-customElements.get("polish-transport-card") || customElements.define("polish-transport-card", tt), window.customCards = window.customCards || [], window.customCards.push({
+customElements.get("polish-transport-card") || customElements.define("polish-transport-card", nt), window.customCards = window.customCards || [], window.customCards.push({
 	type: "polish-transport-card",
 	name: "Polish Transport Card",
 	description: "Tablica odjazdów polskiej komunikacji miejskiej (dane z integracji Polish Transport)",
