@@ -2,7 +2,7 @@
 
 import zipfile
 from io import BytesIO
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -320,6 +320,7 @@ class TestGetRtDelays:
         assert result["TRIP1_S1"] == (120, "V42")
         assert result["TRIP1_seq3"] == (120, "V42")
         assert result["TRIP1"] == (120, "V42")
+        assert not any(key.startswith("route_") for key in result)
 
     @pytest.mark.asyncio
     async def test_returns_empty_on_http_error(self):
@@ -519,6 +520,94 @@ class TestFetchDeduplication:
         assert 60 in deps   # T1 matched by stop_id
         assert 90 in deps   # T2 matched by stop_sequence
         assert 120 in deps  # T3 matched by trip_id fallback
+
+
+    @pytest.mark.asyncio
+    async def test_route_fallback_does_not_copy_delay_to_later_trips(self):
+        """Route-level keys are ignored so later trips keep their schedule (#52)."""
+        calendar = f"{CALENDAR_HEADER}\n{_calendar_line('SVC1', True)}"
+        stops = "stop_id,stop_name\nS1,Stop\nS2,End"
+        routes = "route_id,route_short_name,route_type\nR1,156,3"
+        trips = (
+            "trip_id,route_id,service_id,trip_headsign\n"
+            "T1,R1,SVC1,End\nT2,R1,SVC1,End\nT3,R1,SVC1,End"
+        )
+        st = (
+            "trip_id,stop_id,departure_time,stop_sequence,stop_headsign\n"
+            "T1,S1,19:09:00,1,End\n"
+            "T2,S1,19:29:00,1,End\n"
+            "T3,S1,19:49:00,1,End\n"
+            "T1,S2,19:40:00,2,\n"
+            "T2,S2,20:00:00,2,\n"
+            "T3,S2,20:20:00,2,"
+        )
+        data = _make_gtfs_zip(calendar=calendar, stops=stops, routes=routes, trips=trips, stop_times=st)
+
+        coord = MagicMock()
+        coord.provider = "gtfsrt_poznan"
+        coord.stop_id = "S1"
+        coord.stop_name = "Stop"
+        coord.config_entry = None
+        coord.hass = MagicMock()
+        coord.hass.data = {"mzkzg_transport": {"_gtfsrt_cache": {}, "_gtfsrt_locks": {}}}
+        coord.hass.async_add_executor_job = AsyncMock(side_effect=lambda func, *args: func(*args))
+        session = AsyncMock()
+        coord._get_session = AsyncMock(return_value=session)
+
+        rt_delays = {
+            "T1_S1": (120, "1480"),
+            # A legacy route-level key must never leak to T2/T3.
+            "route_R1_S1": (999, "BAD"),
+            "route_R1": (999, "BAD"),
+        }
+        with patch("mzkzg_transport.provider_gtfsrt._get_rt_delays", new_callable=AsyncMock, return_value=rt_delays):
+            with patch("mzkzg_transport.provider_gtfsrt._download_zip", new_callable=AsyncMock, return_value=data):
+                with patch("mzkzg_transport.provider_gtfsrt.dt_util") as mock_dt:
+                    fake_now = datetime(date.today().year, date.today().month, date.today().day, 19, 0, 0, tzinfo=timezone(timedelta(hours=2)))
+                    mock_dt.now.return_value = fake_now
+                    result = await fetch(coord)
+
+        deps = {d["trip_id"]: d for d in result["departures"] if d.get("trip_id")}
+        assert deps["T1"]["delay_seconds"] == 120
+        assert deps["T1"]["realtime"] is True
+        assert deps["T1"]["vehicle_code"] == "1480"
+        for trip_id in ("T2", "T3"):
+            assert deps[trip_id]["delay_seconds"] == 0
+            assert deps[trip_id]["realtime"] is False
+            assert deps[trip_id]["vehicle_code"] is None
+
+    @pytest.mark.asyncio
+    async def test_negative_delay_at_first_stop_is_clamped(self):
+        """A bus waiting at the terminus shows the scheduled time, not a huge negative delay."""
+        calendar = f"{CALENDAR_HEADER}\n{_calendar_line('SVC1', True)}"
+        stops = "stop_id,stop_name\nS1,Stop\nS2,End"
+        routes = "route_id,route_short_name,route_type\nR1,156,3"
+        trips = "trip_id,route_id,service_id,trip_headsign\nT1,R1,SVC1,End"
+        st = "trip_id,stop_id,departure_time,stop_sequence,stop_headsign\nT1,S1,19:09:00,1,End\nT1,S2,19:40:00,2,"
+        data = _make_gtfs_zip(calendar=calendar, stops=stops, routes=routes, trips=trips, stop_times=st)
+
+        coord = MagicMock()
+        coord.provider = "gtfsrt_poznan"
+        coord.stop_id = "S1"
+        coord.stop_name = "Stop"
+        coord.config_entry = None
+        coord.hass = MagicMock()
+        coord.hass.data = {"mzkzg_transport": {"_gtfsrt_cache": {}, "_gtfsrt_locks": {}}}
+        coord.hass.async_add_executor_job = AsyncMock(side_effect=lambda func, *args: func(*args))
+        session = AsyncMock()
+        coord._get_session = AsyncMock(return_value=session)
+
+        with patch("mzkzg_transport.provider_gtfsrt._get_rt_delays", new_callable=AsyncMock, return_value={"T1_S1": (-1020, "1480")}):
+            with patch("mzkzg_transport.provider_gtfsrt._download_zip", new_callable=AsyncMock, return_value=data):
+                with patch("mzkzg_transport.provider_gtfsrt.dt_util") as mock_dt:
+                    fake_now = datetime(date.today().year, date.today().month, date.today().day, 19, 0, 0, tzinfo=timezone(timedelta(hours=2)))
+                    mock_dt.now.return_value = fake_now
+                    result = await fetch(coord)
+
+        dep = result["departures"][0]
+        assert dep["delay_seconds"] == 0
+        assert dep["realtime"] is True
+        assert dep["estimated_time"] == dep["theoretical_time"]
 
 
 CKAN_URL_PREFIX = "https://otwartedane.metropoliagzm.pl/api/3/action/package_show"
@@ -753,10 +842,10 @@ def test_apply_positions_multiple_vehicles_same_route():
         {"route": "A", "vehicle_code": ""},
     ]
     _apply_positions(deps, positions)
-    # Round-robin: v1, v2, v1
+    # One position per vehicle: the third trip must not reuse a bus marker.
     assert deps[0]["vehicle_lat"] == pytest.approx(51.1)
     assert deps[1]["vehicle_lat"] == pytest.approx(51.2)
-    assert deps[2]["vehicle_lat"] == pytest.approx(51.1)
+    assert "vehicle_lat" not in deps[2]
 
 @pytest.mark.gtfsrt
 def test_parse_gtfsrt_positions_includes_route_id():
@@ -804,9 +893,9 @@ class TestSpeedNormalization:
 
 @pytest.mark.gtfsrt
 class TestApplyPositionsRoundRobin:
-    """Round-robin distribution for route_id fallback."""
+    """One vehicle position per route departure."""
 
-    def test_round_robin_distributes_fairly(self):
+    def test_one_position_per_departure(self):
         from mzkzg_transport.provider_gtfsrt import _apply_positions
 
         positions = {
@@ -814,17 +903,17 @@ class TestApplyPositionsRoundRobin:
             "v2": {"lat": 50.2, "lng": 19.1, "route_id": "42"},
         }
         deps = [
-            {"route": "42", "vehicle_code": ""},
-            {"route": "42", "vehicle_code": ""},
-            {"route": "42", "vehicle_code": ""},
-            {"route": "42", "vehicle_code": ""},
+            {"route": "42", "vehicle_code": "", "estimated_time": "2026-05-14T10:00:00"},
+            {"route": "42", "vehicle_code": "", "estimated_time": "2026-05-14T10:20:00"},
+            {"route": "42", "vehicle_code": "", "estimated_time": "2026-05-14T10:40:00"},
+            {"route": "42", "vehicle_code": "", "estimated_time": "2026-05-14T11:00:00"},
         ]
         _apply_positions(deps, positions)
-        # v1, v2, v1, v2
+        # Two vehicles cover only the next two trips; later trips stay clean.
         assert deps[0]["vehicle_lat"] == pytest.approx(50.1)
         assert deps[1]["vehicle_lat"] == pytest.approx(50.2)
-        assert deps[2]["vehicle_lat"] == pytest.approx(50.1)
-        assert deps[3]["vehicle_lat"] == pytest.approx(50.2)
+        assert "vehicle_lat" not in deps[2]
+        assert "vehicle_lat" not in deps[3]
 
     def test_vehicle_code_has_priority_over_route_id(self):
         from mzkzg_transport.provider_gtfsrt import _apply_positions

@@ -121,19 +121,28 @@ async def fetch(coord: "PolishTransportCoordinator") -> dict:
         if dep_dt < now - timedelta(minutes=1):
             continue
 
-        # Apply RT delay
+        # Apply RT delay only when this exact trip has its own update. A
+        # route-level fallback used to copy one vehicle/delay to every later
+        # trip on the route (Poznań issue #52).
         delay_sec = 0
         is_realtime = False
         vehicle_code = ""
         rt_key = f"{trip_id}_{stop_id}"
         rt_key_seq = f"{trip_id}_seq{st.get('stop_sequence', '')}"
-        rt_key_route = f"route_{route_id}_{stop_id}"
-        rt_key_route_only = f"route_{route_id}"
-        for key in (rt_key, rt_key_seq, trip_id, rt_key_route, rt_key_route_only):
+        for key in (rt_key, rt_key_seq, trip_id):
             if key in delays:
                 delay_sec, vehicle_code = delays[key]
                 is_realtime = True
                 break
+
+        # A bus waiting at the first stop often reports a large negative delay
+        # until it leaves the terminus. Show the scheduled time instead.
+        try:
+            stop_sequence = int(st.get("stop_sequence") or 0)
+        except (TypeError, ValueError):
+            stop_sequence = 0
+        if is_realtime and delay_sec < 0 and stop_sequence <= 1:
+            delay_sec = 0
 
         estimated_dt = dep_dt + timedelta(seconds=delay_sec)
 
@@ -488,42 +497,62 @@ async def _enrich_with_gps_positions(coord, session, city_cfg, departures):
         _LOGGER.debug("GPS positions failed for %s: %s", coord.provider, e)
 
 
+def _apply_position(d: dict, position: dict) -> bool:
+    """Copy one position onto a departure, rejecting the 0,0 sentinel."""
+    if abs(position["lat"]) < 0.0001 and abs(position["lng"]) < 0.0001:
+        return False
+    d["vehicle_lat"] = position["lat"]
+    d["vehicle_lng"] = position["lng"]
+    if position.get("bearing") is not None:
+        d["vehicle_direction"] = position["bearing"]
+    if position.get("speed") is not None:
+        d["vehicle_speed"] = round(position["speed"] * 3.6)
+    return True
+
+
 def _apply_positions(departures, positions):
-    """Add vehicle_lat/lng to departures matching positions by vehicle_code (or route_id fallback)."""
-    # Build route_id → best position map for cities without vehicle_code (e.g. Wrocław)
-    route_positions = {}
+    """Add vehicle_lat/lng to departures matching positions by vehicle_code/trip.
+
+    The route_id fallback is limited to one departure per vehicle. Assigning a
+    route position to every departure on that route painted the same bus on all
+    later trips (Poznań issue #52).
+    """
+    route_positions: dict[str, list[tuple[str, dict]]] = {}
     for vid, entry in positions.items():
         rid = entry.get("route_id")
         if rid:
-            route_positions.setdefault(rid, []).append(entry)
+            route_positions.setdefault(rid, []).append((vid, entry))
 
+    used: set[str] = set()
     for d in departures:
         vc = d.get("vehicle_code", "")
         tid = d.get("trip_id", "")
-        p = None
+        key = None
         if vc and vc in positions:
-            p = positions[vc]
+            key = vc
         elif tid and tid in positions:
-            p = positions[tid]
-        elif not vc:
-            rid = d.get("route", "")
-            candidates = route_positions.get(rid, [])
-            if candidates:
-                p = candidates[0]
-                candidates.append(candidates.pop(0))  # round-robin
-        if p is None:
+            key = tid
+        if key and key not in used:
+            if _apply_position(d, positions[key]):
+                used.add(key)
+
+    for route, candidates in route_positions.items():
+        available = [(vid, entry) for vid, entry in candidates if vid not in used]
+        if not available:
             continue
-        
-        # P1 Data Quality: Reject sentinel (0.0, 0.0) coordinates
-        if abs(p["lat"]) < 0.0001 and abs(p["lng"]) < 0.0001:
-            continue
-            
-        d["vehicle_lat"] = p["lat"]
-        d["vehicle_lng"] = p["lng"]
-        if p.get("bearing") is not None:
-            d["vehicle_direction"] = p["bearing"]
-        if p.get("speed") is not None:
-            d["vehicle_speed"] = round(p["speed"] * 3.6)
+        unmatched = [
+            d
+            for d in departures
+            if "vehicle_lat" not in d
+            and not d.get("vehicle_code")
+            and d.get("route") == route
+        ]
+        unmatched.sort(
+            key=lambda d: d.get("estimated_time") or d.get("theoretical_time") or ""
+        )
+        for d, (vid, entry) in zip(unmatched, available):
+            if _apply_position(d, entry):
+                used.add(vid)
 
 
 async def _get_rt_delays(session, rt_url: str) -> dict:
