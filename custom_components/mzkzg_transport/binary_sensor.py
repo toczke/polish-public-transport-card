@@ -1,4 +1,4 @@
-"""Binary sensor platform for MZKZG Transport."""
+"""Binary sensor platform for Polish Transport."""
 
 from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
@@ -9,7 +9,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import CONF_PROVIDER, DOMAIN, PROVIDER_PLK
+from .const import CONF_PROVIDER, DEVICE_MANUFACTURER, DOMAIN, ENTITY_UNIQUE_PREFIX, PROVIDER_PLK
 from .device_utils import async_link_device_to_parent
 
 
@@ -18,9 +18,11 @@ async def async_setup_entry(
     entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up MZKZG Transport binary sensors from a config entry."""
+    """Set up Polish Transport binary sensors from a config entry."""
     coordinators = hass.data[DOMAIN]["_coordinators"][entry.entry_id]
     provider = entry.data[CONF_PROVIDER]
+
+    _remove_legacy_binary_sensors(hass, entry, provider)
 
     entities = []
 
@@ -28,12 +30,27 @@ async def async_setup_entry(
     # departure); other providers already expose the delay on the sensor rows.
     if provider == PROVIDER_PLK:
         for coordinator in coordinators:
-            entities.append(MzkzgPlkDelayBinarySensor(coordinator, entry))
+            entities.append(PlkDelayBinarySensor(coordinator, entry))
 
     async_add_entities(entities)
 
 
-class MzkzgPlkDelayBinarySensor(CoordinatorEntity, BinarySensorEntity):
+def _remove_legacy_binary_sensors(hass: HomeAssistant, entry: ConfigEntry, provider: str) -> None:
+    """Drop old delay/health binary sensors that this integration no longer creates."""
+    from homeassistant.helpers import entity_registry as er
+
+    registry = er.async_get(hass)
+    for entity in er.async_entries_for_config_entry(registry, entry.entry_id):
+        if entity.domain != "binary_sensor" or not entity.unique_id:
+            continue
+        unique_id = entity.unique_id
+        if unique_id.endswith("_health") or (
+            provider != PROVIDER_PLK and unique_id.endswith("_delay")
+        ):
+            registry.async_remove(entity.entity_id)
+
+
+class PlkDelayBinarySensor(CoordinatorEntity, BinarySensorEntity):
     """Binary sensor that turns on if any train is delayed."""
 
     _attr_has_entity_name = True
@@ -43,13 +60,16 @@ class MzkzgPlkDelayBinarySensor(CoordinatorEntity, BinarySensorEntity):
     def __init__(self, coordinator, entry: ConfigEntry) -> None:
         """Initialize the binary sensor."""
         super().__init__(coordinator)
+        self._entry = entry
         provider = coordinator.provider
         stop = coordinator.stop_id
 
-        self._attr_unique_id = f"{DOMAIN}_{provider}_{stop}_delay"
+        self._attr_unique_id = f"{ENTITY_UNIQUE_PREFIX}_{provider}_{stop}_delay"
         self._attr_name = "Opóźnienia Pociągów"
         self._attr_device_info = {
             "identifiers": {(DOMAIN, f"{provider}_{stop}")},
+            "manufacturer": DEVICE_MANUFACTURER,
+            "model": provider,
         }
 
     async def async_added_to_hass(self) -> None:
@@ -59,6 +79,7 @@ class MzkzgPlkDelayBinarySensor(CoordinatorEntity, BinarySensorEntity):
             self.hass,
             {(DOMAIN, f"{self.coordinator.provider}_{self.coordinator.stop_id}")},
             {(DOMAIN, self.coordinator.provider)},
+            self._entry.entry_id,
         )
 
     @property

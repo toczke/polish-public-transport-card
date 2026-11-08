@@ -1,9 +1,9 @@
-import { defineConfig } from 'vite';
+﻿import { defineConfig } from 'vite';
 
 export default defineConfig({
   build: {
     outDir: 'custom_components/mzkzg_transport/www',
-    emptyOutDir: false, // Don't empty the dir so we don't delete mzkzg-transport-card.js (the wrapper)
+    emptyOutDir: false,
     lib: {
       entry: 'src/polish-transport-card.js',
       name: 'PolishTransportCard',

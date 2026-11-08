@@ -15,7 +15,7 @@ from mzkzg_transport.const import (
     TIME4BUS_TCZEW_LIVE_DEPARTURES_URL,
     TIME4BUS_TCZEW_SCHEDULE_DEPARTURES_URL,
 )
-from mzkzg_transport.coordinator import MzkzgTransportCoordinator
+from mzkzg_transport.coordinator import PolishTransportCoordinator
 
 
 @pytest.fixture(autouse=True)
@@ -35,7 +35,7 @@ def patch_session():
         sessions.append(session)
         return session
 
-    with patch.object(MzkzgTransportCoordinator, "_get_session", _patched_get):
+    with patch.object(PolishTransportCoordinator, "_get_session", _patched_get):
         yield
 
     for session in sessions:
@@ -56,7 +56,7 @@ def mock_hass():
 async def test_time4bus_tczew_live_departures(mock_hass):
     """Time4BUS live payload should parse into realtime departures."""
     now = datetime.now()
-    coordinator = MzkzgTransportCoordinator(mock_hass, "10011", PROVIDER_TCZEW, "Al. Solidarności")
+    coordinator = PolishTransportCoordinator(mock_hass, "10011", PROVIDER_TCZEW, "Al. Solidarności")
 
     live_payload = {
         "stops": [136],
@@ -108,7 +108,7 @@ async def test_time4bus_tczew_live_departures(mock_hass):
 async def test_time4bus_bytow_live_departures(mock_hass):
     """Bytów uses the Time4BUS operator, with its fullcode as the stop id."""
     now = datetime.now()
-    coordinator = MzkzgTransportCoordinator(mock_hass, "03101", PROVIDER_BYTOW, "1-go Maja")
+    coordinator = PolishTransportCoordinator(mock_hass, "03101", PROVIDER_BYTOW, "1-go Maja")
 
     live_payload = {
         "stops": [47],
@@ -141,7 +141,7 @@ async def test_time4bus_bytow_live_departures(mock_hass):
 @pytest.mark.asyncio
 async def test_time4bus_tczew_schedule_fallback(mock_hass):
     """If live departures are missing, the schedule fallback should be used."""
-    coordinator = MzkzgTransportCoordinator(mock_hass, "10011", PROVIDER_TCZEW, "Al. Solidarności")
+    coordinator = PolishTransportCoordinator(mock_hass, "10011", PROVIDER_TCZEW, "Al. Solidarności")
     today = datetime.now().strftime("%Y-%m-%d")
 
     schedule_payload = {

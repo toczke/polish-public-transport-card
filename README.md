@@ -1,13 +1,30 @@
 # Polish Public Transport Card
 
 [![HACS](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
-[![Version](https://img.shields.io/badge/version-1.6.7--hotfix2-blue.svg)](https://github.com/toczke/polish-public-transport-card/releases)
+[![Version](https://img.shields.io/badge/version-2.0.0-blue.svg)](https://github.com/toczke/polish-public-transport-card/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-90%20passed-success.svg)]()
+[![Tests](https://img.shields.io/badge/tests-passing-success.svg)]()
 
-Home Assistant integration + Lovelace card for real-time public transport departures across Poland — **53 operators, 35 GTFS-RT cities with live GPS vehicle map**.
+Home Assistant integration + Lovelace card for real-time public transport departures across Poland — **60 operators, 44 GTFS-RT cities with live GPS vehicle map**.
 
 ![Standard light](docs/screenshots/standard-light.png)
+
+---
+
+## Scope and disclaimer
+
+This project was built primarily for **Gdańsk** (ZTM Gdańsk), with the PKP PLK rail feed used in the author's own Home Assistant setup. Other providers are included on a **best-effort** basis because their public feeds are available, but they are not all verified to the same level.
+
+- Data comes from third-party GTFS, GTFS-RT and operator APIs. It may be incomplete, delayed, stale or unavailable.
+- Stop IDs, schedules, vehicle positions and delay calculations can change without notice when an operator updates its feed.
+- No warranty is given for correctness, completeness or availability of data for any provider.
+- This project is not affiliated with any transport operator.
+
+If something is wrong for your city or provider, please **open an issue** with the provider name, stop ID/entity ID, the time of the problem and — if possible — a sample of the raw API/GTFS response:
+
+**https://github.com/toczke/polish-public-transport-card/issues**
+
+> **PL:** Projekt był tworzony przede wszystkim pod Gdańsk. Nie odpowiadam za poprawność danych innych providerów — jeśli coś jest nie tak, załóż issue na GitHubie.
 
 ---
 
@@ -15,22 +32,21 @@ Home Assistant integration + Lovelace card for real-time public transport depart
 
 ### Core
 
-- **42 transport operators** across Poland — municipal, regional, and rail
+- **60 transport operators** across Poland — municipal, regional, and rail
 - **Real-time departures** with delay indicators, live countdown, and animated status dots
 - **Live GPS vehicle map** — click any positioned departure to open a Leaflet map tracking the vehicle in real time (updates every 30 s)
 - **Multi-provider views** — merged timeline or per-stop tabs, filter by route, destination, platform, or track
-- **Three display presets** — `standard`, `compact`, `e_ink` — optimized for different dashboards and e-paper displays
+- **Five display presets** — `native`, `standard`, `compact`, `minimal` and `e_ink` — optimized for different dashboards and e-paper displays
 
 ### Data Quality
 
 | Feature | | | Description |
 |---|---|---|---|
-| Realtime delays | ✅ | GTFS-RT TripUpdates for 24 cities; route-level fallback matching |
+| Realtime delays | ✅ | GTFS-RT TripUpdates across the supported GTFS-RT cities; route-level fallback matching |
 | GPS positions | ✅ | VehiclePosition protobuf, JSON, and custom API parsing; `trip_id`/`route_id`/`vehicle_code` multi-strategy matching |
 | Speed (km/h) | ✅ | Normalized across all providers — protobuf m/s → km/h conversion |
 | Schedule fallback | ✅ | Static GTFS departures supplement real-time when coverage is limited |
 | Next-day schedule | ✅ | Tomorrow's timetable when no departures remain today |
-| Health monitoring | ✅ | Per-operator connectivity binary sensor with `healthy_stops` / `total_stops` |
 | Sleep mode | ✅ | Configurable per-operator night-time polling pause (default 00:00–04:30) |
 
 ### UX
@@ -104,9 +120,9 @@ Home Assistant integration + Lovelace card for real-time public transport depart
 | [MKS Mielec](https://mks.mielec.pl) | Mielec (bus) | GTFS-RT (api6) | ✅ | 🗺️ | — |
 | [MZK Oświęcim](https://mzk.oswiecim.pl) | Oświęcim (bus) | GTFS-RT (api6) | ✅ | 🗺️ | — |
 | [MPK Radomsko](https://mpk.radomsko.pl) | Radomsko (bus) | GTFS-RT (api6) | ✅ | 🗺️ | — |
-| [MKS Dębica](https://mks.debica.pl) | Dębica (bus) | Static GTFS | ❌ | ❌ | — |
+| [MKS Dębica](https://mks.debica.pl) | Dębica (bus) | Source unavailable | ❌ | ❌ | — |
 | [KM Kołobrzeg](https://km.kolobrzeg.pl) | Kołobrzeg (bus) | Static GTFS | ❌ | ❌ | — |
-| [SPGK Sanok](https://spgk.sanok.pl) | Sanok (bus) | Static GTFS | ❌ | ❌ | — |
+| [SPGK Sanok](https://spgk.sanok.pl) | Sanok (bus) | Source unavailable | ❌ | ❌ | — |
 | [MZK Ostrołęka](https://mzk.ostroleka.pl) | Ostrołęka (bus) | Static GTFS | ❌ | ❌ | — |
 
 ¹ Kraków: GPS for buses (matched by route + brigade) and for trams within a few stops of the stop (matched by upcoming stop + scheduled time), via zbiorkom.live api6-open.
@@ -136,18 +152,58 @@ When a departure includes GPS coordinates, clicking the row opens a Leaflet map 
 
 ---
 
-## What's New in 1.6.7-hotfix2
+## What's New in 2.0.0
 
-- **Live vehicle map fixed** — Leaflet CSS is now always loaded (fixes checkerboard tiles), rows with GPS show markers, and close/backdrop/Escape work
-- **Kraków on zbiorkom.live api6-open** — new stop picker (all tram platforms and agglomeration stops), brigade/next-stop GPS matching and automatic legacy stop-id migration
-- **Wrocław and 11 api6 feeds fixed** — Lublin, Kielce, Radom, Elbląg, Gorzów, Suwałki, Przemyśl, Rybnik, Kutno, Legnica and Leszno now use static + realtime api6 endpoints
-- **Correct service-day filtering** — feeds with only `calendar_dates.txt` no longer show departures from other weekdays
-- **New providers** — MZK Bielsko-Biała and Bytów (moved to Time4BUS)
-- **Memory/OOM work** — streamed GTFS parsing, executor offload, a per-provider load lock and parallel archive downloads
-- **Offline GTFS fallback** — the last schedule is kept on disk and served when the source is unavailable
-- **Beta 1.6 features** — PLK delay sensor, route colors, `refresh_gtfs` service, walking distance/time, English editor and advanced OptionsFlow filters
-- **Card** — OpenStreetMap through HA `map_tiles`, `exclude_destinations`, `min_departures`, max rows up to 100 and per-sensor overrides
-- **Reliability** — PLK 429 backoff, TLS verification everywhere, single shared PLK usage sensor, recorder-friendly attributes and fixed translation placeholders
+- **One hub per provider** — existing single-stop entries are merged automatically;
+  Gdańsk ZTM stops become one `ZTM Gdańsk` hub, PLK stations one `PLK` hub.
+- **New entity names** — `mzkzg_*` entity IDs are migrated, e.g.
+  `sensor.mzkzg_plk_258458` → `sensor.gdansk_srodmiescie_odjazdy`.
+- **Hub sensors** — multi-stop providers expose a merged sensor such as
+  `sensor.ztm_gdansk_odjazdy` alongside per-stop sensors.
+- **Add stops later** — a new stop added through the config flow joins the existing
+  provider hub instead of creating another entry.
+- **Hub options** — open the hub entry options to change settings, add a stop
+  (searchable for large providers) or remove a stop together with its device and
+  entities. A hub always keeps at least one stop.
+- **Offline map library** — Leaflet and its CSS ship with the integration and load
+  from `/polish_transport/leaflet/` on demand, without unpkg/CDN access.
+- **Lower memory use** — raw GTFS archives are released after the hub stops are
+  parsed, tomorrow's fallback schedule is precomputed, and long-lived caches are
+  pruned and capped.
+- **Technical domain** — `mzkzg_transport` remains only as the hidden integration
+  domain required for in-place upgrades; it is not used in entity or device names.
+- **Card cleanup** — only `custom:polish-transport-card` is registered; the legacy
+  `custom:mzkzg-transport-card` alias was removed.
+- **Card UI overhaul** — five presets (`native`, `standard`, `compact`, `minimal`,
+  `e_ink`), theme modes, header styles/clock, grouped view, multi-column boards,
+  row actions in the GUI editor and per-sensor overrides.
+- **Filters** — route, destination, platform, track, vehicle type, provider,
+  low-floor, bike, AC and ticket-machine filters, plus departure visibility and
+  grace-period controls.
+- **Live map polish** — compact vehicle popups, spread-out overlapping markers,
+  selected vehicle centred at zoom 16, dark-theme map controls and a local Leaflet
+  bundle.
+- **Provider coverage** — Kraków on zbiorkom.live api6-open, 11 api6 feeds fixed,
+  correct service-day filtering, Bielsko-Biała and Bytów, and automatic migration
+  of changed GTFS stop IDs.
+- **Reliability** — duplicate schedule/realtime rows merged, recorder-friendly
+  attributes, PLK 429 backoff, one shared PLK usage sensor and TLS handling for
+  operators with expired certificates.
+- **Quality gates** — GitHub Actions CI for lint/build/pytest/Playwright, visual
+  snapshots, map tests and a weekly provider-status workflow.
+
+### Upgrading from 1.6.x or a 2.0 pre-release
+
+Update through HACS (or replace the integration files) and restart Home Assistant.
+The first start runs the 2.0 migration automatically:
+
+1. entries of the same provider are merged into one hub,
+2. per-stop sensors and devices are moved to the hub,
+3. `mzkzg_*` entity IDs are renamed,
+4. duplicate legacy entities are removed.
+
+Keep a backup of `/config/.storage/` if you have custom automations that reference
+old entity IDs. The migration is idempotent and can be retried.
 
 ---
 
@@ -174,7 +230,9 @@ Restart Home Assistant.
 
 1. **Settings → Devices & Services → Add Integration → Polish Public Transport**
 2. Choose your provider from the dropdown
-3. Search or type a stop ID
+3. Search or type a stop ID. Providers with more than 3000 stops (for example
+   ZTP Kraków) show a search field first; submit a name or ID, then pick from the
+   narrowed list.
 4. **Łódź only**: choose between "Single Stop" or "Bus Stop Group" (transfer hub) — the latter expands into one aggregated sensor covering all platforms
 5. For PKP/PLK: enter your API key from [dane.plk-sa.pl](https://dane.plk-sa.pl)
 
@@ -186,6 +244,10 @@ nearby bus stops from ZTP/KiedyPrzyjedzie.
 the operator device, the GTFS cache, the PLK request budget and the live-vehicle snapshot,
 so adding several stops does not multiply upstream requests. A single entry can also hold
 several stops (`stops:` in the config entry) and then exposes one aggregated sensor.
+
+If an operator changes its stop identifiers in the GTFS feed, existing entries resolve
+the new ID automatically by stop name and platform and expose the mapped value as the
+`resolved_stop_id` attribute.
 
 ### Full-day timetable (kiedyPrzyjedzie)
 
@@ -220,21 +282,66 @@ The card registers itself automatically. In the Lovelace UI: **Add Card → Poli
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `entities` | list | required | Sensor entity IDs (string or object with per-sensor overrides) |
-| `display_preset` | string | `standard` | `standard` / `compact` / `e_ink` |
-| `view_mode` | string | `mixed` | `mixed` (merged timeline) / `tabs` (per-stop) |
+| `display_preset` | string | `standard` | `standard` / `compact` / `minimal` / `native` (HA look) / `e_ink` |
+| `view_mode` | string | `mixed` | `mixed` (merged timeline) / `tabs` (per-stop) / `grouped` (grouped by line) |
+| `columns` | int | `1` | Row columns: `1`, `2` or `3` (good for tablets) |
+| `header_style` | string | `provider` | `provider`, `theme` (HA primary), `custom` |
+| `header_color` | string | — | Custom header color (when `header_style: custom`) |
+| `show_header` | bool | `true` | Show the card header |
+| `show_clock` | bool | `false` | Show current time in the header |
+| `show_refresh` | bool | `false` | Show a manual refresh button in the header |
 | `max_departures` | int | `10` | Max rows per stop (1–100) |
 | `min_departures` | int | `0` | Minimum rows; shorter lists are padded with empty rows |
+| `time_format` | string | `auto` | `auto` / `24h` / `12h` |
+| `show_delays` | bool | `true` | Show realtime delays |
+| `show_countdown` | bool | `true` | Show minutes-until-departure |
+| `show_vehicle` | bool | `true` | Show vehicle number chip |
+| `show_platform` | bool | `true` | Show platform / stand / track |
+| `show_accessibility` | bool | `true` | Show bike / wheelchair / A/C icons |
+| `show_stop_name` | bool | `false` | Show stop name on merged rows |
+| `show_footer` | bool | `true` | Show footer |
+| `show_last_update` | bool | `true` | Show last update time in the footer |
 | `filter_routes` | list | — | Show only these routes |
+| `exclude_routes` | list | — | Hide these routes |
 | `destination_filter` | list | — | Show only these destinations |
 | `exclude_destinations` | list | — | Hide departures whose destination contains any of these strings |
+| `filter_vehicle_types` | list | — | Show only `bus`, `tram` or `train` |
+| `filter_providers` | list | — | Show only these provider keys |
 | `filter_platform` | string | — | Show only this platform |
 | `filter_track` | string | — | Show only this track |
 | `highlight_mode` | bool | `false` | Dim instead of hide filtered routes |
 | `hide_terminus` | bool | `true` | Hide departures ending at this stop |
+| `hide_cancelled` | bool | `false` | Hide cancelled departures |
 | `realtime_only` | bool | `false` | Show only realtime departures |
+| `hide_departed` | bool | `true` | Hide rows after their departure time (+ grace) |
+| `departed_grace_minutes` | int | `1` | Minutes a departed row may stay visible |
+| `max_minutes` | int | `0` | Show only departures within this many minutes (`0` = no limit) |
+| `only_low_floor` | bool | `false` | Show only low-floor vehicles |
+| `only_bike` | bool | `false` | Show only vehicles with bike space |
+| `only_ac` | bool | `false` | Show only air-conditioned vehicles |
+| `only_ticket_machine` | bool | `false` | Show only vehicles with a ticket machine |
 | `tap_action` | object | `more-info` | Row tap action |
 | `hold_action` | object | `none` | Row hold action |
 | `double_tap_action` | object | `none` | Row double-tap action |
+
+All filters and `max_departures` can be overridden per sensor. The visual editor exposes
+both a global form and a **per-sensor override** form (including stop-name labels,
+override reset and row ordering); the same structure is accepted in YAML. Tap, hold and
+double-tap actions are editable with Home Assistant's native action picker. The editor
+also shows how many rows remain visible after filtering; providers use a multi-select
+of known operators.
+
+### Card presets
+
+- `standard` — full card with provider-coloured header
+- `compact` — denser rows, fewer secondary details
+- `minimal` — header/footer/accessibility hidden, very compact
+- `native` — Home Assistant-native look: transparent header, HA typography, dividers,
+  secondary-background hover and neutral chips; follows the active HA theme
+- `e_ink` — high-contrast, animation-free layout
+
+`header_style: theme` makes the header use the HA primary colour; `provider` keeps the
+operator colour; `custom` uses `header_color`.
 
 ### Per-sensor Overrides
 
@@ -243,14 +350,28 @@ type: custom:polish-transport-card
 entities:
   - entity: sensor.gdansk_main_odjazdy
     filter_routes: ["2", "8"]
+    exclude_routes: ["N1"]
     destination_filter: ["Wrzeszcz"]
     exclude_destinations: ["Poznań Główny"]
+    filter_vehicle_types: ["tram"]
     max_departures: 40
   - entity: sensor.gdynia_central_odjazdy
     filter_routes: ["147"]
     realtime_only: true
+    max_minutes: 30
+    only_low_floor: true
 filter_routes: ["N1"]
 min_departures: 5
+header_style: provider
+time_format: 24h
+show_clock: true
+show_refresh: true
+columns: 2
+tap_action:
+  action: more-info
+hold_action:
+  action: navigate
+  navigation_path: /lovelace/transport
 ```
 
 ---
@@ -260,9 +381,29 @@ min_departures: 5
 ```bash
 pip install -r requirements_test.txt
 PYTHONPATH=custom_components:$PYTHONPATH pytest tests/ -q
+
+npm ci
+npm run lint
+npm run build
+npx playwright test
 ```
 
-**90 tests** covering GTFS-RT parsing, calendar filtering, position matching, route fallback, speed normalization, deduplication, and provider-specific integration.
+**174 Python tests** cover GTFS-RT parsing, calendar filtering, position matching,
+route fallback, speed normalization, deduplication and provider-specific integration.
+**21 Playwright tests** cover card config, filters, the editor, the live-map popup,
+accessibility and visual snapshots for all five presets. Update visual baselines with
+`npx playwright test tests/e2e/visual-presets.spec.ts --update-snapshots`. CI runs
+lint, build, Python and Playwright on every push and pull request.
+
+A separate **Provider status** workflow runs every Monday at 04:17 UTC and checks
+every configured GTFS/GTFS-RT feed, realtime endpoint and vehicle-position endpoint.
+It uploads a Markdown/JSON report and opens (or updates) a GitHub issue when any
+provider fails. Run it manually from the Actions tab with **Provider status → Run
+workflow**, or locally with:
+
+```bash
+python scripts/validate_providers.py --markdown provider-status.md
+```
 
 ---
 
@@ -280,7 +421,7 @@ Lovelace card (reads entity attributes + renders map)
 
 - **Providers** (`provider_*.py`): fetch departures from upstream APIs, apply RT delays, enrich with GPS
 - **Coordinator** (`coordinator.py`): dispatches to the correct provider, handles sleep mode, deduplicates
-- **Sensors** (`sensor.py`, `binary_sensor.py`): expose data to HA; `MzkzgAggregatedSensor` merges multi-stop entries
+- **Sensors** (`sensor.py`, `binary_sensor.py`): expose data to HA; `PolishAggregatedSensor` merges multi-stop entries
 - **Card** (`polish-transport-card.js`): Lit-based web component rendering the Lovelace UI and Leaflet map
 
 ---

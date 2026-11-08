@@ -11,10 +11,11 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "lint": "eslint src/**/*.js",
-    "build": "vite build",
-    "dev": "vite build --watch"
+    "build": "vite build && node scripts/copy-leaflet.mjs",
+    "dev": "node scripts/copy-leaflet.mjs && vite build --watch"
   },
   "dependencies": {
+    "leaflet": "^1.9.4",
     "lit": "^3.3.3"
   }
 }

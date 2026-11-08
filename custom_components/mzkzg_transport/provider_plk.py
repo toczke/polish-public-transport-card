@@ -15,7 +15,7 @@ from .const import DOMAIN, MAX_DEPARTURES, PLK_API_BASE, PROVIDER_PLK
 _LOGGER = logging.getLogger(__name__)
 
 
-async def fetch(coord: "MzkzgTransportCoordinator") -> dict:
+async def fetch(coord: "PolishTransportCoordinator") -> dict:
     """Fetch departures from PLK OpenData API (PR/SKM/IC)."""
     session = await coord._get_session()
     now = dt_util.now()

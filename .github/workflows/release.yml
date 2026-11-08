@@ -75,11 +75,11 @@ jobs:
           if tag_version != version:
               raise SystemExit(f"tag {tag_version!r} != manifest version {version!r}")
           card = re.search(
-              r'MZKZG_VERSION\s*=\s*"([^"]+)"',
+              r'CARD_VERSION\s*=\s*"([^"]+)"',
               Path("src/utils.js").read_text(encoding="utf-8"),
           )
           if not card or card.group(1) != version:
-              raise SystemExit("MZKZG_VERSION does not match manifest version")
+              raise SystemExit("CARD_VERSION does not match manifest version")
           print(f"Release {version} is consistent")
           PY
         env:

@@ -1,4 +1,4 @@
-"""Config flow for MZKZG Transport."""
+"""Config flow for Polish Transport."""
 
 
 
@@ -7,6 +7,9 @@ import logging
 
 
 import re
+
+
+import unicodedata
 
 
 import aiohttp
@@ -47,12 +50,14 @@ from .const import (
     CONF_SLEEP_START,
     CONF_STOP_ID,
     CONF_STOPS,
+    CONFIG_ENTRY_VERSION,
     DEFAULT_FALLBACK_MIN,
     DEFAULT_SLEEP_END,
     DEFAULT_SLEEP_START,
 
 
     DOMAIN,
+    ENTITY_UNIQUE_PREFIX,
 
 
     KIEDYPRZYJEDZIE_BASE_URLS,
@@ -140,9 +145,7 @@ from .const import (
     PROVIDER_MIELEC,
     PROVIDER_OSWIECIM,
     PROVIDER_RADOMSKO,
-    PROVIDER_DEBICA,
     PROVIDER_KOLOBRZEG,
-    PROVIDER_SANOK,
     PROVIDER_OSTROLEKA,
     PROVIDER_LESZNO,
     PROVIDER_TORUN,
@@ -183,6 +186,34 @@ from .const import (
 
 
 _LOGGER = logging.getLogger(__name__)
+
+MAX_STOP_OPTIONS = 3000
+MAX_STOP_RESULTS = 500
+OPTIONS_STOP_SEARCH_THRESHOLD = 50
+STOP_QUERY = "stop_query"
+
+
+def _normalize_stop_search(value: object) -> str:
+    """Case- and accent-insensitive stop search text."""
+    text = str(value or "").replace("ł", "l").replace("Ł", "L")
+    text = unicodedata.normalize("NFKD", text)
+    return "".join(ch for ch in text if not unicodedata.combining(ch)).casefold()
+
+
+def _match_stops(stops: list[dict], query: str, limit: int = MAX_STOP_RESULTS) -> list[dict]:
+    """Return stops matching every word in the query (name or ID)."""
+    words = [word for word in _normalize_stop_search(query).split() if word]
+    if not words:
+        return []
+    matches: list[dict] = []
+    for stop in stops:
+        haystack = _normalize_stop_search(f"{stop.get('name', '')} {stop.get('id', '')}")
+        if all(word in haystack for word in words):
+            matches.append(stop)
+            if len(matches) >= limit:
+                break
+    return matches
+
 
 
 PROVIDER_OPTIONS = {
@@ -232,9 +263,7 @@ PROVIDER_OPTIONS = {
     PROVIDER_MIELEC: "MKS Mielec",
     PROVIDER_OSWIECIM: "MZK Oświęcim",
     PROVIDER_RADOMSKO: "MPK Radomsko",
-    PROVIDER_DEBICA: "MKS Dębica",
     PROVIDER_KOLOBRZEG: "KM Kołobrzeg",
-    PROVIDER_SANOK: "SPGK Sanok",
     PROVIDER_OSTROLEKA: "MZK Ostrołęka",
     PROVIDER_LESZNO: "MZK Leszno",
     PROVIDER_SWINOUJSCIE: "KA Świnoujście",
@@ -255,13 +284,13 @@ PROVIDER_OPTIONS_SORTED = dict(
 )
 
 
-class MzkzgTransportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
+class PolishTransportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
 
-    """Handle a config flow for MZKZG Transport."""
+    """Handle a config flow for Polish Transport."""
 
 
-    VERSION = 1
+    VERSION = CONFIG_ENTRY_VERSION
 
 
     def __init__(self) -> None:
@@ -274,6 +303,9 @@ class MzkzgTransportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
 
         self._stops: list[dict] = []
+
+
+        self._stop_query: str = ""
 
 
         self._api_key: str = ""
@@ -292,6 +324,9 @@ class MzkzgTransportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
 
             self._provider = user_input[CONF_PROVIDER]
+
+
+            self._stop_query = ""
 
 
             if self._provider == PROVIDER_LODZ:
@@ -565,13 +600,33 @@ class MzkzgTransportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors = {}
 
 
+        large_list = len(self._stops) > MAX_STOP_OPTIONS
+
+
+        matches: list[dict] = []
+
+
         if user_input is not None:
 
 
-            stop_id = str(user_input[CONF_STOP_ID]).strip()
+            query = str(user_input.get(STOP_QUERY, "") or "").strip()
 
 
-            name = user_input.get(CONF_NAME, "").strip()
+            stop_id = str(user_input.get(CONF_STOP_ID, "") or "").strip()
+
+
+            name = str(user_input.get(CONF_NAME, "") or "").strip()
+
+
+            # Large providers are not rendered as one huge dropdown. The first
+            # submit narrows the list by name/ID, then the user picks a match.
+            if large_list and query and not stop_id:
+
+
+                self._stop_query = query
+
+
+                return await self.async_step_stop()
 
 
             if not stop_id or not re.match(STOP_ID_PATTERN, stop_id):
@@ -580,13 +635,13 @@ class MzkzgTransportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 errors[CONF_STOP_ID] = "invalid_stop_id"
 
 
+                if query:
+
+
+                    self._stop_query = query
+
+
             else:
-
-
-                await self.async_set_unique_id(f"{self._provider}_{stop_id}")
-
-
-                self._abort_if_unique_id_configured()
 
 
                 # Resolve name from stops list if not provided
@@ -610,16 +665,40 @@ class MzkzgTransportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 title = PROVIDER_OPTIONS.get(self._provider, self._provider)
 
 
+                hub = next(
+                    (
+                        entry
+                        for entry in self.hass.config_entries.async_entries(DOMAIN)
+                        if entry.data.get(CONF_PROVIDER) == self._provider
+                        and entry.version >= CONFIG_ENTRY_VERSION
+                    ),
+                    None,
+                )
+
+                if hub is not None:
+                    stops = list(hub.data.get(CONF_STOPS) or [])
+                    if any(str(stop.get("stop_id")) == stop_id for stop in stops):
+                        return self.async_abort(reason="already_configured")
+                    stops.append({"stop_id": stop_id, "name": name})
+                    data = dict(hub.data)
+                    data[CONF_STOPS] = stops
+                    if self._api_key:
+                        data[CONF_API_KEY] = self._api_key
+                        data[CONF_PLK_TIER] = self._plk_tier
+                    self.hass.config_entries.async_update_entry(hub, data=data)
+                    await self.hass.config_entries.async_reload(hub.entry_id)
+                    return self.async_abort(reason="stop_added")
+
                 data = {
 
 
-                    CONF_STOP_ID: stop_id,
+                    CONF_STOPS: [{"stop_id": stop_id, "name": name}],
 
 
                     CONF_PROVIDER: self._provider,
 
 
-                    CONF_NAME: name,
+                    CONF_NAME: title,
 
 
                 }
@@ -634,11 +713,17 @@ class MzkzgTransportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     data[CONF_PLK_TIER] = self._plk_tier
 
 
+                await self.async_set_unique_id(f"{ENTITY_UNIQUE_PREFIX}_{self._provider}")
+
+
+                self._abort_if_unique_id_configured()
+
+
                 return self.async_create_entry(title=title, data=data)
 
 
         # Build stop options as dict for selector
-        if self._stops and len(self._stops) <= 3000:
+        if self._stops and not large_list:
             from homeassistant.helpers.selector import (
                 SelectOptionDict,
                 SelectSelector,
@@ -664,40 +749,50 @@ class MzkzgTransportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     vol.Optional(CONF_NAME, default=""): str,
                 }
             )
+        elif large_list:
+            from homeassistant.helpers.selector import (
+                SelectOptionDict,
+                SelectSelector,
+                SelectSelectorConfig,
+                SelectSelectorMode,
+            )
+
+            matches = _match_stops(self._stops, self._stop_query)
+            fields = {
+                vol.Optional(STOP_QUERY, default=self._stop_query): str,
+            }
+            if matches:
+                fields[vol.Optional(CONF_STOP_ID, default="")] = SelectSelector(
+                    SelectSelectorConfig(
+                        options=[
+                            SelectOptionDict(value=str(s["id"]), label=f"{s['name']} ({s['id']})")
+                            for s in matches
+                        ],
+                        mode=SelectSelectorMode.DROPDOWN,
+                        custom_value=True,
+                        sort=False,
+                    )
+                )
+            else:
+                fields[vol.Optional(CONF_STOP_ID, default="")] = str
+                if self._stop_query:
+                    errors[STOP_QUERY] = "no_stops_found"
+            fields[vol.Optional(CONF_NAME, default="")] = str
+            schema = vol.Schema(fields)
         else:
             schema = vol.Schema(
-
-
                 {
-
-
                     vol.Required(CONF_STOP_ID): str,
-
-
                     vol.Optional(CONF_NAME, default=""): str,
-
-
                 }
-
-
             )
 
 
         return self.async_show_form(
-
-
             step_id="stop",
-
-
             data_schema=schema,
-
-
             errors=errors,
-
-
             description_placeholders={"provider": PROVIDER_OPTIONS.get(self._provider, "")},
-
-
         )
 
 
@@ -713,13 +808,27 @@ class MzkzgTransportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Get options flow."""
 
 
-        return MzkzgTransportOptionsFlow()
+        return PolishTransportOptionsFlow()
 
-class MzkzgTransportOptionsFlow(config_entries.OptionsFlow):
-    """Handle options for a stop entry."""
+class PolishTransportOptionsFlow(config_entries.OptionsFlow):
+    """Manage a provider hub and its stops."""
+
+    def __init__(self) -> None:
+        self._stops = None
+        self._api_key = ""
+        self._stop_query = ""
 
     async def async_step_init(self, user_input=None):
-        """Manage the options."""
+        """Show the hub menu."""
+        from .migration import entry_stops
+
+        menu = ["settings", "add_stop"]
+        if len(entry_stops(self.config_entry)) > 1:
+            menu.append("remove_stop")
+        return self.async_show_menu(step_id="init", menu_options=menu)
+
+    async def async_step_settings(self, user_input=None):
+        """Manage sleep mode and filters."""
         if user_input is not None:
             current_opts = self.config_entry.options
             merged = {**current_opts, **user_input}
@@ -728,16 +837,13 @@ class MzkzgTransportOptionsFlow(config_entries.OptionsFlow):
         current_opts = self.config_entry.options
         current_data = self.config_entry.data
         provider = current_data.get(CONF_PROVIDER, "")
-        stop_id = current_data.get(CONF_STOP_ID, "")
+        stops = current_data.get(CONF_STOPS) or []
+        stop_id = "|".join(str(stop.get("stop_id", "")) for stop in stops)
 
         def _opt(key, default=""):
             return current_opts.get(key, current_data.get(key, default))
 
         schema = {
-            vol.Optional(
-                CONF_NAME,
-                default=_opt(CONF_NAME, ""),
-            ): str,
             vol.Optional(
                 "destination_filter",
                 default=_opt("destination_filter", ""),
@@ -783,10 +889,181 @@ class MzkzgTransportOptionsFlow(config_entries.OptionsFlow):
             )] = str
 
         return self.async_show_form(
-            step_id="init",
+            step_id="settings",
             data_schema=vol.Schema(schema),
             description_placeholders={
                 "stop_id": stop_id,
                 "provider": provider,
             },
+        )
+
+    async def async_step_add_stop(self, user_input=None):
+        """Append a stop to the provider hub."""
+        from .migration import entry_stops
+
+        provider = self.config_entry.data.get(CONF_PROVIDER, "")
+        stops = entry_stops(self.config_entry)
+        errors = {}
+
+        if self._stops is None:
+            self._api_key = self.config_entry.data.get(CONF_API_KEY, "")
+            self._stops = await _load_stops(self, provider)
+
+        large_list = (
+            bool(self._stops)
+            and len(self._stops) > OPTIONS_STOP_SEARCH_THRESHOLD
+        )
+
+        if user_input is not None:
+            query = str(user_input.get(STOP_QUERY, "") or "").strip()
+            stop_id = str(user_input.get(CONF_STOP_ID, "") or "").strip()
+            name = str(user_input.get(CONF_NAME, "") or "").strip()
+            # Large providers are not rendered as one huge dropdown. The first
+            # submit narrows the list by name/ID, then the user picks a match.
+            if large_list and query and not stop_id:
+                self._stop_query = query
+                return await self.async_step_add_stop()
+            if not stop_id or not re.match(STOP_ID_PATTERN, stop_id):
+                errors[CONF_STOP_ID] = "invalid_stop_id"
+            elif any(stop["stop_id"] == stop_id for stop in stops):
+                errors["base"] = "already_configured"
+            else:
+                data = dict(self.config_entry.data)
+                data[CONF_STOPS] = stops + [{"stop_id": stop_id, "name": name}]
+                self.hass.config_entries.async_update_entry(self.config_entry, data=data)
+                await self.hass.config_entries.async_reload(self.config_entry.entry_id)
+                return self.async_create_entry(title="", data=self.config_entry.options)
+
+        if large_list:
+            from homeassistant.helpers.selector import (
+                SelectOptionDict,
+                SelectSelector,
+                SelectSelectorConfig,
+                SelectSelectorMode,
+            )
+
+            matches = _match_stops(self._stops, self._stop_query)
+            fields: dict = {
+                vol.Optional(STOP_QUERY, default=self._stop_query): str,
+            }
+            if matches:
+                fields[vol.Required(CONF_STOP_ID)] = SelectSelector(
+                    SelectSelectorConfig(
+                        options=[
+                            SelectOptionDict(
+                                value=str(stop["id"]),
+                                label=f"{stop['name']} ({stop['id']})",
+                            )
+                            for stop in matches
+                        ],
+                        mode=SelectSelectorMode.DROPDOWN,
+                        sort=False,
+                    )
+                )
+            elif self._stop_query:
+                errors[STOP_QUERY] = "no_stops_found"
+            fields[vol.Optional(CONF_NAME, default="")] = str
+            schema = vol.Schema(fields)
+        elif self._stops:
+            from homeassistant.helpers.selector import (
+                SelectOptionDict,
+                SelectSelector,
+                SelectSelectorConfig,
+                SelectSelectorMode,
+            )
+
+            schema = vol.Schema(
+                {
+                    vol.Required(CONF_STOP_ID): SelectSelector(
+                        SelectSelectorConfig(
+                            options=[
+                                SelectOptionDict(
+                                    value=str(stop["id"]),
+                                    label=f"{stop['name']} ({stop['id']})",
+                                )
+                                for stop in self._stops
+                            ],
+                            mode=SelectSelectorMode.DROPDOWN,
+                            custom_value=True,
+                            sort=False,
+                        )
+                    ),
+                    vol.Optional(CONF_NAME, default=""): str,
+                }
+            )
+        else:
+            schema = vol.Schema(
+                {
+                    vol.Required(CONF_STOP_ID): str,
+                    vol.Optional(CONF_NAME, default=""): str,
+                }
+            )
+
+        return self.async_show_form(
+            step_id="add_stop",
+            data_schema=schema,
+            errors=errors,
+            description_placeholders={
+                "provider": PROVIDER_OPTIONS.get(provider, provider),
+                "count": str(len(stops)),
+            },
+        )
+
+    async def async_step_remove_stop(self, user_input=None):
+        """Remove a stop from the provider hub."""
+        from .migration import (
+            async_remove_hub_entity,
+            async_remove_stop_entities,
+            entry_stops,
+        )
+
+        stops = entry_stops(self.config_entry)
+        if len(stops) <= 1:
+            return self.async_abort(reason="last_stop")
+
+        errors = {}
+        if user_input is not None:
+            stop_id = str(user_input.get(CONF_STOP_ID, "") or "").strip()
+            remaining = [stop for stop in stops if stop["stop_id"] != stop_id]
+            if len(remaining) == len(stops):
+                errors[CONF_STOP_ID] = "invalid_stop_id"
+            else:
+                data = dict(self.config_entry.data)
+                data[CONF_STOPS] = remaining
+                self.hass.config_entries.async_update_entry(self.config_entry, data=data)
+                async_remove_stop_entities(self.hass, self.config_entry, stop_id)
+                if len(remaining) <= 1:
+                    async_remove_hub_entity(self.hass, self.config_entry)
+                await self.hass.config_entries.async_reload(self.config_entry.entry_id)
+                return self.async_create_entry(title="", data=self.config_entry.options)
+
+        from homeassistant.helpers.selector import (
+            SelectOptionDict,
+            SelectSelector,
+            SelectSelectorConfig,
+            SelectSelectorMode,
+        )
+
+        schema = vol.Schema(
+            {
+                vol.Required(CONF_STOP_ID): SelectSelector(
+                    SelectSelectorConfig(
+                        options=[
+                            SelectOptionDict(
+                                value=stop["stop_id"],
+                                label=f"{stop['name'] or stop['stop_id']} ({stop['stop_id']})",
+                            )
+                            for stop in stops
+                        ],
+                        mode=SelectSelectorMode.DROPDOWN,
+                        sort=False,
+                    )
+                ),
+            }
+        )
+        return self.async_show_form(
+            step_id="remove_stop",
+            data_schema=schema,
+            errors=errors,
+            description_placeholders={"count": str(len(stops))},
         )

@@ -13,9 +13,10 @@ from .http_utils import fetch_with_retry
 
 TIMETABLE_CACHE_TTL = 3600
 TIMETABLE_MAX_ROWS_PER_LINE = 500
+TIMETABLE_MAX_CACHE_ENTRIES = 500
 
 
-async def fetch(coord: "MzkzgTransportCoordinator") -> dict:
+async def fetch(coord: "PolishTransportCoordinator") -> dict:
     """Fetch departures from kiedyPrzyjedzie carriers."""
     session = await coord._get_session()
     base_url = KIEDYPRZYJEDZIE_BASE_URLS[coord.provider]
@@ -117,6 +118,18 @@ async def _fetch_timetable(coord, session, base_url: str, now: datetime) -> dict
     cache = coord.hass.data.setdefault(DOMAIN, {}).setdefault(
         "_kiedyprzyjedzie_timetable", {}
     )
+    # Long-running installs would otherwise keep every stop/line/day combination
+    # forever. Drop expired rows and cap the cache so memory stays flat.
+    now_monotonic = time.monotonic()
+    for cache_key in list(cache):
+        if now_monotonic - cache[cache_key].get("_ts", 0) >= TIMETABLE_CACHE_TTL:
+            cache.pop(cache_key, None)
+    if len(cache) > TIMETABLE_MAX_CACHE_ENTRIES:
+        oldest = sorted(
+            cache.items(), key=lambda item: item[1].get("_ts", 0)
+        )[: len(cache) - TIMETABLE_MAX_CACHE_ENTRIES]
+        for cache_key, _ in oldest:
+            cache.pop(cache_key, None)
     cache_key_prefix = (coord.provider, coord.stop_id)
     result = {"lines": lines, "today": [], "tomorrow": []}
     today = now.replace(hour=0, minute=0, second=0, microsecond=0)

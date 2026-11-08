@@ -18,9 +18,10 @@
       },
       "stop": {
         "title": "Wybierz przystanek — {provider}",
-        "description": "Wybierz przystanek z listy lub wpisz ID ręcznie.",
+        "description": "Wybierz przystanek z listy lub wpisz ID ręcznie. Przy dużych listach wpisz nazwę lub ID i zatwierdź, aby zawęzić wyniki.",
         "data": {
           "stop_id": "Przystanek",
+          "stop_query": "Szukaj przystanku (nazwa lub ID)",
           "name": "Własna nazwa (opcjonalnie)"
         }
       },
@@ -41,17 +42,27 @@
     },
     "error": {
       "invalid_stop_id": "Wprowadź poprawny identyfikator przystanku",
+      "no_stops_found": "Brak przystanków pasujących do wyszukiwania — spróbuj innej nazwy lub ID",
       "api_key_required": "Klucz API PLK jest wymagany",
       "invalid_group": "Wybrano nieprawidłową grupę przystanków"
     },
     "abort": {
       "already_configured": "Ten przystanek jest już skonfigurowany",
+      "stop_added": "Przystanek dodany do istniejącego huba",
       "lodz_groups_failed": "Nie udało się pobrać grup przystanków — sprawdź połączenie sieciowe"
     }
   },
   "options": {
     "step": {
       "init": {
+        "title": "Zarządzaj hubem",
+        "menu_options": {
+          "settings": "Ustawienia",
+          "add_stop": "Dodaj przystanek",
+          "remove_stop": "Usuń przystanek"
+        }
+      },
+      "settings": {
         "title": "Ustawienia",
         "description": "Skonfiguruj tryb uśpienia, aby wstrzymać odpytywanie API w godzinach nocnych.",
         "data": {
@@ -59,9 +70,38 @@
           "sleep_start": "Początek uśpienia (GG:MM)",
           "sleep_end": "Koniec uśpienia (GG:MM)",
           "fallback_min": "Minimalna liczba odjazdów do uzupełnienia rozkładem (Łódź)",
-          "timetable_lines": "Linie do pe?nego rozk?adu (oddzielone przecinkami)"
+          "timetable_lines": "Linie do pe?nego rozk?adu (oddzielone przecinkami)",
+          "destination_filter": "Filtr kierunku",
+          "filter_routes": "Filtr linii",
+          "highlight_mode": "Tryb wyróżnienia",
+          "hide_terminus": "Ukryj kierunek końcowy",
+          "realtime_only": "Tylko w czasie rzeczywistym"
+        }
+      },
+      "add_stop": {
+        "title": "Dodaj przystanek",
+        "description": "Dodaj kolejny przystanek do huba. Obecnie {count} przystanków.",
+        "data": {
+          "stop_id": "Przystanek",
+          "name": "Własna nazwa (opcjonalnie)",
+          "stop_query": "Szukaj przystanku (nazwa lub ID)"
+        }
+      },
+      "remove_stop": {
+        "title": "Usuń przystanek",
+        "description": "Usuń przystanek z huba. Obecnie {count} przystanków.",
+        "data": {
+          "stop_id": "Przystanek"
         }
       }
+    },
+    "abort": {
+      "last_stop": "Hub musi mieć co najmniej jeden przystanek."
+    },
+    "error": {
+      "invalid_stop_id": "Nieprawidłowy ID przystanku",
+      "no_stops_found": "Brak przystanków pasujących do wyszukiwania",
+      "base": "Ten przystanek jest już w hubie"
     }
   }
 }

@@ -1,0 +1,105 @@
+name: Provider status
+
+on:
+  schedule:
+    # Every Monday at 04:17 UTC, before the working week starts.
+    - cron: "17 4 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: provider-status
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  validate:
+    name: Validate all providers
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install protobuf bindings
+        run: pip install gtfs-realtime-bindings==2.1.0
+      - name: Check every configured provider
+        id: check
+        continue-on-error: true
+        run: python scripts/validate_providers.py --markdown provider-status.md --json provider-status.json
+      - name: Publish job summary
+        if: always()
+        run: |
+          if [ -f provider-status.md ]; then
+            cat provider-status.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Provider status report was not generated." >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: provider-status
+          path: |
+            provider-status.md
+            provider-status.json
+          retention-days: 30
+      - name: Open or update failure issue
+        if: steps.check.outcome == 'failure'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const body = fs.readFileSync('provider-status.md', 'utf8');
+            const title = 'Weekly provider status: failures detected';
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              per_page: 100,
+            });
+            const existing = issues.find((issue) => issue.title === title);
+            if (existing) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing.number,
+                body,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                body,
+              });
+            }
+      - name: Close resolved issue
+        if: steps.check.outcome == 'success'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = 'Weekly provider status: failures detected';
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              per_page: 100,
+            });
+            const existing = issues.find((issue) => issue.title === title);
+            if (existing) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing.number,
+                body: 'All providers passed the weekly validation. Closing this issue.',
+              });
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing.number,
+                state: 'closed',
+              });
+            }

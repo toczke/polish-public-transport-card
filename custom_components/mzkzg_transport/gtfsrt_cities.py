@@ -248,9 +248,12 @@ GTFSRT_CITIES = {
         "label": "MPK Radomsko",
     },
     "gtfs_debica": {
-        "gtfs_url": "https://api.zbiorkom.live/api6-open/debica/gtfs/default",
+        # zbiorkom.live removed this city from its API. Kept for existing entries
+        # so they fail with a clear warning instead of an unknown provider.
+        "gtfs_url": None,
         "rt_url": None,
         "label": "MKS Dębica",
+        "unavailable": True,
     },
     "gtfs_kolobrzeg": {
         "gtfs_url": "https://api.zbiorkom.live/api6-open/kolobrzeg/gtfs/default",
@@ -258,9 +261,11 @@ GTFSRT_CITIES = {
         "label": "KM Kołobrzeg",
     },
     "gtfs_sanok": {
-        "gtfs_url": "https://api.zbiorkom.live/api6-open/sanok/gtfs/default",
+        # zbiorkom.live removed this city from its API. See gtfs_debica above.
+        "gtfs_url": None,
         "rt_url": None,
         "label": "SPGK Sanok",
+        "unavailable": True,
     },
     "gtfs_ostroleka": {
         "gtfs_url": "https://api.zbiorkom.live/api6-open/ostroleka/gtfs/default",

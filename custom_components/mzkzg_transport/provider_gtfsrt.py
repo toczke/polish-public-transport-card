@@ -11,21 +11,47 @@ import aiohttp
 
 from homeassistant.util import dt as dt_util
 
-from .const import DOMAIN, MAX_DEPARTURES
+from .const import CONF_STOP_ID, CONF_STOPS, DOMAIN, MAX_DEPARTURES
 
 _LOGGER = logging.getLogger(__name__)
 
 from .gtfsrt_cities import GTFSRT_CITIES
-from .gtfsrt_parser import _parse_gtfs_zip, _parse_stop_times_for, _parse_stop_times_from_raw, _parse_gtfsrt_positions, _parse_rt_feed, _get_tomorrow_departures
+from .gtfsrt_parser import _parse_gtfs_zip, _parse_stop_times_for, _parse_stop_times_from_raw, _parse_gtfsrt_positions, _parse_rt_feed, _get_tomorrow_departures, _release_gtfs_raw, resolve_stop_id
 from .gtfsrt_gzm import _get_gzm_gtfs_url
 
 
-async def fetch(coord: "MzkzgTransportCoordinator") -> dict:
+def _configured_stop_ids(coord) -> list[str]:
+    """Return every stop configured in the hub entry that owns this coordinator."""
+    entry = getattr(coord, "config_entry", None)
+    data = getattr(entry, "data", {}) if entry is not None else {}
+    ids: list[str] = []
+    for stop in data.get(CONF_STOPS) or []:
+        stop_id = str(stop.get("stop_id") or stop.get("id") or "").strip()
+        if stop_id:
+            ids.append(stop_id)
+    if not ids:
+        stop_id = str(data.get(CONF_STOP_ID) or "").strip()
+        if stop_id:
+            ids.append(stop_id)
+    if not ids:
+        ids.append(str(coord.stop_id))
+    return ids
+
+
+async def fetch(coord: "PolishTransportCoordinator") -> dict:
     """Fetch departures using static GTFS + GTFS-RT TripUpdates."""
     session = await coord._get_session()
     now = dt_util.now()
     city_cfg = GTFSRT_CITIES.get(coord.provider)
     if not city_cfg:
+        return {"stop_id": coord.stop_id, "stop_name": coord.stop_name, "provider": coord.provider, "departures": [], "last_update": now.isoformat()}
+
+    if city_cfg.get("unavailable"):
+        _LOGGER.warning(
+            "GTFS-RT: %s has no public GTFS source anymore (%s)",
+            coord.provider,
+            coord.stop_name or coord.stop_id,
+        )
         return {"stop_id": coord.stop_id, "stop_name": coord.stop_name, "provider": coord.provider, "departures": [], "last_update": now.isoformat()}
 
     # Load static GTFS (cached daily)
@@ -34,11 +60,45 @@ async def fetch(coord: "MzkzgTransportCoordinator") -> dict:
         return {"stop_id": coord.stop_id, "stop_name": coord.stop_name or f"Przystanek {coord.stop_id}", "provider": coord.provider, "departures": [], "last_update": now.isoformat()}
 
     # Get stop name
+    stop_id = str(coord.stop_id)
+    if stop_id not in gtfs["stops"]:
+        resolved = resolve_stop_id(gtfs["stops"], stop_id, coord.stop_name)
+        if resolved:
+            _LOGGER.info(
+                "GTFS-RT %s: stop %s (%s) changed in the feed; using %s (%s)",
+                coord.provider,
+                stop_id,
+                coord.stop_name,
+                resolved,
+                gtfs["stops"][resolved].get("name", ""),
+            )
+            stop_id = resolved
+        else:
+            _LOGGER.warning(
+                "GTFS-RT %s: stop %s (%s) is not present in the current GTFS feed",
+                coord.provider,
+                stop_id,
+                coord.stop_name,
+            )
+
     if not coord.stop_name:
-        coord.stop_name = gtfs["stops"].get(coord.stop_id, {}).get("name", f"Przystanek {coord.stop_id}")
+        coord.stop_name = gtfs["stops"].get(stop_id, {}).get("name", f"Przystanek {stop_id}")
 
     # Get scheduled departures for this stop
-    stop_times = gtfs["stop_times"].get(coord.stop_id, [])
+    if stop_id not in gtfs["stop_times"] and gtfs.get("_raw"):
+        await coord.hass.async_add_executor_job(_parse_stop_times_for, gtfs, stop_id)
+    stop_times = gtfs["stop_times"].get(stop_id, [])
+    if gtfs.get("_raw"):
+        await coord.hass.async_add_executor_job(
+            _release_gtfs_raw, gtfs, _configured_stop_ids(coord), now
+        )
+    _LOGGER.debug(
+        "GTFS-RT %s: feed has %d stops and %d scheduled rows for stop %s",
+        coord.provider,
+        len(gtfs["stops"]),
+        len(stop_times),
+        stop_id,
+    )
 
     # Load RT delays
     delays = {}
@@ -65,9 +125,9 @@ async def fetch(coord: "MzkzgTransportCoordinator") -> dict:
         delay_sec = 0
         is_realtime = False
         vehicle_code = ""
-        rt_key = f"{trip_id}_{coord.stop_id}"
+        rt_key = f"{trip_id}_{stop_id}"
         rt_key_seq = f"{trip_id}_seq{st.get('stop_sequence', '')}"
-        rt_key_route = f"route_{route_id}_{coord.stop_id}"
+        rt_key_route = f"route_{route_id}_{stop_id}"
         rt_key_route_only = f"route_{route_id}"
         for key in (rt_key, rt_key_seq, trip_id, rt_key_route, rt_key_route_only):
             if key in delays:
@@ -138,19 +198,19 @@ async def fetch(coord: "MzkzgTransportCoordinator") -> dict:
             unique.append(d)
 
     # If fewer than 5 departures, load tomorrow's schedule
-    if len(unique) < 5 and gtfs.get("_raw"):
+    if len(unique) < 5:
         tomorrow = now + timedelta(days=1)
         tomorrow_prefix = f"{tomorrow:%Y%m%d}_"
-        tomorrow_key = f"{tomorrow_prefix}{coord.stop_id}"
+        tomorrow_key = f"{tomorrow_prefix}{stop_id}"
         tomorrow_cache = gtfs.setdefault("_tomorrow_departures", {})
-        if tomorrow_key not in tomorrow_cache:
-            for old_key in list(tomorrow_cache):
-                if not old_key.startswith(tomorrow_prefix):
-                    tomorrow_cache.pop(old_key)
+        for old_key in list(tomorrow_cache):
+            if not old_key.startswith(tomorrow_prefix):
+                tomorrow_cache.pop(old_key)
+        if tomorrow_key not in tomorrow_cache and gtfs.get("_raw"):
             tomorrow_cache[tomorrow_key] = await coord.hass.async_add_executor_job(
-                _get_tomorrow_departures, gtfs, coord.stop_id, tomorrow, now
+                _get_tomorrow_departures, gtfs, stop_id, tomorrow, now
             )
-        tomorrow_deps = tomorrow_cache[tomorrow_key]
+        tomorrow_deps = tomorrow_cache.get(tomorrow_key, [])
         for d in tomorrow_deps:
             est = (d.get("estimated_time") or "")[:16]
             key = (d.get("route"), d.get("headsign"), est)
@@ -166,6 +226,7 @@ async def fetch(coord: "MzkzgTransportCoordinator") -> dict:
         "provider": coord.provider,
         "departures": unique[:MAX_DEPARTURES],
         "last_update": now.isoformat(),
+        **({"resolved_stop_id": stop_id} if stop_id != str(coord.stop_id) else {}),
     }
 
 
@@ -180,7 +241,7 @@ async def _get_gtfs_data(coord, session, city_cfg, now):
 
 async def _download_zip(coord, session, url, path_suffix):
     import os
-    zip_path = coord.hass.config.path(f"mzkzg_gtfs_{coord.provider}{path_suffix}.zip")
+    zip_path = coord.hass.config.path(f"polish_transport_gtfs_{coord.provider}{path_suffix}.zip")
     try:
         async with session.get(url, timeout=aiohttp.ClientTimeout(total=120)) as resp:
             if resp.status != 200:
@@ -211,9 +272,14 @@ async def _get_gtfs_data_locked(coord, session, city_cfg, now):
 
     if cache.get(cache_key):
         gtfs = cache[cache_key]
-        if coord.stop_id not in gtfs["stop_times"] and gtfs.get("_raw"):
+        if coord.stop_id in gtfs["stop_times"]:
+            return gtfs
+        if gtfs.get("_raw"):
             await coord.hass.async_add_executor_job(_parse_stop_times_for, gtfs, coord.stop_id)
-        return gtfs
+            return gtfs
+        # The raw zip was released after the other hub stops were parsed. A new
+        # stop needs a fresh archive so its schedule can be extracted.
+        cache.pop(cache_key, None)
 
     prefix = f"{coord.provider}_"
     for old_key in list(cache.keys()):

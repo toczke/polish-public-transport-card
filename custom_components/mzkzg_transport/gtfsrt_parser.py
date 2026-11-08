@@ -1,5 +1,7 @@
 import csv
 import codecs
+import re
+import unicodedata
 import zipfile
 import logging
 from io import BytesIO, TextIOWrapper
@@ -8,6 +10,76 @@ from datetime import date as dt_date, timedelta
 from homeassistant.util import dt as dt_util
 
 _LOGGER = logging.getLogger(__name__)
+
+
+def _normalize_stop_text(value: object) -> str:
+    """Case- and accent-insensitive stop text."""
+    text = str(value or "").replace("ł", "l").replace("Ł", "L")
+    text = unicodedata.normalize("NFKD", text)
+    text = "".join(ch for ch in text if not unicodedata.combining(ch)).casefold()
+    return " ".join(re.sub(r"[^a-z0-9]+", " ", text).split())
+
+
+def _stop_base_name(name: str) -> str:
+    """Strip a trailing platform number and the on-demand marker (NŻ)."""
+    text = _normalize_stop_text(name)
+    text = re.sub(r"\s+nz$", "", text)
+    return re.sub(r"\s+\d{1,2}$", "", text)
+
+
+def _platform_suffix(name: str) -> str | None:
+    match = re.search(r"(?:^|\s)(\d{1,2})$", _normalize_stop_text(name))
+    if not match:
+        return None
+    return match.group(1).lstrip("0") or "0"
+
+
+def resolve_stop_id(stops: dict, old_id: str, old_name: str) -> str | None:
+    """Resolve a stale stop ID after an operator changes GTFS stop identifiers.
+
+    Providers occasionally replace numeric IDs with slugs (Lublin did this on
+    2026-11-04). Match by the base stop name first, then use the platform suffix
+    from the old name or the last digit of the old numeric ID to disambiguate
+    platforms such as "Majdanek - pomnik 01" and "... 02".
+    """
+    old_id = str(old_id or "")
+    if old_id in stops:
+        return old_id
+
+    base = _stop_base_name(old_name)
+    if not base:
+        return None
+
+    candidates = [
+        (str(stop_id), info)
+        for stop_id, info in stops.items()
+        if _stop_base_name(info.get("name", "")) == base
+    ]
+    if len(candidates) == 1:
+        return candidates[0][0]
+    if not candidates:
+        return None
+
+    # Some zbiorkom feeds keep the old numeric stop code inside the new slug
+    # (for example "urzad-miasta1141-mhwf5"). That is the strongest signal.
+    if old_id.isdigit():
+        embedded = [
+            stop_id
+            for stop_id, _info in candidates
+            if re.search(rf"(?<!\d){re.escape(old_id)}(?!\d)", stop_id)
+        ]
+        if len(embedded) == 1:
+            return embedded[0]
+
+    wanted = _platform_suffix(old_name)
+    if not wanted:
+        match = re.search(r"(\d)$", old_id)
+        wanted = match.group(1) if match else None
+    if wanted:
+        for stop_id, info in candidates:
+            if _platform_suffix(info.get("name", "")) == wanted:
+                return stop_id
+    return None
 
 
 def _read_csv(zf, filename):
@@ -339,19 +411,36 @@ def _parse_rt_feed(feed) -> dict:
 
 def _get_tomorrow_departures(gtfs, stop_id, tomorrow, now):
     """Get scheduled departures for tomorrow from raw GTFS zip."""
-    from datetime import date as dt_date
-    
-    cache_key = f"tomorrow_{stop_id}_{tomorrow.strftime('%Y%m%d')}"
-    if cache_key in gtfs:
-        return gtfs[cache_key]
+    return _get_tomorrow_departures_many(gtfs, [stop_id], tomorrow, now).get(
+        str(stop_id), []
+    )
+
+
+def _get_tomorrow_departures_many(gtfs, stop_ids, tomorrow, now):
+    """Get tomorrow's departures for several stops in a single zip pass."""
+    date_key = tomorrow.strftime("%Y%m%d")
+    wanted = [str(stop_id) for stop_id in stop_ids]
+    result: dict[str, list] = {}
+    missing: list[str] = []
+    for stop_id in wanted:
+        cache_key = f"tomorrow_{stop_id}_{date_key}"
+        cached = gtfs.get(cache_key)
+        if cached is None:
+            missing.append(stop_id)
+        else:
+            result[stop_id] = cached
+    if not missing:
+        return result
 
     raw = gtfs.get("_raw")
     if not raw:
-        return []
-    
-    tomorrow_str = tomorrow.strftime("%Y%m%d")
+        for stop_id in missing:
+            result[stop_id] = []
+        return result
+
+    tomorrow_str = date_key
     day_name = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"][tomorrow.weekday()]
-    
+
     # Parse calendar for tomorrow's active services
     active_services = set()
     with zipfile.ZipFile(BytesIO(raw)) as zf:
@@ -387,10 +476,14 @@ def _get_tomorrow_departures(gtfs, stop_id, tomorrow, now):
                     active_services.discard(parts[sid_idx])
 
     if not active_services:
-        return []
+        for stop_id in missing:
+            gtfs[f"tomorrow_{stop_id}_{date_key}"] = []
+            result[stop_id] = []
+        return result
 
     tomorrow_trips = {}
-    stop_times = []
+    stop_times: dict[str, list] = {stop_id: [] for stop_id in missing}
+    missing_set = set(missing)
     with zipfile.ZipFile(BytesIO(raw)) as zf:
         header, rows = _read_csv(zf, "trips.txt")
         if header:
@@ -416,7 +509,7 @@ def _get_tomorrow_departures(gtfs, stop_id, tomorrow, now):
             time_idx = header.index(time_column)
             hs_idx = header.index("stop_headsign") if "stop_headsign" in header else -1
             for parts in rows:
-                if len(parts) <= max(tid_idx, sid_idx, time_idx) or parts[sid_idx] != stop_id:
+                if len(parts) <= max(tid_idx, sid_idx, time_idx) or parts[sid_idx] not in missing_set:
                     continue
                 trip_id = parts[tid_idx]
                 trip = tomorrow_trips.get(trip_id)
@@ -426,44 +519,67 @@ def _get_tomorrow_departures(gtfs, stop_id, tomorrow, now):
                     h, m, s = map(int, parts[time_idx].split(":"))
                 except (TypeError, ValueError):
                     continue
-                stop_times.append({
+                stop_times[parts[sid_idx]].append({
                     "trip_id": trip_id,
                     "route_id": trip["route_id"],
                     "departure_time": (h, m, s),
                     "headsign": parts[hs_idx] if hs_idx >= 0 and len(parts) > hs_idx else "",
                 })
 
-    departures = []
-    
-    for st in stop_times:
-        trip_id = st["trip_id"]
-        trip = tomorrow_trips[trip_id]
-        
-        route_id = st["route_id"]
-        route_name = gtfs["routes"].get(route_id, {}).get("short_name", route_id)
-        headsign = st.get("headsign") or trip.get("headsign", "")
-        
-        h, m, s = st["departure_time"]
-        dep_dt = tomorrow.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(hours=h, minutes=m, seconds=s)
-        
-        if dep_dt < now:
-            continue
+    for stop_id, rows in stop_times.items():
+        departures = []
+        for st in rows:
+            trip_id = st["trip_id"]
+            trip = tomorrow_trips[trip_id]
 
-        departures.append({
-            "route": route_name,
-            "headsign": headsign,
-            "estimated_time": dep_dt.isoformat(),
-            "theoretical_time": dep_dt.isoformat(),
-            "delay_seconds": 0,
-            "realtime": False,
-            "vehicle_type": gtfs["routes"].get(route_id, {}).get("type", "bus"),
-            "route_color": gtfs["routes"].get(route_id, {}).get("color"),
-            "provider": "schedule",
-        })
+            route_id = st["route_id"]
+            route_name = gtfs["routes"].get(route_id, {}).get("short_name", route_id)
+            headsign = st.get("headsign") or trip.get("headsign", "")
 
-    departures.sort(key=lambda x: x.get("estimated_time") or "")
-    gtfs[cache_key] = departures[:15]
-    return gtfs[cache_key]
+            h, m, s = st["departure_time"]
+            dep_dt = tomorrow.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(hours=h, minutes=m, seconds=s)
+
+            if dep_dt < now:
+                continue
+
+            departures.append({
+                "route": route_name,
+                "headsign": headsign,
+                "estimated_time": dep_dt.isoformat(),
+                "theoretical_time": dep_dt.isoformat(),
+                "delay_seconds": 0,
+                "realtime": False,
+                "vehicle_type": gtfs["routes"].get(route_id, {}).get("type", "bus"),
+                "route_color": gtfs["routes"].get(route_id, {}).get("color"),
+                "provider": "schedule",
+            })
+
+        departures.sort(key=lambda x: x.get("estimated_time") or "")
+        result[stop_id] = departures[:15]
+        gtfs[f"tomorrow_{stop_id}_{date_key}"] = result[stop_id]
+
+    return result
+
+
+def _release_gtfs_raw(gtfs, stop_ids, now):
+    """Drop the raw GTFS archive once every configured stop has been parsed.
+
+    The zip is kept only to lazily extract stop_times for stops that have not
+    been requested yet. Once the whole hub has been parsed it costs tens of MB
+    per provider, so precompute tomorrow's small fallback lists and release it.
+    """
+    if not gtfs.get("_raw"):
+        return
+    if any(str(stop_id) not in gtfs["stop_times"] for stop_id in stop_ids):
+        return
+    tomorrow = now + timedelta(days=1)
+    tomorrow_prefix = f"{tomorrow:%Y%m%d}_"
+    rows_by_stop = _get_tomorrow_departures_many(gtfs, stop_ids, tomorrow, now)
+    tomorrow_cache = gtfs.setdefault("_tomorrow_departures", {})
+    for stop_id, rows in rows_by_stop.items():
+        tomorrow_cache[f"{tomorrow_prefix}{stop_id}"] = rows
+    gtfs.pop("_raw", None)
+    gtfs.pop("_raw_tram", None)
 
 
 # Bytes pulled from the end of a remote zip — enough for the central directory

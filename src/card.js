@@ -1,6 +1,6 @@
 import { LitElement, html, svg, nothing } from 'lit';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
-import { t, minutesUntil, formatTime, formatMins, routeColor, parseVehiclePosition, normalizeList, normalizeActionConfig, fireHassEvent, PROVIDER_HEADER_COLORS } from "./utils.js";
+import { t, minutesUntil, formatTime, formatMins, routeColor, parseVehiclePosition, normalizeList, normalizeEntityEntry, normalizeActionConfig, fireHassEvent, providerLabel, PROVIDER_HEADER_COLORS } from "./utils.js";
 import { styles } from "./styles.js";
 import { VehicleMap } from "./map.js";
 
@@ -12,7 +12,9 @@ const ICON_BIKE = `<svg viewBox="0 0 24 24" width="14" height="14"><path fill="c
 const ICON_WHEELCHAIR = `<svg viewBox="0 0 24 24" width="14" height="14"><path fill="currentColor" d="M18.4,11.2L14.3,11.4L16.6,8.8C16.8,8.5 16.9,8 16.8,7.5C16.7,7.2 16.6,6.9 16.3,6.7L10.9,3.5C10.5,3.2 9.9,3.3 9.5,3.6L6.8,6.1C6.3,6.6 6.2,7.3 6.7,7.8C7.1,8.3 7.9,8.3 8.4,7.9L10.4,6.1L12.3,7.2L8.1,11.5C8,11.6 8,11.7 7.9,11.7C7.4,11.9 6.9,12.1 6.5,12.4L8,13.9C8.5,13.7 9,13.5 9.5,13.5C11.4,13.5 13,15.1 13,17C13,17.6 12.9,18.1 12.6,18.5L14.1,20C14.7,19.1 15,18.1 15,17C15,15.8 14.6,14.6 13.9,13.7L17.2,13.4L17,18.2C16.9,18.9 17.4,19.4 18.1,19.5H18.2C18.8,19.5 19.3,19 19.4,18.4L19.6,12.5C19.6,12.2 19.5,11.8 19.3,11.6C19,11.3 18.7,11.2 18.4,11.2M18,5.5A2,2 0 0,0 20,3.5A2,2 0 0,0 18,1.5A2,2 0 0,0 16,3.5A2,2 0 0,0 18,5.5M12.5,21.6C11.6,22.2 10.6,22.5 9.5,22.5C6.5,22.5 4,20 4,17C4,15.9 4.3,14.9 4.9,14L6.4,15.5C6.2,16 6,16.5 6,17C6,18.9 7.6,20.5 9.5,20.5C10.1,20.5 10.6,20.4 11,20.1L12.5,21.6Z"/></svg>`;
 const ICON_AC = `<svg viewBox="0 0 24 24" width="14" height="14"><path fill="currentColor" d="M20.79,13.95L18.46,14.57L16.46,13.44V10.56L18.46,9.43L20.79,10.05L21.31,8.12L19.54,7.65L20,5.88L18.07,5.36L17.45,7.69L15.45,8.82L13,7.38V5.12L14.71,3.41L13.29,2L12,3.29L10.71,2L9.29,3.41L11,5.12V7.38L8.5,8.82L6.5,7.69L5.92,5.36L4,5.88L4.47,7.65L2.7,8.12L3.22,10.05L5.55,9.43L7.55,10.56V13.45L5.55,14.58L3.22,13.96L2.7,15.89L4.47,16.36L4,18.12L5.93,18.64L6.55,16.31L8.55,15.18L11,16.62V18.88L9.29,20.59L10.71,22L12,20.71L13.29,22L14.7,20.59L13,18.88V16.62L15.5,15.17L17.5,16.3L18.12,18.63L20,18.12L19.53,16.35L21.3,15.88L20.79,13.95M9.5,10.56L12,9.11L14.5,10.56V13.44L12,14.89L9.5,13.44V10.56Z"/></svg>`;
 
-export class MzkzgTransportCard extends LitElement {
+const stateIcon = (icon) => html`<ha-icon class="state-icon" icon=${icon}></ha-icon>`;
+
+export class PolishTransportCard extends LitElement {
   static get properties() {
     return {
       hass: { type: Object },
@@ -36,41 +38,77 @@ export class MzkzgTransportCard extends LitElement {
   }
 
   static getConfigElement() {
-    return document.createElement("mzkzg-transport-card-editor");
+    return document.createElement("polish-transport-card-editor");
   }
 
   setConfig(config) {
     if (!config) throw new Error("No configuration provided");
     if (config.entities && !Array.isArray(config.entities)) throw new Error("entities must be an array");
+    const preset = ["standard", "compact", "e_ink", "minimal", "native"].includes(config.display_preset)
+      ? config.display_preset : "standard";
+    const themeMode = ["auto", "light", "dark"].includes(config.theme_mode) ? config.theme_mode : "auto";
+    const headerStyle = ["provider", "theme", "custom"].includes(config.header_style)
+      ? config.header_style : (config.header_color ? "custom" : "provider");
     this._config = {
       ...config,
-      entities: Array.isArray(config.entities) ? config.entities : [],
+      entities: (Array.isArray(config.entities) ? config.entities : []).map(normalizeEntityEntry).filter(Boolean),
       max_departures: Math.max(1, Math.min(100, parseInt(config.max_departures) || 10)),
-      min_departures: Math.max(0, Math.min(100, parseInt(config.min_departures) || 0)),
+      min_departures: Math.min(
+        Math.max(1, Math.min(100, parseInt(config.max_departures) || 10)),
+        Math.max(0, Math.min(100, parseInt(config.min_departures) || 0))
+      ),
       refresh_interval: Math.max(5, Math.min(600, parseInt(config.refresh_interval) || 60)),
-      display_preset: config.display_preset || "standard",
-      view_mode: config.view_mode || "mixed",
+      display_preset: preset,
+      view_mode: ["mixed", "tabs", "grouped"].includes(config.view_mode) ? config.view_mode : "mixed",
+      theme_mode: themeMode,
+      header_style: headerStyle,
+      show_header: config.show_header !== false,
+      show_clock: config.show_clock === true,
       show_delays: config.show_delays !== false,
       hide_terminus: config.hide_terminus !== false,
+      hide_cancelled: config.hide_cancelled === true,
       realtime_only: config.realtime_only === true,
       highlight_mode: config.highlight_mode === true,
+      show_countdown: config.show_countdown !== false,
+      show_vehicle: config.show_vehicle !== false,
+      show_platform: config.show_platform !== false,
+      show_accessibility: config.show_accessibility !== false,
       show_bike: config.show_bike !== false,
       show_wheelchair: config.show_wheelchair !== false,
       show_ac: config.show_ac !== false,
       show_ticket_machine: config.show_ticket_machine !== false,
       show_stop_name: config.show_stop_name === true,
+      show_last_update: config.show_last_update !== false,
+      show_refresh: config.show_refresh === true,
+      columns: Math.max(1, Math.min(3, parseInt(config.columns) || 1)),
+      max_minutes: Math.max(0, Math.min(1440, parseInt(config.max_minutes) || 0)),
+      hide_departed: config.hide_departed !== false,
+      departed_grace_minutes: Math.max(
+        0,
+        Math.min(60, Number.isFinite(parseInt(config.departed_grace_minutes, 10))
+          ? parseInt(config.departed_grace_minutes, 10)
+          : 1)
+      ),
+      only_low_floor: config.only_low_floor === true,
+      only_bike: config.only_bike === true,
+      only_ac: config.only_ac === true,
+      only_ticket_machine: config.only_ticket_machine === true,
       filter_routes: normalizeList(config.filter_routes),
-      destination_filter: Array.isArray(config.destination_filter) ? config.destination_filter : (config.destination_filter ? String(config.destination_filter).split(",").map(s=>s.trim()).filter(Boolean) : []),
+      exclude_routes: normalizeList(config.exclude_routes),
+      destination_filter: normalizeList(config.destination_filter),
       exclude_destinations: normalizeList(config.exclude_destinations),
+      filter_vehicle_types: normalizeList(config.filter_vehicle_types).map(v => v.toLowerCase()),
+      filter_providers: normalizeList(config.filter_providers),
       filter_platform: config.filter_platform || "",
       filter_track: config.filter_track || "",
+      time_format: ["auto", "24h", "12h"].includes(config.time_format) ? config.time_format : "auto",
       icon: config.icon || "",
       show_footer: config.show_footer !== false,
       tap_action: normalizeActionConfig(config.tap_action, "more-info"),
       hold_action: normalizeActionConfig(config.hold_action, "none"),
       double_tap_action: normalizeActionConfig(config.double_tap_action, "none"),
     };
-    this.vehicleMap.preloadLeaflet();
+    this._depCache = null;
   }
 
   getCardSize() { return (this._config.max_departures || 10) + 1; }
@@ -116,8 +154,20 @@ export class MzkzgTransportCard extends LitElement {
     return all.sort((a, b) => new Date(a.estimated_time || a.theoretical_time) - new Date(b.estimated_time || b.theoretical_time));
   }
 
+  _departuresCacheKey() {
+    const ids = this._getEntityIds();
+    const states = ids.map(eid => {
+      const s = this.hass.states[eid];
+      return `${eid}:${s?.state || ""}:${s?.last_updated || ""}`;
+    }).join("|");
+    const bucket = Math.floor(Date.now() / 15000);
+    return `${states}|tab:${this._activeTab}|t:${bucket}`;
+  }
+
   _getDepartures() {
     if (!this.hass || !this._config.entities?.length) return [];
+    const cacheKey = this._departuresCacheKey();
+    if (this._depCache?.key === cacheKey) return this._depCache.value;
     const c = this._config;
     let all = [];
     const entities = this._getEntityIds();
@@ -133,20 +183,67 @@ export class MzkzgTransportCard extends LitElement {
       all = this._getAllDepartures();
     }
 
-    if (c.realtime_only) all = all.filter(d => d.realtime);
-    if (c.filter_routes.length) all = all.filter(d => c.filter_routes.includes(d.route));
-    if (c.destination_filter.length) {
-      all = all.filter(d => c.destination_filter.some(df => d.headsign && d.headsign.toLowerCase().includes(df.toLowerCase())));
-    }
-    if (c.exclude_destinations.length) {
-      all = all.filter(d => !c.exclude_destinations.some(df => d.headsign && d.headsign.toLowerCase().includes(df.toLowerCase())));
-    }
-    if (c.filter_platform) all = all.filter(d => String(d.platform || "") === String(c.filter_platform));
-    if (c.filter_track) all = all.filter(d => String(d.track || "") === String(c.filter_track));
-    
-    if (c.hide_terminus && all.length) {
-      all = all.filter(d => !(d.headsign && d._stopName && d.headsign.toLowerCase() === d._stopName.toLowerCase()));
-    }
+    // Resolve a value from the per-sensor override first, then the card default.
+    const cfg = (d, key, fallback) => {
+      const ec = d._entityConfig && typeof d._entityConfig === "object" ? d._entityConfig : {};
+      return key in ec ? ec[key] : fallback;
+    };
+    const includesText = (value, filters) =>
+      Array.isArray(filters) && filters.length > 0 &&
+      filters.some(f => String(value || "").toLowerCase().includes(String(f).toLowerCase()));
+
+    all = all.filter(d => {
+      if (cfg(d, "realtime_only", c.realtime_only) && !d.realtime) return false;
+
+      const routes = cfg(d, "filter_routes", c.filter_routes);
+      if (Array.isArray(routes) && routes.length &&
+          !routes.some(r => String(r).toUpperCase() === String(d.route || "").toUpperCase())) return false;
+      const excludedRoutes = cfg(d, "exclude_routes", c.exclude_routes);
+      if (Array.isArray(excludedRoutes) && excludedRoutes.length &&
+          excludedRoutes.some(r => String(r).toUpperCase() === String(d.route || "").toUpperCase())) return false;
+
+      const destinations = cfg(d, "destination_filter", c.destination_filter);
+      if (Array.isArray(destinations) && destinations.length && !includesText(d.headsign, destinations)) return false;
+      if (includesText(d.headsign, cfg(d, "exclude_destinations", c.exclude_destinations))) return false;
+
+      const vehicleTypes = cfg(d, "filter_vehicle_types", c.filter_vehicle_types);
+      if (Array.isArray(vehicleTypes) && vehicleTypes.length &&
+          !vehicleTypes.some(v => String(v).toLowerCase() === String(d.vehicle_type || "").toLowerCase())) return false;
+
+      const providers = cfg(d, "filter_providers", c.filter_providers);
+      if (Array.isArray(providers) && providers.length &&
+          !providers.includes(d._provider || d.provider || "")) return false;
+
+      const platform = cfg(d, "filter_platform", c.filter_platform);
+      if (platform && String(d.platform || "") !== String(platform)) return false;
+      const track = cfg(d, "filter_track", c.filter_track);
+      if (track && String(d.track || "") !== String(track)) return false;
+
+      if (cfg(d, "hide_terminus", c.hide_terminus) && d.headsign && d._stopName &&
+          d.headsign.toLowerCase() === d._stopName.toLowerCase()) return false;
+      if (cfg(d, "hide_cancelled", c.hide_cancelled) && d.cancelled) return false;
+
+      const maxMinutes = parseInt(cfg(d, "max_minutes", c.max_minutes), 10) || 0;
+      if (maxMinutes > 0) {
+        const mins = minutesUntil(d.estimated_time || d.theoretical_time);
+        if (mins === null || mins > maxMinutes) return false;
+      }
+      if (cfg(d, "only_low_floor", c.only_low_floor) &&
+          !(d.wheelchair_accessible === true || (d.floor_height && d.floor_height !== "Pojazd wysokopodłogowy"))) return false;
+      if (cfg(d, "only_bike", c.only_bike) && d.bike_allowed !== true) return false;
+      if (cfg(d, "only_ac", c.only_ac) && d.air_conditioning !== true) return false;
+      if (cfg(d, "only_ticket_machine", c.only_ticket_machine) && d.ticket_machine !== true) return false;
+
+      if (cfg(d, "hide_departed", c.hide_departed)) {
+        const mins = minutesUntil(d.estimated_time || d.theoretical_time);
+        const grace = parseInt(cfg(d, "departed_grace_minutes", c.departed_grace_minutes), 10);
+        if (mins !== null && mins < -(Number.isFinite(grace) ? grace : 1)) return false;
+      }
+
+      return true;
+    });
+
+    all = this._dedupeDepartures(all);
 
     if (c.highlight_mode) {
       const byRoute = {};
@@ -161,18 +258,64 @@ export class MzkzgTransportCard extends LitElement {
       }
     }
 
-    // Per-sensor overrides from YAML: destination exclusions and row caps.
+    // Per-sensor row caps, applied after all filters so a route filter does not
+    // consume the cap with rows that are hidden anyway.
     const perEntityCounts = {};
     all = all.filter(d => {
-      const ec = d._entityConfig && typeof d._entityConfig === "object" ? d._entityConfig : {};
-      const excluded = Array.isArray(ec.exclude_destinations) ? ec.exclude_destinations : [];
-      if (excluded.length && d.headsign && excluded.some(x => d.headsign.toLowerCase().includes(String(x).toLowerCase()))) return false;
-      const cap = parseInt(ec.max_departures) || c.max_departures;
+      const cap = parseInt(cfg(d, "max_departures", c.max_departures)) || c.max_departures;
       perEntityCounts[d._entityId] = (perEntityCounts[d._entityId] || 0) + 1;
       return perEntityCounts[d._entityId] <= cap;
     });
 
-    return all.slice(0, c.max_departures);
+    const result = all.slice(0, c.max_departures);
+    this._depCache = { key: cacheKey, value: result };
+    return result;
+  }
+
+  _headsignsCompatible(first, second) {
+    const a = String(first || "").trim().toLowerCase();
+    const b = String(second || "").trim().toLowerCase();
+    if (!a || !b || a === b) return true;
+    return a.startsWith(b) || b.startsWith(a);
+  }
+
+  _mergeDeparture(base, extra) {
+    let primary = base;
+    let secondary = extra;
+    if (extra.realtime && !base.realtime) {
+      primary = extra;
+      secondary = base;
+    }
+    const merged = { ...primary };
+    for (const [key, value] of Object.entries(secondary)) {
+      if (key === "headsign") continue;
+      const current = merged[key];
+      if ((current === undefined || current === null || current === "") &&
+          value !== undefined && value !== null && value !== "") {
+        merged[key] = value;
+      }
+    }
+    if (String(extra.headsign || "").length > String(primary.headsign || "").length) {
+      merged.headsign = extra.headsign;
+    }
+    return merged;
+  }
+
+  _dedupeDepartures(departures) {
+    const groups = [];
+    for (const d of departures) {
+      const time = String(d.theoretical_time || d.estimated_time || "").slice(0, 16);
+      const key = `${d._entityId || ""}|${d.route}|${time}`;
+      const group = groups.find(g =>
+        g.key === key && this._headsignsCompatible(g.base.headsign, d.headsign)
+      );
+      if (group) {
+        group.base = this._mergeDeparture(group.base, d);
+      } else {
+        groups.push({ key, base: d });
+      }
+    }
+    return groups.map(g => g.base);
   }
 
   _getAutoIcon() {
@@ -187,6 +330,14 @@ export class MzkzgTransportCard extends LitElement {
   }
 
   _getHeaderColor() {
+    if (this._config.header_style === "theme") return "var(--primary-color, #005eb8)";
+    if (this._config.header_style === "custom" && this._config.header_color) {
+      const c = this._config.header_color;
+      if (/^(#[0-9a-fA-F]{3,8}|rgba?\([^)]+\)|hsla?\([^)]+\)|linear-gradient\([^;{}]+\)|[a-zA-Z]{3,20})$/.test(c.trim())) {
+        return c.trim();
+      }
+      return "var(--primary-color, #005eb8)";
+    }
     if (this._config.header_color) {
       const c = this._config.header_color;
       if (/^(#[0-9a-fA-F]{3,8}|rgba?\([^)]+\)|hsla?\([^)]+\)|linear-gradient\([^;{}]+\)|[a-zA-Z]{3,20})$/.test(c.trim())) {
@@ -220,14 +371,14 @@ export class MzkzgTransportCard extends LitElement {
 
   _getTitle() {
     if (this._config.title) return this._config.title;
-    if (!this.hass || !this._config.entities?.length) return "MZKZG Transport";
+    if (!this.hass || !this._config.entities?.length) return "Polish Transport";
     const firstId = this._getEntityIds()[0];
     const first = firstId ? this.hass.states[firstId] : null;
-    return first?.attributes?.stop_name || first?.attributes?.friendly_name || "MZKZG Transport";
+    return first?.attributes?.stop_name || first?.attributes?.friendly_name || "Polish Transport";
   }
 
   _getSubtitle() {
-    if (!this.hass || !this._config.entities?.length) return "Wybierz encje";
+    if (!this.hass || !this._config.entities?.length) return t("select_entities");
     const providers = new Set();
     for (const eid of this._getEntityIds()) {
       const s = this.hass.states[eid];
@@ -235,7 +386,18 @@ export class MzkzgTransportCard extends LitElement {
         providers.add(s.attributes.provider);
       }
     }
-    return [...providers].join(" + ") || "MZKZG";
+    return [...providers].map(providerLabel).join(" • ") || "Polish Transport";
+  }
+
+  _getClock() {
+    const locale = this.hass?.locale?.language || document.documentElement.lang || "pl-PL";
+    const configured = this._config.time_format;
+    const hour12 = configured === "12h" || (configured === "auto" && this.hass?.locale?.time_format === "12");
+    return new Intl.DateTimeFormat(locale, {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12,
+    }).format(new Date());
   }
 
   _getLastUpdate() {
@@ -248,7 +410,22 @@ export class MzkzgTransportCard extends LitElement {
     }
     if (!latest) return "";
     const d = new Date(latest);
-    return `Odświeżono: ${d.toLocaleTimeString("pl-PL", {hour:"2-digit", minute:"2-digit", second:"2-digit"})}`;
+    const locale = this.hass?.locale?.language || document.documentElement.lang || "pl-PL";
+    return `${t("last_update")}: ${d.toLocaleTimeString(locale, {hour:"2-digit", minute:"2-digit", second:"2-digit"})}`;
+  }
+
+  async _refresh(ev) {
+    ev?.stopPropagation?.();
+    if (!this.hass) return;
+    const ids = this._getEntityIds();
+    if (!ids.length) return;
+    this._refreshing = true;
+    this.requestUpdate();
+    try {
+      await this.hass.callService("homeassistant", "update_entity", { entity_id: ids });
+    } finally {
+      setTimeout(() => { this._refreshing = false; this.requestUpdate(); }, 1200);
+    }
   }
 
   _resolveActionConfig(kind) {
@@ -323,6 +500,11 @@ export class MzkzgTransportCard extends LitElement {
       return;
     }
 
+    const tapAction = this._resolveActionConfig("tap").action || "none";
+    // Rows without a live vehicle position should behave like plain timetable
+    // text; never open the entity more-info dialog for them.
+    if (tapAction === "more-info") return;
+
     if (this._tapTimer) clearTimeout(this._tapTimer);
     this._tapTimer = setTimeout(() => this._handleRowAction("tap", d), 220);
   }
@@ -362,7 +544,7 @@ export class MzkzgTransportCard extends LitElement {
 
   _renderDeps() {
     const c = this._config;
-    if (!c.entities?.length) return html`<div class="state-msg"><span class="icon">📍</span>${t("no_entities")}</div>`;
+    if (!c.entities?.length) return html`<div class="state-msg">${stateIcon("mdi:map-marker-off")}${t("no_entities")}</div>`;
 
     if (!this.hass) {
       const skeletonCount = typeof c.min_departures !== 'undefined' && c.min_departures > 0 ? c.min_departures : Math.min(5, c.max_departures || 5);
@@ -380,7 +562,7 @@ export class MzkzgTransportCard extends LitElement {
       const missing = this._getEntityIds().filter(eid => !this.hass.states[eid]);
       if (missing.length) {
         const names = missing.map(e => e.replace("sensor.", "")).join(", ");
-        return html`<div class="state-msg"><span class="icon">⚠️</span>${t("missing_entities")}<br><small>${names}</small></div>`;
+        return html`<div class="state-msg">${stateIcon("mdi:alert-circle-outline")}${t("missing_entities")}<br><small>${names}</small></div>`;
       }
       const unavailable = this._getEntityIds().filter(eid => {
         const s = this.hass.states[eid];
@@ -389,19 +571,23 @@ export class MzkzgTransportCard extends LitElement {
       if (unavailable.length) {
         const hasPlk = unavailable.some(eid => this.hass.states[eid]?.attributes?.provider === "plk_rail");
         const msg = hasPlk ? t("plk_rate_limit") : t("unavailable");
-        return html`<div class="state-msg"><span class="icon">⚠️</span>${msg}</div>`;
+        return html`<div class="state-msg">${stateIcon(hasPlk ? "mdi:cloud-alert-outline" : "mdi:alert-outline")}${msg}</div>`;
       }
       const allDeps = this._getAllDepartures();
       if (allDeps.length) {
         const next = allDeps[0];
         const nextTime = next.estimated_time ? formatTime(next.estimated_time) : "";
-        return html`<div class="state-msg"><span class="icon">🕐</span>${t("no_departures")}<br><small>${nextTime ? (t("min") === "min" ? "Next" : "Następny") + ": " + next.route + " → " + next.headsign + " " + nextTime : ""}</small></div>`;
+        return html`<div class="state-msg">${stateIcon("mdi:clock-outline")}${t("no_departures")}<br><small>${nextTime ? `${t("next")}: ${next.route} → ${next.headsign} ${nextTime}` : ""}</small></div>`;
       }
-      return html`<div class="state-msg"><span class="icon">⏳</span>${t("no_departures")}</div>`;
+      return html`<div class="state-msg">${stateIcon("mdi:timer-sand-empty")}${t("no_departures")}</div>`;
     }
-    const hasRowActions = ["none"].indexOf((this._config.tap_action?.action || "more-info")) === -1
-      || ["none"].indexOf((this._config.hold_action?.action || "none")) === -1
-      || ["none"].indexOf((this._config.double_tap_action?.action || "none")) === -1;
+    const tapAction = this._resolveActionConfig("tap").action || "none";
+    const holdAction = this._resolveActionConfig("hold").action || "none";
+    const doubleTapAction = this._resolveActionConfig("double").action || "none";
+    const hasExplicitActions =
+      (tapAction !== "none" && tapAction !== "more-info") ||
+      holdAction !== "none" ||
+      doubleTapAction !== "none";
 
     const renderRow = (d) => {
       const mins = minutesUntil(d.estimated_time);
@@ -419,61 +605,84 @@ export class MzkzgTransportCard extends LitElement {
         const delayPart = showDelay
           ? html` <span class="delay-badge ${delayMin > 0 ? 'late' : 'early'}">${delayMin > 0 ? "+" : ""}${delayMin}min</span>`
           : nothing;
-        const mainTime = showDelay
+        const mainTime = showDelay && formatTime(d.theoretical_time || d.estimated_time) !== formatTime(d.estimated_time)
           ? html`<span class="time-struck">${formatTime(d.theoretical_time || d.estimated_time)}</span> ${formatTime(d.estimated_time)}`
           : formatTime(d.estimated_time);
-        const countdown = mins !== null && mins <= 0 ? t("departing") : formatMins(mins);
-        timeHTML = html`<div class="time-main">${mainTime}</div><div class="time-sub"><span class="dot">●</span> ${countdown}${delayPart}</div>`;
+        const countdown = mins === null
+          ? ""
+          : mins <= 0
+            ? t("departing")
+            : `${t("in")} ${formatMins(mins)}`;
+        timeHTML = c.show_countdown
+          ? html`<div class="time-main">${mainTime}</div><div class="time-sub"><span class="dot">●</span> ${countdown}${delayPart}</div>`
+          : html`<div class="time-main">${mainTime}${delayPart}</div>`;
       } else {
         timeHTML = html`<div class="time-main">${formatTime(d.theoretical_time || d.estimated_time)}</div>`;
       }
 
-      let platformHTML = nothing;
-      if (d._provider === "plk_rail") {
-        platformHTML = html`
-          ${d.platform ? html`<span class="platform">peron ${d.platform}</span>` : nothing}
-          ${d.track ? html`<span class="platform">${t("track")} ${d.track}</span>` : nothing}
-        `;
+      const platformParts = [];
+      if (c.show_platform && d._provider === "plk_rail") {
+        if (d.platform) platformParts.push(`${t("platform")} ${d.platform}`);
+        if (d.track) platformParts.push(`${t("track")} ${d.track}`);
+      }
+      const trainParts = [];
+      if (d.train_number && d._provider === "plk_rail") {
+        const shortCarrier = (d.carrier || "").replace(/^[„""'\s]+/, "").replace(/PKP\s*Szybka\s*Kolej\s*Miejska.*/i, "SKM").replace(/PKP\s*Intercity.*/i, "IC").replace(/POLREGIO.*/i, "Polregio").replace(/\s*sp\.?\s*z\s*o\.?\s*o\.?.*/i, "");
+        trainParts.push(`${t("train_no")} ${d.train_number}`);
+        if (shortCarrier) trainParts.push(shortCarrier);
       }
 
-      let iconsHTML = [];
-      if (c.show_bike && d.bike_allowed === true) iconsHTML.push(html`<span title="Rower">${unsafeHTML(ICON_BIKE)}</span>`);
-      if (c.show_wheelchair && d.wheelchair_accessible === true) iconsHTML.push(html`<span title="Wózek">${unsafeHTML(ICON_WHEELCHAIR)}</span>`);
-      if (c.show_ac && d.air_conditioning === true) iconsHTML.push(html`<span title="Klimatyzacja">${unsafeHTML(ICON_AC)}</span>`);
-      
-      const vehicleChip = (d._provider !== "plk_rail" && d.vehicle_code && d.realtime)
-        ? html`<span class="platform">${d.vehicle_code}</span>`
+      const iconsHTML = [];
+      if (c.show_accessibility) {
+        if (c.show_bike && d.bike_allowed === true) iconsHTML.push(html`<span title=${t("bike")}>${unsafeHTML(ICON_BIKE)}</span>`);
+        if (c.show_wheelchair && d.wheelchair_accessible === true) iconsHTML.push(html`<span title=${t("wheelchair")}>${unsafeHTML(ICON_WHEELCHAIR)}</span>`);
+        if (c.show_ac && d.air_conditioning === true) iconsHTML.push(html`<span title=${t("ac")}>${unsafeHTML(ICON_AC)}</span>`);
+      }
+
+      const vehicleChip = (c.show_vehicle && d._provider !== "plk_rail" && d.vehicle_code && d.realtime)
+        ? html`<span class="vehicle-no" title=${t("show_vehicle")}>#${d.vehicle_code}</span>`
         : nothing;
-      const platformText = d.platform && d._provider !== "plk_rail" ? html`<span class="platform" title="Stanowisko/peron">${d.platform}</span>` : nothing;
-      
-      const metaRow = (iconsHTML.length > 0 || platformText !== nothing || platformHTML !== nothing)
-        ? html`<span class="meta-row"><span class="icons">${iconsHTML}</span>${platformHTML}${platformText}</span>`
+      const platformText = (c.show_platform && d.platform && d._provider !== "plk_rail")
+        ? html`<span class="platform" title=${t("platform")}>${d.platform}</span>`
+        : nothing;
+      const hasPos = parseVehiclePosition(d.vehicle_lat, d.vehicle_lng) !== null;
+
+      const metaChips = [];
+      if (platformParts.length) metaChips.push(html`<span class="meta-pill">${platformParts.join(" · ")}</span>`);
+      if (platformText !== nothing) metaChips.push(platformText);
+      const trainInfo = trainParts.length
+        ? html`<span class="train-info">${trainParts.join(" · ")}</span>`
+        : nothing;
+      const metaRow = (iconsHTML.length > 0 || metaChips.length > 0 || trainInfo !== nothing)
+        ? html`<span class="meta-row">
+            ${iconsHTML.length ? html`<span class="icons">${iconsHTML}</span>` : nothing}
+            ${metaChips.length || trainInfo !== nothing
+              ? html`<span class="meta-chips">${metaChips}${trainInfo}</span>`
+              : nothing}
+          </span>`
         : nothing;
 
       const showStop = c.show_stop_name && c.entities.length > 1 && c.view_mode !== "tabs" && d._stopName;
       const cleanStopName = (d._stopName || "").replace(/\s*\(?(bus|tramwaj|tram|train|skm)\)?\s*/gi, " ").trim();
-      
-      let trainInfo = nothing;
-      if (d.train_number && d._provider === "plk_rail") {
-        const shortCarrier = (d.carrier || "").replace(/^[„""'\s]+/, "").replace(/PKP\s*Szybka\s*Kolej\s*Miejska.*/i, "SKM").replace(/PKP\s*Intercity.*/i, "IC").replace(/POLREGIO.*/i, "Polregio").replace(/\s*sp\.?\s*z\s*o\.?\s*o\.?.*/i, "");
-        trainInfo = html`<span class="stop-name">nr ${d.train_number} - ${shortCarrier}</span>`;
-      }
 
-      const hasPos = parseVehiclePosition(d.vehicle_lat, d.vehicle_lng) !== null;
-      const isInteractive = hasRowActions || hasPos;
+      const isInteractive = hasPos || hasExplicitActions;
+      const rowTime = formatTime(d.estimated_time || d.theoretical_time);
+      const rowLabel = `${d.route} → ${d.headsign || ""}${rowTime ? `, ${rowTime}` : ""}${hasPos ? `, ${t("show_on_map")}` : ""}`;
 
       return html`
         <div class="dep-row ${isInteractive ? 'interactive' : ''} ${imminent ? 'imminent' : ''} ${d._dimmed ? 'dimmed' : ''} ${cancelled ? 'cancelled' : ''}"
              tabindex=${isInteractive ? "0" : "-1"}
+             role=${isInteractive ? "button" : nothing}
+             aria-label=${isInteractive ? rowLabel : nothing}
              @click=${(e) => this._onRowClick(e, d)}
              @dblclick=${(e) => this._onRowDblClick(e, d)}
              @contextmenu=${(e) => this._onRowContext(e, d)}
              @keydown=${(e) => { if(e.key==="Enter" || e.key===" ") { e.preventDefault(); this._onRowClick(e, d); }}}>
           <span class="badge" style="background:${routeColor(d.route, d._provider || d.provider, d.route_color)}">${d.route}</span>
           <span class="headsign">
-            <span class="head-main"><span class="headsign-text">${d.headsign}</span>${vehicleChip}</span>
+            <span class="head-main"><span class="headsign-text" title=${d.headsign}>${d.headsign}</span>${vehicleChip}</span>
             ${metaRow}
-            ${trainInfo !== nothing ? trainInfo : (showStop ? html`<span class="stop-name">${cleanStopName}</span>` : nothing)}
+            ${showStop ? html`<span class="stop-name" title=${cleanStopName}>${cleanStopName}</span>` : nothing}
           </span>
           <div class="time-col">${timeHTML}</div>
         </div>
@@ -490,14 +699,24 @@ export class MzkzgTransportCard extends LitElement {
       });
       for (const p in grouped) {
         let pName;
-        if (p === "ztm_gdansk") pName = "ZTM Gdańsk";
-        else if (p === "zkm_gdynia") pName = "ZKM Gdynia";
-        else if (p === "mzk_wejherowo") pName = "MZK Wejherowo";
-        else if (p === "plk_rail") pName = "Pociągi (SKM/IC/PR)";
-        else pName = p.charAt(0).toUpperCase() + p.slice(1);
+        if (p === "plk_rail") pName = t("trains");
+        else if (p === "Inne") pName = t("other");
+        else pName = providerLabel(p);
         
         rows.push(html`<div class="provider-header">${pName}</div>`);
         grouped[p].forEach(d => rows.push(renderRow(d)));
+      }
+    } else if (c.view_mode === "grouped") {
+      const groups = new Map();
+      for (const d of deps) {
+        const key = `${d.route}|${d.headsign || ""}`;
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key).push(d);
+      }
+      for (const [, group] of groups) {
+        const first = group[0];
+        rows.push(html`<div class="provider-header line-header">${first.route} → ${first.headsign || "—"}</div>`);
+        group.forEach(d => rows.push(renderRow(d)));
       }
     } else {
       deps.forEach(d => rows.push(renderRow(d)));
@@ -517,22 +736,29 @@ export class MzkzgTransportCard extends LitElement {
   render() {
     if (!this._config) return nothing;
     const c = this._config;
-    const cardClass = c.display_preset === "e_ink" ? "e-ink" : c.display_preset === "compact" ? "compact" : "";
+    const cardClass = c.display_preset === "e_ink" ? "e-ink"
+      : c.display_preset === "compact" ? "compact"
+      : c.display_preset === "minimal" ? "minimal"
+      : c.display_preset === "native" ? "native" : "";
 
     return html`
-      <ha-card class="${cardClass}">
-        <div class="header" style="background:${this._getHeaderColor()}">
-          <span class="header-icon">${c.icon ? html`<ha-icon icon="${c.icon}" style="color:#fff;--mdc-icon-size:20px"></ha-icon>` : this._getAutoIcon()}</span>
-          <div class="header-body">
-            <div class="header-title">${this._getTitle()}</div>
-            <div class="header-sub">${this._getSubtitle()}</div>
+      <ha-card class="${cardClass}" data-theme="${c.theme_mode}" data-header="${c.header_style}">
+        ${c.show_header ? html`
+          <div class="header" style="background:${this._getHeaderColor()}">
+            <span class="header-icon">${c.icon ? html`<ha-icon icon="${c.icon}" style="color:var(--ptc-header-text, #fff);--mdc-icon-size:20px"></ha-icon>` : this._getAutoIcon()}</span>
+            <div class="header-body">
+              <div class="header-title">${this._getTitle()}</div>
+              <div class="header-sub">${this._getSubtitle()}</div>
+            </div>
+            ${c.show_clock ? html`<div class="header-clock">${this._getClock()}</div>` : nothing}
+            ${c.show_refresh ? html`<button class="header-refresh ${this._refreshing ? "spinning" : ""}" title=${t("refresh")} @click=${this._refresh}><ha-icon icon="mdi:refresh"></ha-icon></button>` : nothing}
           </div>
-        </div>
+        ` : nothing}
         ${this._renderTabs()}
-        <div class="dep-list" aria-live="polite" aria-atomic="true">
+        <div class="dep-list ${c.columns > 1 ? `columns-${c.columns}` : ""}" aria-live="polite" aria-atomic="true">
           ${this._renderDeps()}
         </div>
-        ${c.show_footer ? html`<div class="footer">${this._getLastUpdate()}</div>` : nothing}
+        ${c.show_footer && c.show_last_update ? html`<div class="footer">${this._getLastUpdate()}</div>` : nothing}
       </ha-card>
     `;
   }

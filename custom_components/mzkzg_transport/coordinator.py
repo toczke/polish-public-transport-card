@@ -1,4 +1,4 @@
-"""Data coordinator for MZKZG Transport."""
+"""Data coordinator for Polish Transport."""
 
 from datetime import timedelta
 import logging
@@ -33,7 +33,7 @@ _LOGGER = logging.getLogger(__name__)
 _STOP_ID_RE = re.compile(STOP_ID_PATTERN)
 
 
-class MzkzgTransportCoordinator(DataUpdateCoordinator):
+class PolishTransportCoordinator(DataUpdateCoordinator):
     """Coordinator that fetches departure data from transport APIs."""
 
     def __init__(
@@ -128,38 +128,64 @@ class MzkzgTransportCoordinator(DataUpdateCoordinator):
         return _parse_time(value, reference_dt)
 
     @staticmethod
+    def _headsigns_compatible(first: str, second: str) -> bool:
+        """Return True when two headsigns describe the same destination."""
+        a = (first or "").strip().casefold()
+        b = (second or "").strip().casefold()
+        if not a or not b or a == b:
+            return True
+        return a.startswith(b) or b.startswith(a)
+
+    @staticmethod
+    def _merge_departure(base: dict, extra: dict) -> dict:
+        """Merge two rows for the same departure, keeping the richer fields."""
+        # A realtime row wins as the base so delay and vehicle data survive.
+        if extra.get("realtime") and not base.get("realtime"):
+            base, extra = extra, base
+        merged = dict(base)
+        for key, value in extra.items():
+            if key == "headsign":
+                continue
+            if merged.get(key) in (None, "", [], {}) and value not in (None, "", [], {}):
+                merged[key] = value
+        # Keep the more specific terminus ("Brzeźno Dom Zdrojowy" over "Brzeźno").
+        base_hs = str(base.get("headsign") or "")
+        extra_hs = str(extra.get("headsign") or "")
+        if len(extra_hs) > len(base_hs):
+            merged["headsign"] = extra["headsign"]
+        return merged
+
+    @staticmethod
     def _deduplicate_prefer_rt(departures: list) -> list:
-        """Deduplicate by (route, theoretical_time, headsign), prefer realtime.
+        """Merge schedule and realtime rows for the same departure.
 
-        Using theoretical_time ensures RT entries with delay still match
-        the corresponding schedule entry from GTFS fallback.
-        Entries with empty headsign match any headsign at the same route+time.
+        Route + theoretical time is the stable identity. Headsigns may differ
+        when one is a prefix of the other, because providers often return both
+        a short and a full terminus for the same trip (for example "Brzeźno"
+        and "Brzeźno Dom Zdrojowy"). The merged row keeps the more specific
+        headsign and fills missing vehicle/trip fields from the other source.
         """
-        seen: dict[tuple, dict] = {}
-        seen_rt: dict[tuple, dict] = {}
+        groups: list[dict] = []
         for d in departures:
+            route = d.get("route")
             t = (d.get("theoretical_time") or d.get("estimated_time") or "")[:16]
-            h = (d.get("headsign") or "").strip()
-            key = (d.get("route"), t, h)
-            key_rt = (d.get("route"), t)
-
-            existing = seen.get(key)
-            if existing:
-                if d.get("realtime") and not existing.get("realtime"):
-                    seen[key] = d
-                continue
-
-            if not h and key_rt in seen_rt:
-                existing_no_hs = seen_rt[key_rt]
-                if d.get("realtime") and not existing_no_hs.get("realtime"):
-                    seen_rt[key_rt] = d
-                    seen[key] = d
-                continue
-
-            seen[key] = d
-            seen_rt[key_rt] = d
-
-        return list(seen.values())
+            headsign = d.get("headsign") or ""
+            match = None
+            for group in groups:
+                if (
+                    group["route"] == route
+                    and group["time"] == t
+                    and PolishTransportCoordinator._headsigns_compatible(
+                        group["base"].get("headsign"), headsign
+                    )
+                ):
+                    match = group
+                    break
+            if match:
+                match["base"] = PolishTransportCoordinator._merge_departure(match["base"], d)
+            else:
+                groups.append({"route": route, "time": t, "base": d})
+        return [group["base"] for group in groups]
 
     async def _async_update_data(self) -> dict:
         """Fetch departures from the appropriate provider module."""

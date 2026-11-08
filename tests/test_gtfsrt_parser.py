@@ -3,11 +3,17 @@ import sys
 import os
 import io
 import zipfile
-from datetime import date
+from datetime import date, datetime, timedelta
 
 # Direct import - gtfsrt_parser has no HA dependencies
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'custom_components', 'mzkzg_transport'))
-from gtfsrt_parser import _read_csv, _parse_gtfs_zip, _parse_stop_times_for
+from gtfsrt_parser import (
+    _get_tomorrow_departures_many,
+    _parse_gtfs_zip,
+    _parse_stop_times_for,
+    _read_csv,
+    _release_gtfs_raw,
+)
 
 
 # ─── Helpers ────────────────────────────────────────────────────────────────
@@ -225,3 +231,51 @@ def test_parse_stop_times_for_idempotent():
     _parse_stop_times_for(gtfs, 'STOP_A')
     count_second = len(gtfs['stop_times']['STOP_A'])
     assert count_first == count_second
+
+def _make_future_gtfs() -> bytes:
+    days = "monday,tuesday,wednesday,thursday,friday,saturday,sunday"
+    calendar = f"service_id,{days},start_date,end_date\nSVC1,1,1,1,1,1,1,1,20200101,29991231\n"
+    trips = "trip_id,route_id,service_id,trip_headsign\nTRIP1,R1,SVC1,Centrum\n"
+    routes = "route_id,route_short_name,route_type,route_color\nR1,10,3,FF0000\n"
+    stops = "stop_id,stop_name\nSTOP_A,Plac\nSTOP_B,Rynek\n"
+    stop_times = (
+        "trip_id,stop_id,departure_time,stop_sequence\n"
+        "TRIP1,STOP_A,08:30:00,1\n"
+        "TRIP1,STOP_B,08:45:00,2\n"
+    )
+    return _make_zip({
+        "calendar.txt": calendar,
+        "trips.txt": trips,
+        "routes.txt": routes,
+        "stops.txt": stops,
+        "stop_times.txt": stop_times,
+    })
+
+
+def test_get_tomorrow_departures_many_shares_one_pass():
+    gtfs = _parse_gtfs_zip(_make_future_gtfs())
+    now = datetime(2026, 5, 14, 9, 0, 0)
+    tomorrow = now + timedelta(days=1)
+    result = _get_tomorrow_departures_many(gtfs, ["STOP_A", "STOP_B"], tomorrow, now)
+    assert set(result) == {"STOP_A", "STOP_B"}
+    assert result["STOP_A"][0]["route"] == "10"
+    assert result["STOP_A"][0]["headsign"] == "Centrum"
+    assert result["STOP_B"][0]["theoretical_time"] == "2026-05-15T08:45:00"
+
+
+def test_release_gtfs_raw_after_all_stops_parsed():
+    gtfs = _parse_gtfs_zip(_make_future_gtfs())
+    _parse_stop_times_for(gtfs, "STOP_A")
+    _parse_stop_times_for(gtfs, "STOP_B")
+    now = datetime(2026, 5, 14, 9, 0, 0)
+    _release_gtfs_raw(gtfs, ["STOP_A", "STOP_B"], now)
+    assert "_raw" not in gtfs
+    tomorrow_key = f"{(now + timedelta(days=1)):%Y%m%d}_STOP_A"
+    assert gtfs["_tomorrow_departures"][tomorrow_key]
+
+
+def test_release_gtfs_raw_keeps_archive_until_every_stop_is_parsed():
+    gtfs = _parse_gtfs_zip(_make_future_gtfs())
+    _parse_stop_times_for(gtfs, "STOP_A")
+    _release_gtfs_raw(gtfs, ["STOP_A", "STOP_B"], datetime(2026, 5, 14, 9, 0, 0))
+    assert "_raw" in gtfs

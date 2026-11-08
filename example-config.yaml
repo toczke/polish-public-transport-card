@@ -68,13 +68,44 @@ entities:
     realtime_only: true
 
 ---
+# ── Theme, clock and vehicle-type filter ─────────────────────────────────
+type: custom:polish-transport-card
+entities:
+  - sensor.centrum_01_odjazdy
+header_style: theme       # provider | theme | custom
+show_clock: true
+time_format: 24h
+filter_vehicle_types: ["tram"]
+show_vehicle: false
+
+---
 # ── Compact preset ───────────────────────────────────────────────────────
 type: custom:polish-transport-card
-display_preset: compact
+display_preset: native
 entities:
   - sensor.brama_wyzynna_03_odjazdy
   - sensor.centrum_01_odjazdy
   - sensor.katowice_dworzec_pkp_odjazdy
+
+---
+# ── Grouped by line + two columns (tablet / wide card) ───────────────────
+type: custom:polish-transport-card
+view_mode: grouped
+columns: 2
+show_refresh: true
+entities:
+  - sensor.brama_wyzynna_03_odjazdy
+  - sensor.dworzec_pks_02_odjazdy
+
+---
+# ── Only the next 30 minutes, low-floor vehicles ─────────────────────────
+type: custom:polish-transport-card
+entities:
+  - entity: sensor.centrum_01_odjazdy
+    max_minutes: 30
+    only_low_floor: true
+hide_departed: true
+departed_grace_minutes: 1
 
 ---
 # ── E-ink preset (black & white, no animations) ──────────────────────────

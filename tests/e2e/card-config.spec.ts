@@ -1,0 +1,370 @@
+import { test, expect } from '@playwright/test';
+import * as path from 'path';
+
+const SCRIPT = path.resolve('custom_components/mzkzg_transport/www/polish-transport-card.js');
+
+async function makeCard(page: any, config: any, hass: any) {
+  return await page.evaluate(async ({ config, hass }) => {
+    const card: any = document.createElement('polish-transport-card');
+    card.setConfig(config);
+    document.body.appendChild(card);
+    card.hass = hass;
+    await card.updateComplete;
+    return {
+      theme: card.shadowRoot.querySelector('ha-card')?.getAttribute('data-theme'),
+      classes: card.shadowRoot.querySelector('ha-card')?.className,
+      depotCount: card.shadowRoot.querySelectorAll('.dep-row').length,
+      routes: [...card.shadowRoot.querySelectorAll('.badge')].map((e: any) => e.textContent.trim()),
+      mapPins: card.shadowRoot.querySelectorAll('.map-pin').length,
+    };
+  }, { config, hass });
+}
+
+test('native preset is reflected in the card DOM', async ({ page }) => {
+  await page.goto('about:blank');
+  await page.addScriptTag({ path: SCRIPT });
+  const result = await makeCard(page, {
+    entities: ['sensor.test'],
+    header_style: 'theme',
+    display_preset: 'native',
+  }, {
+    locale: { language: 'pl', time_format: '24' },
+    states: { 'sensor.test': { attributes: { departures: [], stop_name: 'Test' } } },
+  });
+  expect(result.classes).toContain('native');
+});
+
+test('global and per-sensor filters are applied', async ({ page }) => {
+  await page.goto('about:blank');
+  await page.addScriptTag({ path: SCRIPT });
+  const now = new Date(Date.now() + 600000).toISOString();
+  const departures = [
+    { route: '6', headsign: 'Jelitkowo', estimated_time: now, theoretical_time: now, realtime: true, vehicle_type: 'bus', vehicle_lat: 54.4, vehicle_lng: 18.6 },
+    { route: '7', headsign: 'Nowy Port', estimated_time: now, theoretical_time: now, realtime: true, vehicle_type: 'bus' },
+    { route: '175', headsign: 'Siedlce', estimated_time: now, theoretical_time: now, realtime: true, vehicle_type: 'bus' },
+  ];
+  const result = await makeCard(page, {
+    entities: [
+      { entity: 'sensor.one', filter_routes: ['6'] },
+      { entity: 'sensor.two', exclude_destinations: ['Siedlce'] },
+    ],
+    filter_vehicle_types: ['bus'],
+  }, {
+    locale: { language: 'pl', time_format: '24' },
+    states: {
+      'sensor.one': { attributes: { provider: 'ztm_gdansk', stop_name: 'One', departures } },
+      'sensor.two': { attributes: { provider: 'ztm_gdansk', stop_name: 'Two', departures } },
+    },
+  });
+  expect(result.routes).toEqual(['6', '6', '7']);
+  expect(result.mapPins).toBe(0);
+});
+
+test('countdown, vehicle number and consolidated meta chips', async ({ page }) => {
+  await page.goto('about:blank');
+  await page.addScriptTag({ path: SCRIPT });
+  const soon = new Date(Date.now() + 11 * 60000).toISOString();
+  const later = new Date(Date.now() + 20 * 60000).toISOString();
+  const result = await page.evaluate(async ({ soon, later }) => {
+    document.documentElement.lang = 'pl';
+    const card: any = document.createElement('polish-transport-card');
+    card.setConfig({ entities: ['sensor.ztm', 'sensor.plk'], show_stop_name: true });
+    document.body.appendChild(card);
+    card.hass = {
+      locale: { language: 'pl' },
+      states: {
+        'sensor.ztm': { attributes: { provider: 'ztm_gdansk', stop_name: 'Płocka', departures: [
+          { route: '6', headsign: 'Jelitkowo', estimated_time: soon, theoretical_time: soon, realtime: true, vehicle_code: '100', platform: '5', bike_allowed: true, vehicle_lat: 54.4, vehicle_lng: 18.6, delay_seconds: 60 },
+        ] } },
+        'sensor.plk': { attributes: { provider: 'plk_rail', stop_name: 'Gdańsk Śródmieście', departures: [
+          { route: 'S1', headsign: 'Wejherowo', estimated_time: later, theoretical_time: later, realtime: false, platform: '1', track: '502', train_number: '95485', carrier: 'PKP Szybka Kolej Miejska w Trójmieście' },
+        ] } },
+      },
+    };
+    await card.updateComplete;
+    const rows = [...card.shadowRoot.querySelectorAll('.dep-row')] as HTMLElement[];
+    const ztm = rows.find((r) => r.textContent.includes('Jelitkowo')) as HTMLElement;
+    const plk = rows.find((r) => r.textContent.includes('Wejherowo')) as HTMLElement;
+    return {
+      ztmCountdown: ztm.querySelector('.time-sub')?.textContent?.replace(/\s+/g, ' ').trim() || '',
+      ztmVehicle: ztm.querySelector('.vehicle-no')?.textContent?.trim() || '',
+      ztmPlatform: ztm.querySelector('.platform')?.textContent?.trim() || '',
+      ztmStopTitle: ztm.querySelector('.stop-name')?.getAttribute('title') || '',
+      ztmIcons: ztm.querySelectorAll('.icons svg').length,
+      ztmStruck: ztm.querySelectorAll('.time-struck').length,
+      plkMeta: plk.querySelector('.meta-pill')?.textContent?.trim() || '',
+      plkTrain: plk.querySelector('.train-info')?.textContent?.trim() || '',
+      iconsFirst: ztm.querySelector('.meta-row')?.firstElementChild?.classList.contains('icons') || false,
+      plkHasCountdown: Boolean(plk.querySelector('.time-sub')),
+    };
+  }, { soon, later });
+  expect(result.ztmCountdown).toContain('za');
+  expect(result.ztmCountdown).toContain('min');
+  expect(result.ztmVehicle).toBe('#100');
+  expect(result.ztmPlatform).toBe('5');
+  expect(result.ztmStopTitle).toBe('Płocka');
+  expect(result.ztmIcons).toBe(1);
+  expect(result.ztmStruck).toBe(0);
+  expect(result.plkMeta).toBe('peron 1 · tor 502');
+  expect(result.plkTrain).toBe('nr 95485 · SKM');
+  expect(result.iconsFirst).toBe(true);
+  expect(result.plkHasCountdown).toBe(false);
+});
+
+test('presets hide secondary metadata consistently', async ({ page }) => {
+  await page.goto('about:blank');
+  await page.addScriptTag({ path: SCRIPT });
+  const soon = new Date(Date.now() + 600000).toISOString();
+  const result = await page.evaluate(async ({ soon }) => {
+    document.documentElement.lang = 'pl';
+    const card: any = document.createElement('polish-transport-card');
+    document.body.appendChild(card);
+    card.hass = {
+      locale: { language: 'pl' },
+      states: {
+        'sensor.ztm': { attributes: { provider: 'ztm_gdansk', stop_name: 'Płocka', departures: [
+          { route: '6', headsign: 'Jelitkowo', estimated_time: soon, theoretical_time: soon, realtime: true, vehicle_code: '100', platform: '5', vehicle_lat: 54.4, vehicle_lng: 18.6 },
+        ] } },
+        'sensor.plk': { attributes: { provider: 'plk_rail', stop_name: 'Gdańsk Śródmieście', departures: [
+          { route: 'S1', headsign: 'Wejherowo', estimated_time: soon, theoretical_time: soon, realtime: false, platform: '1', track: '502', train_number: '95485', carrier: 'PKP Szybka Kolej Miejska w Trójmieście' },
+        ] } },
+      },
+    };
+    const out: any = {};
+    for (const preset of ['standard', 'compact', 'minimal', 'native', 'e_ink']) {
+      card.setConfig({ entities: ['sensor.ztm', 'sensor.plk'], display_preset: preset });
+      await card.updateComplete;
+      await new Promise((r) => setTimeout(r, 20));
+      const meta = card.shadowRoot.querySelector('.meta-row');
+      const vehicle = card.shadowRoot.querySelector('.vehicle-no');
+      out[preset] = {
+        meta: meta ? getComputedStyle(meta).display : 'missing',
+        vehicle: vehicle ? getComputedStyle(vehicle).display : 'missing',
+      };
+    }
+    return out;
+  }, { soon });
+  expect(result.standard.meta).not.toBe('none');
+  expect(result.standard.vehicle).not.toBe('none');
+  expect(result.compact.meta).toBe('none');
+  expect(result.compact.vehicle).not.toBe('none');
+  expect(result.minimal.meta).toBe('none');
+  expect(result.minimal.vehicle).toBe('none');
+  expect(result.native.meta).not.toBe('none');
+  expect(result.native.vehicle).not.toBe('none');
+  expect(result.e_ink.meta).toBe('none');
+  expect(result.e_ink.vehicle).toBe('none');
+});
+
+test('rows without live position are not clickable', async ({ page }) => {
+  await page.goto('about:blank');
+  await page.addScriptTag({ path: SCRIPT });
+  const soon = new Date(Date.now() + 300000).toISOString();
+  const departures = [
+    { route: '6', headsign: 'Live', estimated_time: soon, theoretical_time: soon, realtime: true, vehicle_lat: 54.4, vehicle_lng: 18.6, vehicle_code: '100' },
+    { route: '7', headsign: 'Static', estimated_time: soon, theoretical_time: soon, realtime: false },
+  ];
+  const result = await page.evaluate(async ({ departures }) => {
+    const card: any = document.createElement('polish-transport-card');
+    card.setConfig({ entities: ['sensor.test'] });
+    document.body.appendChild(card);
+    card.hass = {
+      locale: { language: 'pl' },
+      states: { 'sensor.test': { attributes: { provider: 'ztm_gdansk', stop_name: 'Test', departures } } },
+    };
+    await card.updateComplete;
+    let moreInfo = 0;
+    card.addEventListener('hass-more-info', () => { moreInfo += 1; });
+    const rows = [...card.shadowRoot.querySelectorAll('.dep-row')] as HTMLElement[];
+    const staticRow = rows.find((r) => r.textContent.includes('Static')) as HTMLElement;
+    const liveRow = rows.find((r) => r.textContent.includes('Live')) as HTMLElement;
+    staticRow.click();
+    await new Promise((r) => setTimeout(r, 300));
+    return {
+      moreInfo,
+      staticInteractive: staticRow.classList.contains('interactive'),
+      staticTabindex: staticRow.getAttribute('tabindex'),
+      liveInteractive: liveRow.classList.contains('interactive'),
+      liveTabindex: liveRow.getAttribute('tabindex'),
+      staticRole: staticRow.getAttribute('role'),
+      staticAria: staticRow.getAttribute('aria-label'),
+      liveRole: liveRow.getAttribute('role'),
+      liveAria: liveRow.getAttribute('aria-label'),
+    };
+  }, { departures });
+  expect(result.moreInfo).toBe(0);
+  expect(result.staticInteractive).toBe(false);
+  expect(result.staticTabindex).toBe('-1');
+  expect(result.staticRole).toBeNull();
+  expect(result.staticAria).toBeNull();
+  expect(result.liveInteractive).toBe(true);
+  expect(result.liveTabindex).toBe('0');
+  expect(result.liveRole).toBe('button');
+  expect(result.liveAria).toContain('→');
+});
+
+test('departed rows are hidden by default and can be re-enabled', async ({ page }) => {
+  await page.goto('about:blank');
+  await page.addScriptTag({ path: SCRIPT });
+  const past = new Date(Date.now() - 5 * 60000).toISOString();
+  const future = new Date(Date.now() + 5 * 60000).toISOString();
+  const departures = [
+    { route: '6', headsign: 'Future', estimated_time: future, theoretical_time: future, realtime: false },
+    { route: '7', headsign: 'Past', estimated_time: past, theoretical_time: past, realtime: false },
+  ];
+  const counts = await page.evaluate(async ({ departures }) => {
+    const make = async (config: any) => {
+      const card: any = document.createElement('polish-transport-card');
+      card.setConfig(config);
+      document.body.appendChild(card);
+      card.hass = {
+        locale: { language: 'pl' },
+        states: { 'sensor.test': { last_updated: 'x', attributes: { provider: 'ztm_gdansk', stop_name: 'Test', departures } } },
+      };
+      await card.updateComplete;
+      const count = card.shadowRoot.querySelectorAll('.dep-row').length;
+      card.remove();
+      return count;
+    };
+    return {
+      byDefault: await make({ entities: ['sensor.test'] }),
+      disabled: await make({ entities: ['sensor.test'], hide_departed: false }),
+      perSensor: await make({ entities: [{ entity: 'sensor.test', hide_departed: false }] }),
+    };
+  }, { departures });
+  expect(counts.byDefault).toBe(1);
+  expect(counts.disabled).toBe(2);
+  expect(counts.perSensor).toBe(2);
+});
+
+test('empty states use ha-icon instead of emoji', async ({ page }) => {
+  await page.goto('about:blank');
+  await page.addScriptTag({ path: SCRIPT });
+  const result = await page.evaluate(async () => {
+    document.documentElement.lang = 'pl';
+    const card: any = document.createElement('polish-transport-card');
+    card.setConfig({ entities: [] });
+    document.body.appendChild(card);
+    card.hass = { locale: { language: 'pl' }, states: {} };
+    await card.updateComplete;
+    const message = card.shadowRoot.querySelector('.state-msg');
+    return {
+      hasIcon: Boolean(message?.querySelector('ha-icon.state-icon')),
+      text: message?.textContent?.trim() || '',
+      emoji: /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(message?.textContent || ''),
+    };
+  });
+  expect(result.hasIcon).toBe(true);
+  expect(result.emoji).toBe(false);
+  expect(result.text).toContain('encje');
+});
+
+test('prefix headsign duplicates are merged in the card', async ({ page }) => {
+  await page.goto('about:blank');
+  await page.addScriptTag({ path: SCRIPT });
+  const time = '2026-11-06T21:22:00+01:00';
+  const departures = [
+    { route: '3', headsign: 'Brzeźno', estimated_time: time, theoretical_time: time, realtime: false, trip_id: 102, route_id_int: 3, vehicle_code: '' },
+    { route: '3', headsign: 'Brzeźno Dom Zdrojowy', estimated_time: time, theoretical_time: time, realtime: false },
+    { route: '3', headsign: 'Nowy Port', estimated_time: time, theoretical_time: time, realtime: false },
+  ];
+  const result = await page.evaluate(async ({ departures }) => {
+    const card: any = document.createElement('polish-transport-card');
+    card.setConfig({ entities: ['sensor.test'], hide_terminus: false, hide_departed: false });
+    document.body.appendChild(card);
+    card.hass = {
+      locale: { language: 'pl' },
+      states: { 'sensor.test': { attributes: { provider: 'ztm_gdansk', stop_name: 'Test', departures } } },
+    };
+    await card.updateComplete;
+    return {
+      rows: card.shadowRoot.querySelectorAll('.dep-row').length,
+      headsigns: [...card.shadowRoot.querySelectorAll('.headsign-text')].map((e: any) => e.textContent.trim()),
+    };
+  }, { departures });
+  expect(result.rows).toBe(2);
+  expect(result.headsigns).toEqual(['Brzeźno Dom Zdrojowy', 'Nowy Port']);
+});
+
+test('grouped view adds a line header per route and headsign', async ({ page }) => {
+  await page.goto('about:blank');
+  await page.addScriptTag({ path: SCRIPT });
+  const now = new Date(Date.now() + 300000).toISOString();
+  const later = new Date(Date.now() + 900000).toISOString();
+  const result = await page.evaluate(async ({ now, later }) => {
+    const card: any = document.createElement('polish-transport-card');
+    card.setConfig({ entities: ['sensor.test'], view_mode: 'grouped' });
+    document.body.appendChild(card);
+    card.hass = {
+      locale: { language: 'pl' },
+      states: { 'sensor.test': { attributes: { provider: 'ztm_gdansk', stop_name: 'Test', departures: [
+        { route: '6', headsign: 'Jelitkowo', estimated_time: now, theoretical_time: now, realtime: true },
+        { route: '6', headsign: 'Jelitkowo', estimated_time: later, theoretical_time: later, realtime: true },
+        { route: '7', headsign: 'Nowy Port', estimated_time: later, theoretical_time: later, realtime: true },
+      ] } } },
+    };
+    await card.updateComplete;
+    return {
+      headers: [...card.shadowRoot.querySelectorAll('.line-header')].map((e: any) => e.textContent.trim()),
+      rows: card.shadowRoot.querySelectorAll('.dep-row').length,
+    };
+  }, { now, later });
+  expect(result.headers).toEqual(['6 → Jelitkowo', '7 → Nowy Port']);
+  expect(result.rows).toBe(3);
+});
+
+test('columns and refresh button are rendered from config', async ({ page }) => {
+  await page.goto('about:blank');
+  await page.addScriptTag({ path: SCRIPT });
+  const now = new Date(Date.now() + 300000).toISOString();
+  const result = await page.evaluate(async (now) => {
+    const card: any = document.createElement('polish-transport-card');
+    let serviceCall = null;
+    card.setConfig({ entities: ['sensor.test'], columns: 3, show_refresh: true });
+    document.body.appendChild(card);
+    card.hass = {
+      locale: { language: 'pl' },
+      states: { 'sensor.test': { state: 'ok', attributes: { provider: 'ztm_gdansk', stop_name: 'Test', departures: [
+        { route: '6', headsign: 'Jelitkowo', estimated_time: now, theoretical_time: now, realtime: true },
+      ] } } },
+      callService: (domain: string, service: string, data: any) => { serviceCall = { domain, service, data }; return Promise.resolve(); },
+    };
+    await card.updateComplete;
+    const list = card.shadowRoot.querySelector('.dep-list');
+    const button = card.shadowRoot.querySelector('.header-refresh');
+    button?.click();
+    await new Promise((r) => setTimeout(r, 50));
+    return {
+      columns: list?.className,
+      hasButton: Boolean(button),
+      serviceCall,
+    };
+  }, now);
+  expect(result.columns).toContain('columns-3');
+  expect(result.hasButton).toBe(true);
+  expect(result.serviceCall).toEqual({ domain: 'homeassistant', service: 'update_entity', data: { entity_id: ['sensor.test'] } });
+});
+
+test('time and vehicle feature filters are applied', async ({ page }) => {
+  await page.goto('about:blank');
+  await page.addScriptTag({ path: SCRIPT });
+  const soon = new Date(Date.now() + 300000).toISOString();
+  const late = new Date(Date.now() + 3600000).toISOString();
+  const departures = [
+    { route: '6', headsign: 'A', estimated_time: soon, theoretical_time: soon, realtime: true, wheelchair_accessible: true },
+    { route: '7', headsign: 'B', estimated_time: late, theoretical_time: late, realtime: true, wheelchair_accessible: true },
+    { route: '8', headsign: 'C', estimated_time: soon, theoretical_time: soon, realtime: true, wheelchair_accessible: false, floor_height: 'Pojazd wysokopodłogowy' },
+  ];
+  const result = await page.evaluate(async ({ departures }) => {
+    const card: any = document.createElement('polish-transport-card');
+    card.setConfig({ entities: ['sensor.test'], max_minutes: 30, only_low_floor: true });
+    document.body.appendChild(card);
+    card.hass = {
+      locale: { language: 'pl' },
+      states: { 'sensor.test': { attributes: { provider: 'ztm_gdansk', stop_name: 'Test', departures } } },
+    };
+    await card.updateComplete;
+    return [...card.shadowRoot.querySelectorAll('.badge')].map((e: any) => e.textContent.trim());
+  }, { departures });
+  expect(result).toEqual(['6']);
+});

@@ -1,5 +1,157 @@
 # Changelog
 
+## [2.0.0] - 2026-11-08
+
+### Breaking changes
+- **One hub per provider** - existing single-stop config entries are merged
+  automatically into one hub per provider. The 2.0 migration keeps existing
+  entity IDs where possible, renames sensors and devices to the new
+  `polish_transport` namespace, and removes legacy `mzkzg_*` entity IDs.
+- **Entity and device naming** - user-facing card classes, custom elements, CSS
+  variables and entity unique IDs no longer use the `mzkzg` prefix. Examples:
+  `sensor.mzkzg_plk_258458` becomes `sensor.gdansk_srodmiescie_odjazdy`, and each
+  provider gets one hub sensor such as `sensor.ztm_gdansk_odjazdy`.
+- **Card element** - `custom:polish-transport-card` is the only registered card
+  element; the legacy `custom:mzkzg-transport-card` alias was removed.
+- **Technical domain** - the integration domain remains `mzkzg_transport` so
+  Home Assistant can load and migrate existing config entries in place. It is not
+  shown in entity IDs or device names and will be removed in a future major release.
+
+### Added
+
+#### Hubs and migration
+- **Automatic hub migration** - groups all entries of one provider into a single
+  hub with a shared stop list, one operator device and stop child devices.
+- **Automatic entity migration** - moves per-stop sensors, hub sensors, PLK delay
+  sensors and the PLK usage sensor to the new namespace while removing duplicates
+  left by older releases. The pass is idempotent and repairs entities left behind
+  by an interrupted migration.
+- **Hub sensor** - multi-stop providers expose one merged sensor (for example
+  `sensor.ztm_gdansk_odjazdy`) next to the per-stop sensors.
+- **Add stop to existing hub** - adding another stop in the config flow appends it
+  to the provider hub instead of creating a new config entry.
+- **Hub options** - each hub now has an options menu to change settings, add a
+  stop (with search for providers with large stop lists) or remove a stop. Removing
+  a stop also removes its device and entities; the last stop cannot be removed.
+
+#### Card and UI
+- **Card presets** - added `native` (Home Assistant look) next to `standard`,
+  `compact`, `minimal` and `e_ink`; optional header clock and
+  `time_format: auto|24h|12h`; `header_style: provider|theme|custom`.
+- **Display modes** - row-level switches for countdown, vehicle number,
+  platform/stand, accessibility icons, stop name, footer and last-update time.
+- **Filters** - `exclude_routes`, `filter_vehicle_types`, `filter_providers` and
+  `hide_cancelled`, alongside the existing route/destination/platform/track filters;
+  added `max_minutes`, `only_low_floor`, `only_bike`, `only_ac` and
+  `only_ticket_machine`.
+- **Views and layout** - `view_mode: grouped` groups rows by line, `columns: 1|2|3`
+  renders a multi-column board, the optional header refresh button re-queries sensors,
+  and provider subtitles use friendly operator names.
+- **Row polish** - live countdown reads `za 11 min`, vehicle numbers use a compact
+  `#1040` monospace chip, platform/track stay in one pill while train number and
+  carrier are a separate muted line. Stop names and long headsigns expose full text
+  in tooltips, and the time column keeps a stable width.
+- **Interactions** - tap / hold / double-tap actions are editable in the GUI with
+  Home Assistant's native action picker, including navigation, URL and service calls.
+- **Live map** - vehicle markers open one compact detail popup on click, overlapping
+  markers are spread apart, the selected vehicle stays centred at zoom 16, and the
+  map controls/status follow a dark HA theme. Leaflet and its CSS ship with the
+  integration and load from `/polish_transport/leaflet/` only when the map opens.
+- **Per-sensor editor** - stop-name labels, override reset, row reordering, a live
+  visible-row preview, provider multi-select and validation for departure limits and
+  header colour; editor option labels and section titles are localized.
+- **Departure visibility** - `hide_departed` (default `true`) removes rows after their
+  departure time, with `departed_grace_minutes` (default `1`) keeping late vehicles
+  visible briefly.
+- **Map discoverability** - rows with a live vehicle position open the map when
+  clicked; the extra row pin icon was removed to keep rows compact.
+- **Accessibility** - the map is a modal dialog with focus trap and focus restore,
+  interactive rows expose `role="button"` and descriptive labels, and empty states
+  use Home Assistant icons instead of emoji.
+- **YAML documentation** - README options table and example config updated with all
+  global/per-sensor keys and theme examples.
+
+#### Providers and data
+- **Kraków on zbiorkom.live api6-open** - new stop picker (all tram platforms and
+  agglomeration stops), brigade/next-stop GPS matching and automatic legacy stop-id
+  migration.
+- **Wrocław and 11 api6 feeds fixed** - Lublin, Kielce, Radom, Elbląg, Gorzów,
+  Suwałki, Przemyśl, Rybnik, Kutno, Legnica and Leszno now use static + realtime
+  api6 endpoints.
+- **Correct service-day filtering** - feeds with only `calendar_dates.txt` no longer
+  show departures from other weekdays.
+- **New providers** - MZK Bielsko-Biała and Bytów (Time4BUS).
+- **Offline GTFS fallback** - the last schedule is kept on disk and served when the
+  source is unavailable.
+- **Beta 1.6 features** - PLK delay sensor, route colors, `refresh_gtfs` service,
+  walking distance/time, English editor and advanced OptionsFlow filters.
+- **Card** - OpenStreetMap through HA `map_tiles`, `exclude_destinations`,
+  `min_departures`, max rows up to 100 and per-sensor overrides.
+- **Provider status monitoring** - a weekly GitHub Actions workflow validates every
+  GTFS schedule, GTFS-RT and vehicle-position endpoint, uploads a Markdown/JSON
+  report and opens or updates an issue when any provider fails.
+
+### Performance
+- **Offline Leaflet** - the map library and its CSS are shipped inside the
+  integration and loaded lazily from `/polish_transport/leaflet/` instead of unpkg.
+- **Lower memory use** - the parsed GTFS raw zip is released once every stop in
+  the hub has been extracted, tomorrow's small fallback schedule is precomputed
+  in one pass, and the kiedyPrzyjedzie timetable cache is pruned and capped.
+- **Less redundant work** - the merged hub sensor caches its sorted departures
+  between coordinator updates instead of rebuilding the list for every attribute
+  read. GTFS parsing is streamed and offloaded to the executor, with a per-provider
+  load lock and parallel archive downloads.
+- **Quality gates** - GitHub Actions CI for lint/build/pytest/Playwright, visual
+  snapshot baselines for all five presets, and permanent map popup/marker tests.
+
+### Fixed
+- **City feed validation** - reviewed every configured GTFS/GTFS-RT city. All
+  reachable feeds return valid schedule, realtime and vehicle-position data. The
+  ZKM Gdynia endpoint currently has an expired TLS certificate, so requests for that
+  host skip certificate verification until the operator renews it. MKS Dębica and
+  SPGK Sanok no longer exist in the zbiorkom.live catalogue; they are hidden from the
+  provider picker and existing entries log a clear warning instead of silently
+  returning empty departures.
+- **Changed GTFS stop IDs** - operators that replace numeric stop IDs with slug
+  IDs (Lublin did this on 2026-11-04) no longer leave existing entries empty. The
+  integration resolves the new ID by stop name and platform, exposes
+  `resolved_stop_id`, and logs the feed/row counts for diagnostics. Slugs that
+  embed the old numeric code are matched directly as well.
+- **Device registry deprecation** - device links now use the per-entry
+  `async_get_device_by_identifier` API where available, removing the Home Assistant
+  2027.8 deprecation warning.
+- **Legacy binary sensors** - restored `*_health` and non-PLK `*_delay` binary
+  sensors from older releases are removed from the entity registry instead of
+  staying unavailable forever.
+- **Large stop lists** - providers with more than 3000 stops (for example ZTP
+  Kraków with 3808 stops) no longer fall back to a bare stop-ID field. The config
+  flow now asks for a name/ID search, narrows the list (accent- and case-insensitive)
+  and shows a selectable dropdown, while keeping the 3000-option cap that prevents
+  the Home Assistant frontend memory crash from #20.
+- **Static rows** - departures without a live vehicle position are no longer
+  clickable and no longer open the entity more-info dialog; only rows with GPS or
+  an explicitly configured action are interactive.
+- **Duplicate departures** - schedule and realtime rows for the same route and time
+  are now merged when one headsign is a prefix of the other (for example
+  `Brzeźno` and `Brzeźno Dom Zdrojowy`); the more specific terminus and the richer
+  vehicle/trip fields are kept.
+- **Vehicle marker** - replaced the old clipped arrow shape with a circular puck
+  centred on the vehicle and a small direction pointer; the selected vehicle stays
+  centred at zoom 16. The map now has one compact detail popup opened by clicking a
+  marker (no auto-opened giant bubble and no tiny hover tooltip), without emoji.
+- **Dark map** - zoom controls, attribution, popup and the refresh status chip follow
+  a dark Home Assistant theme instead of staying light.
+- **Live vehicle marker** - removed the black vehicle-code badge that overlapped the
+  route circle. Markers now show only the route number and direction arrow, with a
+  white ring around the selected vehicle. Leaflet CSS is served locally, so tiles no
+  longer render as a checkerboard.
+- **Recorder attributes** - `departures`, `last_update` and `timetable` are marked
+  as unrecorded attributes, so large stop attributes no longer trigger the 16 KiB
+  recorder warning.
+- **PLK API usage sensor** - created once per Home Assistant instead of once per PLK
+  entry, so several stations no longer log "does not generate unique IDs" on startup.
+- **PLK rate limiting** - dynamic request throttling with 429 backoff.
+
 ## [1.6.7-hotfix2] - 2026-11-06
 
 ### Fixed

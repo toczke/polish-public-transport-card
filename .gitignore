@@ -15,5 +15,7 @@ dev/server.err.log
 .coverage
 test-results/
 playwright-report/
+provider-status.md
+provider-status.json
 scratch/
 test_leaflet.html

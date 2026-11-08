@@ -31,7 +31,7 @@ POSITIONS_RETRY_AFTER = 60
 BRIGADE_MATCH_HORIZON_MS = 90 * 60 * 1000
 
 
-async def fetch(coord: "MzkzgTransportCoordinator") -> dict:
+async def fetch(coord: "PolishTransportCoordinator") -> dict:
     """Fetch departures for a Kraków stop."""
     session = await coord._get_session()
     now = dt_util.now()

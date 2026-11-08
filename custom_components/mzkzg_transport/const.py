@@ -1,6 +1,25 @@
-"""Constants for MZKZG Transport integration."""
+"""Constants for Polish Transport integration."""
 
-DOMAIN = "mzkzg_transport"
+DOMAIN = "mzkzg_transport"  # Technical legacy domain, kept so 2.0 can auto-migrate old entries.
+ENTITY_UNIQUE_PREFIX = "polish_transport"
+CONFIG_ENTRY_VERSION = 2
+INTEGRATION_VERSION = "2.0.0"
+DEVICE_MANUFACTURER = "Polish Transport"
+
+
+def provider_entity_slug(provider: str) -> str:
+    """Short, stable slug used in hub entity IDs."""
+    mapping = {
+        "plk_rail": "plk",
+        "zbiorkom_krakow": "krakow",
+        "mpk_lodz": "lodz",
+    }
+    if provider in mapping:
+        return mapping[provider]
+    for prefix in ("gtfsrt_", "gtfs_", "kiedyprzyjedzie_", "time4bus_"):
+        if provider.startswith(prefix):
+            return provider[len(prefix):]
+    return provider
 
 # API endpoints
 ZTM_GDANSK_DEPARTURES_URL = "https://ckan2.multimediagdansk.pl/departures"

@@ -29,7 +29,7 @@ def _fallback_min(coord) -> int:
     return coord._options.get(CONF_FALLBACK_MIN, DEFAULT_FALLBACK_MIN) if hasattr(coord, "_options") else DEFAULT_FALLBACK_MIN
 
 
-async def fetch(coord: "MzkzgTransportCoordinator") -> dict:
+async def fetch(coord: "PolishTransportCoordinator") -> dict:
     """Fetch realtime departures from MPK Łódź.
 
     stop_id formats:

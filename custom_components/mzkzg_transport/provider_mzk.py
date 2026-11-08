@@ -5,7 +5,7 @@ from homeassistant.util import dt as dt_util
 from .const import PROVIDER_MZK
 
 
-async def fetch(coord: "MzkzgTransportCoordinator") -> dict:
+async def fetch(coord: "PolishTransportCoordinator") -> dict:
     """Fetch departures from MZK Wejherowo static GTFS."""
     from .gtfs_provider import get_gtfs_data
 

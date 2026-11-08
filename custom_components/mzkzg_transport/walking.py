@@ -1,4 +1,4 @@
-"""Walking distance utilities for MZKZG Transport."""
+"""Walking distance utilities for Polish Transport."""
 import math
 
 

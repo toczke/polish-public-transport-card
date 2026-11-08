@@ -1,1 +1,0 @@
-custom_components/mzkzg_transport/www/polish-transport-card.js

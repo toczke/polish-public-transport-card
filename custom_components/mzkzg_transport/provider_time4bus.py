@@ -12,7 +12,7 @@ from .http_utils import fetch_with_retry
 _LOGGER = logging.getLogger(__name__)
 
 
-async def fetch(coord: "MzkzgTransportCoordinator") -> dict:
+async def fetch(coord: "PolishTransportCoordinator") -> dict:
     """Fetch departures from Time4BUS with live fallback."""
     session = await coord._get_session()
     now = dt_util.now()

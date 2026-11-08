@@ -300,7 +300,7 @@ async def _load_zkm_stops(self) -> list[dict]:
     async with session.get(
 
 
-        ZKM_GDYNIA_STOPS_URL, timeout=aiohttp.ClientTimeout(total=20)
+        ZKM_GDYNIA_STOPS_URL, timeout=aiohttp.ClientTimeout(total=20), ssl=False
 
 
     ) as resp:
@@ -453,6 +453,13 @@ async def _load_gtfsrt_stops(self, provider: str) -> list[dict]:
 
     city_cfg = GTFSRT_CITIES.get(provider)
     if not city_cfg:
+        return []
+
+    if city_cfg.get("unavailable"):
+        _LOGGER.warning(
+            "GTFS-RT: %s has no public GTFS source anymore; skipping stop list",
+            provider,
+        )
         return []
 
     # Kraków: use lightweight ttss.pl API instead of 25MB GTFS download

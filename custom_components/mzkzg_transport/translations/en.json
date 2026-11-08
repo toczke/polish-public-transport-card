@@ -18,9 +18,10 @@
       },
       "stop": {
         "title": "Select stop - {provider}",
-        "description": "Choose a stop from the list or type the ID manually.",
+        "description": "Choose a stop from the list or type the ID manually. For large lists, type a name or ID and submit to narrow the results.",
         "data": {
           "stop_id": "Stop",
+          "stop_query": "Search stops (name or ID)",
           "name": "Custom name (optional)"
         }
       },
@@ -41,17 +42,27 @@
     },
     "error": {
       "invalid_stop_id": "Enter a valid stop ID",
+      "no_stops_found": "No stops match your search - try another name or ID",
       "api_key_required": "PLK API key is required",
       "invalid_group": "Invalid bus stop group selected"
     },
     "abort": {
       "already_configured": "This stop is already configured",
+      "stop_added": "Stop added to the existing hub",
       "lodz_groups_failed": "Failed to load bus stop groups — check network connection"
     }
   },
   "options": {
     "step": {
       "init": {
+        "title": "Manage hub",
+        "menu_options": {
+          "settings": "Settings",
+          "add_stop": "Add stop",
+          "remove_stop": "Remove stop"
+        }
+      },
+      "settings": {
         "title": "Settings",
         "description": "Configure sleep mode to pause API polling during night hours.",
         "data": {
@@ -59,9 +70,38 @@
           "sleep_start": "Sleep start (HH:MM)",
           "sleep_end": "Sleep end (HH:MM)",
           "fallback_min": "Minimum scheduled departures for Łódź fallback",
-          "timetable_lines": "Timetable lines (comma-separated)"
+          "timetable_lines": "Timetable lines (comma-separated)",
+          "destination_filter": "Destination filter",
+          "filter_routes": "Route filter",
+          "highlight_mode": "Highlight mode",
+          "hide_terminus": "Hide terminus",
+          "realtime_only": "Realtime only"
+        }
+      },
+      "add_stop": {
+        "title": "Add stop",
+        "description": "Add another stop to this provider hub. Currently {count} stops.",
+        "data": {
+          "stop_id": "Stop",
+          "name": "Custom name (optional)",
+          "stop_query": "Search stop (name or ID)"
+        }
+      },
+      "remove_stop": {
+        "title": "Remove stop",
+        "description": "Remove a stop from this hub. Currently {count} stops.",
+        "data": {
+          "stop_id": "Stop"
         }
       }
+    },
+    "abort": {
+      "last_stop": "A hub must keep at least one stop."
+    },
+    "error": {
+      "invalid_stop_id": "Invalid stop ID",
+      "no_stops_found": "No stops match the query",
+      "base": "This stop is already in the hub"
     }
   }
 }
