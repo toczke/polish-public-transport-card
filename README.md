@@ -190,6 +190,10 @@ the operator device, the GTFS cache, the PLK request budget and the live-vehicle
 so adding several stops does not multiply upstream requests. A single entry can also hold
 several stops (`stops:` in the config entry) and then exposes one aggregated sensor.
 
+If an operator changes its stop identifiers in the GTFS feed, existing entries resolve
+the new ID automatically by stop name and platform and expose the mapped value as the
+`resolved_stop_id` attribute.
+
 ### Full-day timetable (kiedyPrzyjedzie)
 
 For kiedyPrzyjedzie providers, open **Configure** on the entry and set

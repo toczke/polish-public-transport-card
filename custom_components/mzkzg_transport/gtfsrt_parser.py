@@ -1,5 +1,7 @@
 import csv
 import codecs
+import re
+import unicodedata
 import zipfile
 import logging
 from io import BytesIO, TextIOWrapper
@@ -8,6 +10,65 @@ from datetime import date as dt_date, timedelta
 from homeassistant.util import dt as dt_util
 
 _LOGGER = logging.getLogger(__name__)
+
+
+def _normalize_stop_text(value: object) -> str:
+    """Case- and accent-insensitive stop text."""
+    text = str(value or "").replace("ł", "l").replace("Ł", "L")
+    text = unicodedata.normalize("NFKD", text)
+    text = "".join(ch for ch in text if not unicodedata.combining(ch)).casefold()
+    return " ".join(re.sub(r"[^a-z0-9]+", " ", text).split())
+
+
+def _stop_base_name(name: str) -> str:
+    """Strip a trailing platform number and the on-demand marker (NŻ)."""
+    text = _normalize_stop_text(name)
+    text = re.sub(r"\s+nz$", "", text)
+    return re.sub(r"\s+\d{1,2}$", "", text)
+
+
+def _platform_suffix(name: str) -> str | None:
+    match = re.search(r"(?:^|\s)(\d{1,2})$", _normalize_stop_text(name))
+    if not match:
+        return None
+    return match.group(1).lstrip("0") or "0"
+
+
+def resolve_stop_id(stops: dict, old_id: str, old_name: str) -> str | None:
+    """Resolve a stale stop ID after an operator changes GTFS stop identifiers.
+
+    Providers occasionally replace numeric IDs with slugs (Lublin did this on
+    2026-11-04). Match by the base stop name first, then use the platform suffix
+    from the old name or the last digit of the old numeric ID to disambiguate
+    platforms such as "Majdanek - pomnik 01" and "... 02".
+    """
+    old_id = str(old_id or "")
+    if old_id in stops:
+        return old_id
+
+    base = _stop_base_name(old_name)
+    if not base:
+        return None
+
+    candidates = [
+        (str(stop_id), info)
+        for stop_id, info in stops.items()
+        if _stop_base_name(info.get("name", "")) == base
+    ]
+    if len(candidates) == 1:
+        return candidates[0][0]
+    if not candidates:
+        return None
+
+    wanted = _platform_suffix(old_name)
+    if not wanted:
+        match = re.search(r"(\d)$", old_id)
+        wanted = match.group(1) if match else None
+    if wanted:
+        for stop_id, info in candidates:
+            if _platform_suffix(info.get("name", "")) == wanted:
+                return stop_id
+    return None
 
 
 def _read_csv(zf, filename):

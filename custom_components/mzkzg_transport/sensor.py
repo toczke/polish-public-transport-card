@@ -52,6 +52,7 @@ class MzkzgTransportSensor(CoordinatorEntity, SensorEntity):
     def __init__(self, coordinator: MzkzgTransportCoordinator, entry: ConfigEntry) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator)
+        self._entry = entry
         provider = coordinator.provider
         provider_label = PROVIDER_LABELS.get(provider, provider)
         stop = coordinator.stop_id
@@ -74,6 +75,7 @@ class MzkzgTransportSensor(CoordinatorEntity, SensorEntity):
             self.hass,
             {(DOMAIN, f"{self.coordinator.provider}_{self.coordinator.stop_id}")},
             {(DOMAIN, self.coordinator.provider)},
+            self._entry.entry_id,
         )
 
     @property
@@ -98,6 +100,8 @@ class MzkzgTransportSensor(CoordinatorEntity, SensorEntity):
             "provider": data.get("provider"),
             "last_update": data.get("last_update"),
         }
+        if data.get("resolved_stop_id"):
+            attrs["resolved_stop_id"] = data["resolved_stop_id"]
         if data.get("timetable"):
             attrs["timetable"] = data["timetable"]
         if "walking_distance_m" in data:
@@ -183,6 +187,7 @@ class MzkzgAggregatedSensor(SensorEntity):
             self.hass,
             {(DOMAIN, f"{self._provider}_multi_{self._entry.entry_id}")},
             {(DOMAIN, self._provider)},
+            self._entry.entry_id,
         )
         self.async_on_remove(
             self._entry.add_update_listener(self._async_update_from_coordinators)

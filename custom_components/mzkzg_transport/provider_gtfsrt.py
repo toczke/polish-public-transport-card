@@ -16,7 +16,7 @@ from .const import DOMAIN, MAX_DEPARTURES
 _LOGGER = logging.getLogger(__name__)
 
 from .gtfsrt_cities import GTFSRT_CITIES
-from .gtfsrt_parser import _parse_gtfs_zip, _parse_stop_times_for, _parse_stop_times_from_raw, _parse_gtfsrt_positions, _parse_rt_feed, _get_tomorrow_departures
+from .gtfsrt_parser import _parse_gtfs_zip, _parse_stop_times_for, _parse_stop_times_from_raw, _parse_gtfsrt_positions, _parse_rt_feed, _get_tomorrow_departures, resolve_stop_id
 from .gtfsrt_gzm import _get_gzm_gtfs_url
 
 
@@ -34,11 +34,41 @@ async def fetch(coord: "MzkzgTransportCoordinator") -> dict:
         return {"stop_id": coord.stop_id, "stop_name": coord.stop_name or f"Przystanek {coord.stop_id}", "provider": coord.provider, "departures": [], "last_update": now.isoformat()}
 
     # Get stop name
+    stop_id = str(coord.stop_id)
+    if stop_id not in gtfs["stops"]:
+        resolved = resolve_stop_id(gtfs["stops"], stop_id, coord.stop_name)
+        if resolved:
+            _LOGGER.info(
+                "GTFS-RT %s: stop %s (%s) changed in the feed; using %s (%s)",
+                coord.provider,
+                stop_id,
+                coord.stop_name,
+                resolved,
+                gtfs["stops"][resolved].get("name", ""),
+            )
+            stop_id = resolved
+        else:
+            _LOGGER.warning(
+                "GTFS-RT %s: stop %s (%s) is not present in the current GTFS feed",
+                coord.provider,
+                stop_id,
+                coord.stop_name,
+            )
+
     if not coord.stop_name:
-        coord.stop_name = gtfs["stops"].get(coord.stop_id, {}).get("name", f"Przystanek {coord.stop_id}")
+        coord.stop_name = gtfs["stops"].get(stop_id, {}).get("name", f"Przystanek {stop_id}")
 
     # Get scheduled departures for this stop
-    stop_times = gtfs["stop_times"].get(coord.stop_id, [])
+    if stop_id not in gtfs["stop_times"] and gtfs.get("_raw"):
+        await coord.hass.async_add_executor_job(_parse_stop_times_for, gtfs, stop_id)
+    stop_times = gtfs["stop_times"].get(stop_id, [])
+    _LOGGER.debug(
+        "GTFS-RT %s: feed has %d stops and %d scheduled rows for stop %s",
+        coord.provider,
+        len(gtfs["stops"]),
+        len(stop_times),
+        stop_id,
+    )
 
     # Load RT delays
     delays = {}
@@ -65,9 +95,9 @@ async def fetch(coord: "MzkzgTransportCoordinator") -> dict:
         delay_sec = 0
         is_realtime = False
         vehicle_code = ""
-        rt_key = f"{trip_id}_{coord.stop_id}"
+        rt_key = f"{trip_id}_{stop_id}"
         rt_key_seq = f"{trip_id}_seq{st.get('stop_sequence', '')}"
-        rt_key_route = f"route_{route_id}_{coord.stop_id}"
+        rt_key_route = f"route_{route_id}_{stop_id}"
         rt_key_route_only = f"route_{route_id}"
         for key in (rt_key, rt_key_seq, trip_id, rt_key_route, rt_key_route_only):
             if key in delays:
@@ -141,14 +171,14 @@ async def fetch(coord: "MzkzgTransportCoordinator") -> dict:
     if len(unique) < 5 and gtfs.get("_raw"):
         tomorrow = now + timedelta(days=1)
         tomorrow_prefix = f"{tomorrow:%Y%m%d}_"
-        tomorrow_key = f"{tomorrow_prefix}{coord.stop_id}"
+        tomorrow_key = f"{tomorrow_prefix}{stop_id}"
         tomorrow_cache = gtfs.setdefault("_tomorrow_departures", {})
         if tomorrow_key not in tomorrow_cache:
             for old_key in list(tomorrow_cache):
                 if not old_key.startswith(tomorrow_prefix):
                     tomorrow_cache.pop(old_key)
             tomorrow_cache[tomorrow_key] = await coord.hass.async_add_executor_job(
-                _get_tomorrow_departures, gtfs, coord.stop_id, tomorrow, now
+                _get_tomorrow_departures, gtfs, stop_id, tomorrow, now
             )
         tomorrow_deps = tomorrow_cache[tomorrow_key]
         for d in tomorrow_deps:
@@ -166,6 +196,7 @@ async def fetch(coord: "MzkzgTransportCoordinator") -> dict:
         "provider": coord.provider,
         "departures": unique[:MAX_DEPARTURES],
         "last_update": now.isoformat(),
+        **({"resolved_stop_id": stop_id} if stop_id != str(coord.stop_id) else {}),
     }
 
 
