@@ -810,10 +810,21 @@ class PolishTransportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return PolishTransportOptionsFlow()
 
 class PolishTransportOptionsFlow(config_entries.OptionsFlow):
-    """Handle options for a stop entry."""
+    """Manage a provider hub and its stops."""
+
+    def __init__(self) -> None:
+        self._stops = None
+        self._api_key = ""
 
     async def async_step_init(self, user_input=None):
-        """Manage the options."""
+        """Show the hub menu."""
+        return self.async_show_menu(
+            step_id="init",
+            menu_options=["settings", "add_stop", "remove_stop"],
+        )
+
+    async def async_step_settings(self, user_input=None):
+        """Manage sleep mode and filters."""
         if user_input is not None:
             current_opts = self.config_entry.options
             merged = {**current_opts, **user_input}
@@ -822,7 +833,8 @@ class PolishTransportOptionsFlow(config_entries.OptionsFlow):
         current_opts = self.config_entry.options
         current_data = self.config_entry.data
         provider = current_data.get(CONF_PROVIDER, "")
-        stop_id = current_data.get(CONF_STOP_ID, "")
+        stops = current_data.get(CONF_STOPS) or []
+        stop_id = "|".join(str(stop.get("stop_id", "")) for stop in stops)
 
         def _opt(key, default=""):
             return current_opts.get(key, current_data.get(key, default))
@@ -877,10 +889,132 @@ class PolishTransportOptionsFlow(config_entries.OptionsFlow):
             )] = str
 
         return self.async_show_form(
-            step_id="init",
+            step_id="settings",
             data_schema=vol.Schema(schema),
             description_placeholders={
                 "stop_id": stop_id,
                 "provider": provider,
             },
+        )
+
+    async def async_step_add_stop(self, user_input=None):
+        """Append a stop to the provider hub."""
+        from .migration import entry_stops
+
+        provider = self.config_entry.data.get(CONF_PROVIDER, "")
+        stops = entry_stops(self.config_entry)
+        errors = {}
+
+        if user_input is not None:
+            stop_id = str(user_input.get(CONF_STOP_ID, "") or "").strip()
+            name = str(user_input.get(CONF_NAME, "") or "").strip()
+            if not stop_id or not re.match(STOP_ID_PATTERN, stop_id):
+                errors[CONF_STOP_ID] = "invalid_stop_id"
+            elif any(stop["stop_id"] == stop_id for stop in stops):
+                errors["base"] = "already_configured"
+            else:
+                data = dict(self.config_entry.data)
+                data[CONF_STOPS] = stops + [{"stop_id": stop_id, "name": name}]
+                self.hass.config_entries.async_update_entry(self.config_entry, data=data)
+                await self.hass.config_entries.async_reload(self.config_entry.entry_id)
+                return self.async_create_entry(title="", data=self.config_entry.options)
+
+        if self._stops is None:
+            self._api_key = self.config_entry.data.get(CONF_API_KEY, "")
+            self._stops = await _load_stops(self, provider)
+
+        if self._stops and len(self._stops) <= MAX_STOP_OPTIONS:
+            from homeassistant.helpers.selector import (
+                SelectOptionDict,
+                SelectSelector,
+                SelectSelectorConfig,
+                SelectSelectorMode,
+            )
+
+            schema = vol.Schema(
+                {
+                    vol.Required(CONF_STOP_ID): SelectSelector(
+                        SelectSelectorConfig(
+                            options=[
+                                SelectOptionDict(
+                                    value=str(stop["id"]),
+                                    label=f"{stop['name']} ({stop['id']})",
+                                )
+                                for stop in self._stops
+                            ],
+                            mode=SelectSelectorMode.DROPDOWN,
+                            custom_value=True,
+                            sort=False,
+                        )
+                    ),
+                    vol.Optional(CONF_NAME, default=""): str,
+                }
+            )
+        else:
+            schema = vol.Schema(
+                {
+                    vol.Required(CONF_STOP_ID): str,
+                    vol.Optional(CONF_NAME, default=""): str,
+                }
+            )
+
+        return self.async_show_form(
+            step_id="add_stop",
+            data_schema=schema,
+            errors=errors,
+            description_placeholders={
+                "provider": PROVIDER_OPTIONS.get(provider, provider),
+                "count": str(len(stops)),
+            },
+        )
+
+    async def async_step_remove_stop(self, user_input=None):
+        """Remove a stop from the provider hub."""
+        from .migration import entry_stops
+
+        stops = entry_stops(self.config_entry)
+        errors = {}
+        if user_input is not None:
+            stop_id = str(user_input.get(CONF_STOP_ID, "") or "").strip()
+            if len(stops) <= 1:
+                return self.async_abort(reason="last_stop")
+            remaining = [stop for stop in stops if stop["stop_id"] != stop_id]
+            if len(remaining) == len(stops):
+                errors[CONF_STOP_ID] = "invalid_stop_id"
+            else:
+                data = dict(self.config_entry.data)
+                data[CONF_STOPS] = remaining
+                self.hass.config_entries.async_update_entry(self.config_entry, data=data)
+                await self.hass.config_entries.async_reload(self.config_entry.entry_id)
+                return self.async_create_entry(title="", data=self.config_entry.options)
+
+        from homeassistant.helpers.selector import (
+            SelectOptionDict,
+            SelectSelector,
+            SelectSelectorConfig,
+            SelectSelectorMode,
+        )
+
+        schema = vol.Schema(
+            {
+                vol.Required(CONF_STOP_ID): SelectSelector(
+                    SelectSelectorConfig(
+                        options=[
+                            SelectOptionDict(
+                                value=stop["stop_id"],
+                                label=f"{stop['name'] or stop['stop_id']} ({stop['stop_id']})",
+                            )
+                            for stop in stops
+                        ],
+                        mode=SelectSelectorMode.DROPDOWN,
+                        sort=False,
+                    )
+                ),
+            }
+        )
+        return self.async_show_form(
+            step_id="remove_stop",
+            data_schema=schema,
+            errors=errors,
+            description_placeholders={"count": str(len(stops))},
         )

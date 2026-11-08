@@ -55,6 +55,14 @@
   "options": {
     "step": {
       "init": {
+        "title": "Manage hub",
+        "menu_options": {
+          "settings": "Settings",
+          "add_stop": "Add stop",
+          "remove_stop": "Remove stop"
+        }
+      },
+      "settings": {
         "title": "Settings",
         "description": "Configure sleep mode to pause API polling during night hours.",
         "data": {
@@ -64,7 +72,25 @@
           "fallback_min": "Minimum scheduled departures for Łódź fallback",
           "timetable_lines": "Timetable lines (comma-separated)"
         }
+      },
+      "add_stop": {
+        "title": "Add stop",
+        "description": "Add another stop to this provider hub. Currently {count} stops.",
+        "data": {
+          "stop_id": "Stop",
+          "name": "Custom name (optional)"
+        }
+      },
+      "remove_stop": {
+        "title": "Remove stop",
+        "description": "Remove a stop from this hub. Currently {count} stops.",
+        "data": {
+          "stop_id": "Stop"
+        }
       }
+    },
+    "abort": {
+      "last_stop": "A hub must keep at least one stop."
     }
   }
 }

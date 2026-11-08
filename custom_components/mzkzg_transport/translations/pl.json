@@ -55,6 +55,14 @@
   "options": {
     "step": {
       "init": {
+        "title": "Zarządzaj hubem",
+        "menu_options": {
+          "settings": "Ustawienia",
+          "add_stop": "Dodaj przystanek",
+          "remove_stop": "Usuń przystanek"
+        }
+      },
+      "settings": {
         "title": "Ustawienia",
         "description": "Skonfiguruj tryb uśpienia, aby wstrzymać odpytywanie API w godzinach nocnych.",
         "data": {
@@ -64,7 +72,25 @@
           "fallback_min": "Minimalna liczba odjazdów do uzupełnienia rozkładem (Łódź)",
           "timetable_lines": "Linie do pe?nego rozk?adu (oddzielone przecinkami)"
         }
+      },
+      "add_stop": {
+        "title": "Dodaj przystanek",
+        "description": "Dodaj kolejny przystanek do huba. Obecnie {count} przystanków.",
+        "data": {
+          "stop_id": "Przystanek",
+          "name": "Własna nazwa (opcjonalnie)"
+        }
+      },
+      "remove_stop": {
+        "title": "Usuń przystanek",
+        "description": "Usuń przystanek z huba. Obecnie {count} przystanków.",
+        "data": {
+          "stop_id": "Przystanek"
+        }
       }
+    },
+    "abort": {
+      "last_stop": "Hub musi mieć co najmniej jeden przystanek."
     }
   }
 }
