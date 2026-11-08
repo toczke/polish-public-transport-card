@@ -98,7 +98,7 @@ jobs:
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: existing.number,
-                body: 'All providers passed the weekly validation. Closing this issue.',
+                body: 'No provider checks failed this week. Warnings and skipped checks may still be listed in the workflow report. Closing this issue.',
               });
               await github.rest.issues.update({
                 owner: context.repo.owner,
