@@ -90,9 +90,16 @@ def _reconcile_entity(
     old_uniques: list[str],
     desired_entity_id: str,
     hub_entry_id: str,
-    device_id: str,
+    device_id: str | None,
+    rename_existing: bool | None = True,
 ) -> None:
-    """Keep the 2.0 entity, remove legacy duplicates and fix its registry data."""
+    """Keep the 2.0 entity, remove legacy duplicates and fix its registry data.
+
+    ``rename_existing`` controls what happens when the entity already uses the
+    2.0 unique id: ``True`` always rewrites its object id, ``None`` rewrites it
+    only when the current id still contains the legacy ``mzkzg`` marker, and
+    ``False`` never rewrites it (used by the hub slug normalizer).
+    """
     new_entity_id = registry.async_get_entity_id(domain, platform, new_unique)
     old_entity_ids = [
         entity_id
@@ -105,16 +112,21 @@ def _reconcile_entity(
         for old_entity_id in old_entity_ids:
             if old_entity_id != new_entity_id:
                 registry.async_remove(old_entity_id)
-        wanted = desired_entity_id.split(".", 1)[-1]
-        target = _unique_entity_id(registry, domain, wanted, new_entity_id)
-        update_kwargs = {
-            "new_entity_id": target,
-            "config_entry_id": hub_entry_id,
-            "device_id": device_id,
-        }
+        should_rename = rename_existing is True or (
+            rename_existing is None and "mzkzg" in new_entity_id
+        )
+        update_kwargs: dict = {"config_entry_id": hub_entry_id}
+        if device_id:
+            update_kwargs["device_id"] = device_id
         if entity is not None and entity.unique_id != new_unique:
             update_kwargs["new_unique_id"] = new_unique
-        registry.async_update_entity(new_entity_id, **update_kwargs)
+        if should_rename:
+            wanted = desired_entity_id.split(".", 1)[-1]
+            target = _unique_entity_id(registry, domain, wanted, new_entity_id)
+            if target != new_entity_id:
+                update_kwargs["new_entity_id"] = target
+        if update_kwargs:
+            registry.async_update_entity(new_entity_id, **update_kwargs)
         return
 
     if not old_entity_ids:
@@ -125,13 +137,14 @@ def _reconcile_entity(
         registry.async_remove(duplicate)
     wanted = desired_entity_id.split(".", 1)[-1]
     target = _unique_entity_id(registry, domain, wanted, primary)
-    registry.async_update_entity(
-        primary,
-        new_entity_id=target,
-        new_unique_id=new_unique,
-        config_entry_id=hub_entry_id,
-        device_id=device_id,
-    )
+    update_kwargs = {
+        "new_entity_id": target,
+        "new_unique_id": new_unique,
+        "config_entry_id": hub_entry_id,
+    }
+    if device_id:
+        update_kwargs["device_id"] = device_id
+    registry.async_update_entity(primary, **update_kwargs)
 
 
 async def _migrate_group(
@@ -291,6 +304,112 @@ def is_legacy_hub_entity_id(provider_label: str, entity_id: str) -> bool:
     if entity_id == legacy:
         return True
     return bool(re.fullmatch(rf"{re.escape(legacy)}_\d+", entity_id))
+
+
+async def async_heal_entity_ids(hass: HomeAssistant) -> None:
+    """Finish 2.0 entity renames even when an earlier run was interrupted.
+
+    Entries are marked with version 2 before their entities are reconciled, so a
+    failure in the middle of a previous migration left legacy entity ids behind
+    while later startups skipped them. This pass is idempotent and only rewrites
+    ids that still use a legacy unique id or the ``mzkzg`` marker, leaving
+    user-renamed entities untouched.
+    """
+    registry = er.async_get(hass)
+    dev_reg = dr.async_get(hass)
+
+    groups: dict[str, list[ConfigEntry]] = defaultdict(list)
+    for entry in hass.config_entries.async_entries(DOMAIN):
+        provider = entry.data.get(CONF_PROVIDER)
+        if provider:
+            groups[provider].append(entry)
+
+    for provider, entries in groups.items():
+        entries.sort(key=lambda entry: entry.version < CONFIG_ENTRY_VERSION)
+        primary = entries[0]
+        stops: list[dict] = []
+        seen: set[str] = set()
+        for entry in entries:
+            for stop in entry_stops(entry):
+                if stop["stop_id"] not in seen:
+                    seen.add(stop["stop_id"])
+                    stops.append(stop)
+        if not stops:
+            continue
+
+        hub_device = dev_reg.async_get_device(identifiers={(DOMAIN, provider)})
+        hub_device_id = hub_device.id if hub_device else None
+        stop_devices: dict[str, str] = {}
+        for stop in stops:
+            stop_id = stop["stop_id"]
+            device = dev_reg.async_get_device(
+                identifiers={(DOMAIN, f"{provider}_{stop_id}")}
+            )
+            if device:
+                stop_devices[stop_id] = device.id
+
+        old_hub_uniques: list[str] = []
+        for entry in entries:
+            old_hub_uniques.extend(
+                entity.unique_id
+                for entity in er.async_entries_for_config_entry(
+                    registry, entry.entry_id
+                )
+                if entity.unique_id and "_multi_" in entity.unique_id
+            )
+
+        for stop in stops:
+            stop_id = stop["stop_id"]
+            stop_name = stop["name"] or stop_id
+            _reconcile_entity(
+                registry,
+                domain="sensor",
+                platform=DOMAIN,
+                new_unique=f"{ENTITY_UNIQUE_PREFIX}_{provider}_{stop_id}",
+                old_uniques=[f"{DOMAIN}_{provider}_{stop_id}"],
+                desired_entity_id=f"sensor.{slugify(stop_name)}_odjazdy",
+                hub_entry_id=primary.entry_id,
+                device_id=stop_devices.get(stop_id, hub_device_id),
+                rename_existing=None,
+            )
+            if provider == PROVIDER_PLK:
+                _reconcile_entity(
+                    registry,
+                    domain="binary_sensor",
+                    platform=DOMAIN,
+                    new_unique=f"{ENTITY_UNIQUE_PREFIX}_{provider}_{stop_id}_delay",
+                    old_uniques=[f"{DOMAIN}_{provider}_{stop_id}_delay"],
+                    desired_entity_id=f"binary_sensor.{slugify(stop_name)}_opoznienie",
+                    hub_entry_id=primary.entry_id,
+                    device_id=stop_devices.get(stop_id, hub_device_id),
+                    rename_existing=None,
+                )
+
+        if len(stops) > 1:
+            _reconcile_entity(
+                registry,
+                domain="sensor",
+                platform=DOMAIN,
+                new_unique=f"{ENTITY_UNIQUE_PREFIX}_{provider}_hub",
+                old_uniques=old_hub_uniques,
+                desired_entity_id=f"sensor.{provider_entity_slug(provider)}_odjazdy",
+                hub_entry_id=primary.entry_id,
+                device_id=hub_device_id,
+                rename_existing=None,
+            )
+
+        if provider == PROVIDER_PLK:
+            _reconcile_entity(
+                registry,
+                domain="sensor",
+                platform=DOMAIN,
+                new_unique=f"{ENTITY_UNIQUE_PREFIX}_plk_api_usage",
+                old_uniques=[f"{DOMAIN}_plk_api_usage"],
+                desired_entity_id="sensor.plk_api_usage",
+                hub_entry_id=primary.entry_id,
+                device_id=hub_device_id,
+                rename_existing=None,
+            )
 
 
 async def async_normalize_hub_entity_ids(hass: HomeAssistant) -> None:
