@@ -820,10 +820,12 @@ class PolishTransportOptionsFlow(config_entries.OptionsFlow):
 
     async def async_step_init(self, user_input=None):
         """Show the hub menu."""
-        return self.async_show_menu(
-            step_id="init",
-            menu_options=["settings", "add_stop", "remove_stop"],
-        )
+        from .migration import entry_stops
+
+        menu = ["settings", "add_stop"]
+        if len(entry_stops(self.config_entry)) > 1:
+            menu.append("remove_stop")
+        return self.async_show_menu(step_id="init", menu_options=menu)
 
     async def async_step_settings(self, user_input=None):
         """Manage sleep mode and filters."""

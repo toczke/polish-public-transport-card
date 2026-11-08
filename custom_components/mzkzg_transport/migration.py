@@ -140,6 +140,8 @@ async def _migrate_group(
     group: list[ConfigEntry],
 ) -> None:
     """Merge every entry of one provider into a single hub entry."""
+    # Prefer an already migrated 2.0 hub if a previous run was interrupted.
+    group.sort(key=lambda entry: entry.version < CONFIG_ENTRY_VERSION)
     hub = group[0]
     stops: list[dict] = []
     seen: set[str] = set()
@@ -279,6 +281,18 @@ async def _migrate_group(
                 _LOGGER.warning("2.0 migration: could not remove %s: %s", entry.title, err)
 
 
+def is_legacy_hub_entity_id(provider_label: str, entity_id: str) -> bool:
+    """Return True only for the long hub object id generated before 2.0.
+
+    This prevents startup normalization from renaming an entity id that the
+    user customized manually.
+    """
+    legacy = f"sensor.{slugify(provider_label)}_odjazdy"
+    if entity_id == legacy:
+        return True
+    return bool(re.fullmatch(rf"{re.escape(legacy)}_\d+", entity_id))
+
+
 async def async_normalize_hub_entity_ids(hass: HomeAssistant) -> None:
     """Keep provider hub entity IDs short and stable across 2.0 updates."""
     registry = er.async_get(hass)
@@ -291,11 +305,16 @@ async def async_normalize_hub_entity_ids(hass: HomeAssistant) -> None:
         if not entity_id:
             continue
         desired = f"sensor.{provider_entity_slug(provider)}_odjazdy"
-        if entity_id != desired:
-            target = _unique_entity_id(
-                registry, "sensor", desired.split(".", 1)[1], entity_id
-            )
-            registry.async_update_entity(entity_id, new_entity_id=target)
+        if entity_id == desired:
+            continue
+        if not is_legacy_hub_entity_id(
+            PROVIDER_LABELS.get(provider, provider), entity_id
+        ):
+            continue
+        target = _unique_entity_id(
+            registry, "sensor", desired.split(".", 1)[1], entity_id
+        )
+        registry.async_update_entity(entity_id, new_entity_id=target)
 
 
 def async_remove_stop_entities(
@@ -315,6 +334,8 @@ def async_remove_stop_entities(
     for entity in er.async_entries_for_device(
         ent_reg, device.id, include_disabled_entities=True
     ):
+        if entity.config_entry_id not in (None, entry.entry_id):
+            continue
         ent_reg.async_remove(entity.entity_id)
     dev_reg.async_remove_device(device.id)
 
