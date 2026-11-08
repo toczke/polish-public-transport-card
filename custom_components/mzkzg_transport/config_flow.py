@@ -1,4 +1,4 @@
-"""Config flow for MZKZG Transport."""
+"""Config flow for Polish Transport."""
 
 
 
@@ -50,12 +50,14 @@ from .const import (
     CONF_SLEEP_START,
     CONF_STOP_ID,
     CONF_STOPS,
+    CONFIG_ENTRY_VERSION,
     DEFAULT_FALLBACK_MIN,
     DEFAULT_SLEEP_END,
     DEFAULT_SLEEP_START,
 
 
     DOMAIN,
+    ENTITY_UNIQUE_PREFIX,
 
 
     KIEDYPRZYJEDZIE_BASE_URLS,
@@ -281,13 +283,13 @@ PROVIDER_OPTIONS_SORTED = dict(
 )
 
 
-class MzkzgTransportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
+class PolishTransportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
 
-    """Handle a config flow for MZKZG Transport."""
+    """Handle a config flow for Polish Transport."""
 
 
-    VERSION = 1
+    VERSION = CONFIG_ENTRY_VERSION
 
 
     def __init__(self) -> None:
@@ -641,12 +643,6 @@ class MzkzgTransportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             else:
 
 
-                await self.async_set_unique_id(f"{self._provider}_{stop_id}")
-
-
-                self._abort_if_unique_id_configured()
-
-
                 # Resolve name from stops list if not provided
 
 
@@ -668,16 +664,40 @@ class MzkzgTransportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 title = PROVIDER_OPTIONS.get(self._provider, self._provider)
 
 
+                hub = next(
+                    (
+                        entry
+                        for entry in self.hass.config_entries.async_entries(DOMAIN)
+                        if entry.data.get(CONF_PROVIDER) == self._provider
+                        and entry.version >= CONFIG_ENTRY_VERSION
+                    ),
+                    None,
+                )
+
+                if hub is not None:
+                    stops = list(hub.data.get(CONF_STOPS) or [])
+                    if any(str(stop.get("stop_id")) == stop_id for stop in stops):
+                        return self.async_abort(reason="already_configured")
+                    stops.append({"stop_id": stop_id, "name": name})
+                    data = dict(hub.data)
+                    data[CONF_STOPS] = stops
+                    if self._api_key:
+                        data[CONF_API_KEY] = self._api_key
+                        data[CONF_PLK_TIER] = self._plk_tier
+                    self.hass.config_entries.async_update_entry(hub, data=data)
+                    await self.hass.config_entries.async_reload(hub.entry_id)
+                    return self.async_abort(reason="stop_added")
+
                 data = {
 
 
-                    CONF_STOP_ID: stop_id,
+                    CONF_STOPS: [{"stop_id": stop_id, "name": name}],
 
 
                     CONF_PROVIDER: self._provider,
 
 
-                    CONF_NAME: name,
+                    CONF_NAME: title,
 
 
                 }
@@ -690,6 +710,12 @@ class MzkzgTransportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
 
                     data[CONF_PLK_TIER] = self._plk_tier
+
+
+                await self.async_set_unique_id(f"{ENTITY_UNIQUE_PREFIX}_{self._provider}")
+
+
+                self._abort_if_unique_id_configured()
 
 
                 return self.async_create_entry(title=title, data=data)
@@ -781,9 +807,9 @@ class MzkzgTransportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Get options flow."""
 
 
-        return MzkzgTransportOptionsFlow()
+        return PolishTransportOptionsFlow()
 
-class MzkzgTransportOptionsFlow(config_entries.OptionsFlow):
+class PolishTransportOptionsFlow(config_entries.OptionsFlow):
     """Handle options for a stop entry."""
 
     async def async_step_init(self, user_input=None):

@@ -1,4 +1,4 @@
-"""Sensor platform for MZKZG Transport."""
+"""Sensor platform for Polish Transport."""
 
 
 from homeassistant.components.sensor import SensorEntity
@@ -8,8 +8,16 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import CONF_PROVIDER, CONF_STOPS, DOMAIN, MAX_DEPARTURES, PROVIDER_LABELS, PROVIDER_PLK
-from .coordinator import MzkzgTransportCoordinator
+from .const import (
+    CONF_PROVIDER,
+    DEVICE_MANUFACTURER,
+    DOMAIN,
+    ENTITY_UNIQUE_PREFIX,
+    MAX_DEPARTURES,
+    PROVIDER_LABELS,
+    PROVIDER_PLK,
+)
+from .coordinator import PolishTransportCoordinator
 from .device_utils import async_link_device_to_parent
 
 
@@ -18,18 +26,17 @@ async def async_setup_entry(
     entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up MZKZG Transport sensor from a config entry."""
+    """Set up Polish Transport sensor from a config entry."""
     coordinators = hass.data[DOMAIN]["_coordinators"][entry.entry_id]
     provider = entry.data[CONF_PROVIDER]
 
     entities = []
-    is_multi = bool(entry.data.get(CONF_STOPS)) and len(coordinators) > 1
-    if is_multi:
-        # Single aggregated sensor for multi-stop entries
-        entities.append(MzkzgAggregatedSensor(coordinators, entry))
-    else:
-        for coordinator in coordinators:
-            entities.append(MzkzgTransportSensor(coordinator, entry))
+    for coordinator in coordinators:
+        entities.append(PolishTransportSensor(coordinator, entry))
+    if len(coordinators) > 1:
+        # One hub-level sensor with the merged timeline; per-stop sensors remain
+        # available for dashboards that need a single stop.
+        entities.append(PolishAggregatedSensor(coordinators, entry))
 
     # Add the shared PLK API usage sensor once per Home Assistant instance. The usage
     # counters are global, so a sensor per PLK entry would only duplicate the same
@@ -38,33 +45,32 @@ async def async_setup_entry(
         marker = f"_plk_usage_sensor_{provider}"
         if not hass.data[DOMAIN].get(marker):
             hass.data[DOMAIN][marker] = entry.entry_id
-            entities.append(MzkzgPlkApiUsageSensor(hass, entry))
+            entities.append(PlkApiUsageSensor(hass, entry))
 
     async_add_entities(entities)
 
 
-class MzkzgTransportSensor(CoordinatorEntity, SensorEntity):
+class PolishTransportSensor(CoordinatorEntity, SensorEntity):
     """Sensor representing departures from a single stop."""
 
     _attr_has_entity_name = True
     _unrecorded_attributes = frozenset({"departures", "last_update", "timetable"})
 
-    def __init__(self, coordinator: MzkzgTransportCoordinator, entry: ConfigEntry) -> None:
+    def __init__(self, coordinator: PolishTransportCoordinator, entry: ConfigEntry) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator)
         self._entry = entry
         provider = coordinator.provider
-        provider_label = PROVIDER_LABELS.get(provider, provider)
         stop = coordinator.stop_id
         custom_name = coordinator.stop_name
         stop_label = custom_name or stop
-        self._attr_unique_id = f"{DOMAIN}_{provider}_{stop}"
+        self._attr_unique_id = f"{ENTITY_UNIQUE_PREFIX}_{provider}_{stop}"
         self._attr_name = "Odjazdy"
         self._attr_icon = "mdi:bus-multiple"
         self._attr_device_info = {
             "identifiers": {(DOMAIN, f"{provider}_{stop}")},
             "name": stop_label,
-            "manufacturer": provider_label,
+            "manufacturer": DEVICE_MANUFACTURER,
             "model": provider,
         }
 
@@ -115,7 +121,7 @@ class MzkzgTransportSensor(CoordinatorEntity, SensorEntity):
         return attrs
 
 
-class MzkzgAggregatedSensor(SensorEntity):
+class PolishAggregatedSensor(SensorEntity):
     """Sensor that merges departures from multiple stops (węzeł przesiadkowy)."""
 
     _attr_has_entity_name = True
@@ -126,15 +132,14 @@ class MzkzgAggregatedSensor(SensorEntity):
         self._entry = entry
         provider = coordinators[0].provider if coordinators else entry.data.get(CONF_PROVIDER, "")
         provider_label = PROVIDER_LABELS.get(provider, provider)
-        name = entry.data.get("name", "")
         self._provider = provider
-        self._attr_unique_id = f"{DOMAIN}_{provider}_multi_{entry.entry_id}"
+        self._attr_unique_id = f"{ENTITY_UNIQUE_PREFIX}_{provider}_hub"
         self._attr_name = "Odjazdy"
         self._attr_icon = "mdi:bus-multiple"
         self._attr_device_info = {
-            "identifiers": {(DOMAIN, f"{provider}_multi_{entry.entry_id}")},
-            "name": name or "Węzeł",
-            "manufacturer": provider_label,
+            "identifiers": {(DOMAIN, provider)},
+            "name": provider_label,
+            "manufacturer": DEVICE_MANUFACTURER,
             "model": provider,
         }
 
@@ -170,7 +175,7 @@ class MzkzgAggregatedSensor(SensorEntity):
         for c in self._coordinators:
             if c.data:
                 all_deps.extend(c.data.get("departures", []))
-        all_deps = MzkzgTransportCoordinator._deduplicate_prefer_rt(all_deps)
+        all_deps = PolishTransportCoordinator._deduplicate_prefer_rt(all_deps)
         all_deps.sort(key=lambda d: d.get("estimated_time") or "")
         return all_deps[:MAX_DEPARTURES]
 
@@ -183,12 +188,6 @@ class MzkzgAggregatedSensor(SensorEntity):
             await c.async_refresh()
 
     async def async_added_to_hass(self) -> None:
-        async_link_device_to_parent(
-            self.hass,
-            {(DOMAIN, f"{self._provider}_multi_{self._entry.entry_id}")},
-            {(DOMAIN, self._provider)},
-            self._entry.entry_id,
-        )
         self.async_on_remove(
             self._entry.add_update_listener(self._async_update_from_coordinators)
         )
@@ -197,7 +196,7 @@ class MzkzgAggregatedSensor(SensorEntity):
         self.async_write_ha_state()
 
 
-class MzkzgPlkApiUsageSensor(SensorEntity, RestoreEntity):
+class PlkApiUsageSensor(SensorEntity, RestoreEntity):
     """Sensor tracking PLK API usage."""
 
     _attr_has_entity_name = True
@@ -209,7 +208,7 @@ class MzkzgPlkApiUsageSensor(SensorEntity, RestoreEntity):
         """Initialize."""
         self._hass = hass
         # Kept exactly as before so the existing entity is adopted on upgrade.
-        self._attr_unique_id = f"{DOMAIN}_plk_api_usage"
+        self._attr_unique_id = f"{ENTITY_UNIQUE_PREFIX}_plk_api_usage"
         self._attr_name = "PLK API Usage"
         self._attr_device_info = {
             "identifiers": {(DOMAIN, entry.data[CONF_PROVIDER])},

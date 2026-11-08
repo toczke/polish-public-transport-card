@@ -1,6 +1,10 @@
-"""Constants for MZKZG Transport integration."""
+"""Constants for Polish Transport integration."""
 
-DOMAIN = "mzkzg_transport"
+DOMAIN = "mzkzg_transport"  # Technical legacy domain, kept so 2.0 can auto-migrate old entries.
+ENTITY_UNIQUE_PREFIX = "polish_transport"
+CONFIG_ENTRY_VERSION = 2
+INTEGRATION_VERSION = "2.0.0"
+DEVICE_MANUFACTURER = "Polish Transport"
 
 # API endpoints
 ZTM_GDANSK_DEPARTURES_URL = "https://ckan2.multimediagdansk.pl/departures"

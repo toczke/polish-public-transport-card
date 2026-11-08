@@ -1,4 +1,4 @@
-"""Data coordinator for MZKZG Transport."""
+"""Data coordinator for Polish Transport."""
 
 from datetime import timedelta
 import logging
@@ -33,7 +33,7 @@ _LOGGER = logging.getLogger(__name__)
 _STOP_ID_RE = re.compile(STOP_ID_PATTERN)
 
 
-class MzkzgTransportCoordinator(DataUpdateCoordinator):
+class PolishTransportCoordinator(DataUpdateCoordinator):
     """Coordinator that fetches departure data from transport APIs."""
 
     def __init__(
@@ -175,14 +175,14 @@ class MzkzgTransportCoordinator(DataUpdateCoordinator):
                 if (
                     group["route"] == route
                     and group["time"] == t
-                    and MzkzgTransportCoordinator._headsigns_compatible(
+                    and PolishTransportCoordinator._headsigns_compatible(
                         group["base"].get("headsign"), headsign
                     )
                 ):
                     match = group
                     break
             if match:
-                match["base"] = MzkzgTransportCoordinator._merge_departure(match["base"], d)
+                match["base"] = PolishTransportCoordinator._merge_departure(match["base"], d)
             else:
                 groups.append({"route": route, "time": t, "base": d})
         return [group["base"] for group in groups]

@@ -21,7 +21,7 @@ ZTM_GDANSK_GTFS_URL = (
 )
 
 
-async def fetch(coord: "MzkzgTransportCoordinator") -> dict:
+async def fetch(coord: "PolishTransportCoordinator") -> dict:
     """Fetch departures from ZTM Gdańsk TRISTAR API with GTFS fallback."""
     session = await coord._get_session()
     url = f"{ZTM_GDANSK_DEPARTURES_URL}?stopId={coord.stop_id}"

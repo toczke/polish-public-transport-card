@@ -1,4 +1,4 @@
-"""MZKZG Transport integration for Home Assistant."""
+"""Polish Transport integration for Home Assistant."""
 
 import hashlib
 import json
@@ -8,8 +8,8 @@ from pathlib import Path
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
-from .const import CONF_API_KEY, CONF_NAME, CONF_PLK_TIER, CONF_PROVIDER, CONF_STOP_ID, CONF_STOPS, DOMAIN
-from .coordinator import MzkzgTransportCoordinator
+from .const import CONF_API_KEY, CONF_NAME, CONF_PLK_TIER, CONF_PROVIDER, CONF_STOP_ID, CONF_STOPS, CONFIG_ENTRY_VERSION, DEVICE_MANUFACTURER, DOMAIN
+from .coordinator import PolishTransportCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -33,8 +33,27 @@ if _CARD_BUILD:
     CARD_URL = f"{CARD_URL}-{_CARD_BUILD}"
 
 
+async def async_setup(hass: HomeAssistant, config: dict) -> bool:
+    """Run domain-wide 2.0 migration before config entries are set up."""
+    hass.data.setdefault(DOMAIN, {})
+    from .migration import async_migrate_entries
+
+    await async_migrate_entries(hass)
+    return True
+
+
+async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Migrate a legacy entry to the 2.0 hub format."""
+    if entry.version >= CONFIG_ENTRY_VERSION:
+        return True
+    from .migration import async_migrate_entries
+
+    await async_migrate_entries(hass)
+    return True
+
+
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Set up MZKZG Transport from a config entry."""
+    """Set up Polish Transport from a config entry."""
     hass.data.setdefault(DOMAIN, {})
     domain_data = hass.data[DOMAIN]
     domain_data.setdefault("_global", {})
@@ -56,7 +75,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     for stop_cfg in stops:
         stop_id = stop_cfg["stop_id"]
         name = stop_cfg.get("name", "")
-        coordinator = MzkzgTransportCoordinator(
+        coordinator = PolishTransportCoordinator(
             hass,
             stop_id,
             provider,
@@ -85,7 +104,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         config_entry_id=entry.entry_id,
         identifiers={(DOMAIN, provider)},
         name=provider_label,
-        manufacturer="MZKZG Transport",
+        manufacturer=DEVICE_MANUFACTURER,
         model=provider,
         entry_type=dr.DeviceEntryType.SERVICE,
     )
@@ -152,11 +171,10 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 
 async def _register_card(hass: HomeAssistant) -> None:
-    """Serve and register the Lovelace card JS (supports both polish-transport-card and legacy mzkzg-transport-card)."""
+    """Serve and register the Lovelace card JS."""
     www_path = str(Path(__file__).parent / "www")
     static_paths = [
         ("/polish_transport", www_path),
-        ("/mzkzg_transport", www_path),
     ]
     try:
         from homeassistant.components.http import StaticPathConfig
@@ -184,7 +202,7 @@ async def _register_card(hass: HomeAssistant) -> None:
             if hasattr(resources, "async_items") and isinstance(resources, ResourceStorageCollection):
                 existing = [
                     r for r in resources.async_items()
-                    if "/mzkzg_transport/" in (r.get("url") or "") or "/polish_transport/" in (r.get("url") or "")
+                    if f"/{DOMAIN}/" in (r.get("url") or "") or "/polish_transport/" in (r.get("url") or "")
                 ]
                 # Create the current entry first — deleting first would leave the
                 # dashboard with no card resource at all if creation then fails.

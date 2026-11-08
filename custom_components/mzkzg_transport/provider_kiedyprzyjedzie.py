@@ -15,7 +15,7 @@ TIMETABLE_CACHE_TTL = 3600
 TIMETABLE_MAX_ROWS_PER_LINE = 500
 
 
-async def fetch(coord: "MzkzgTransportCoordinator") -> dict:
+async def fetch(coord: "PolishTransportCoordinator") -> dict:
     """Fetch departures from kiedyPrzyjedzie carriers."""
     session = await coord._get_session()
     base_url = KIEDYPRZYJEDZIE_BASE_URLS[coord.provider]

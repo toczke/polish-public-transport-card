@@ -48,6 +48,7 @@
     },
     "abort": {
       "already_configured": "Ten przystanek jest już skonfigurowany",
+      "stop_added": "Przystanek dodany do istniejącego huba",
       "lodz_groups_failed": "Nie udało się pobrać grup przystanków — sprawdź połączenie sieciowe"
     }
   },

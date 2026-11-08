@@ -87,8 +87,8 @@ jobs:
                   assert en[section] == pl[section] or en[section].keys() == pl[section].keys()
 
           src = Path("src/utils.js").read_text(encoding="utf-8")
-          card_version = re.search(r'MZKZG_VERSION\s*=\s*"([^"]+)"', src)
-          assert card_version, "MZKZG_VERSION missing from src/utils.js"
+          card_version = re.search(r'CARD_VERSION\s*=\s*"([^"]+)"', src)
+          assert card_version, "CARD_VERSION missing from src/utils.js"
           assert card_version.group(1) == manifest["version"], (
               f"manifest {manifest['version']} != card {card_version.group(1)}"
           )

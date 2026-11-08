@@ -163,7 +163,7 @@ const LIST_KEYS = new Set([
   "filter_providers",
 ]);
 
-export class MzkzgTransportCardEditor extends LitElement {
+export class PolishTransportCardEditor extends LitElement {
   static get properties() {
     return {
       hass: { type: Object },
@@ -602,5 +602,4 @@ export class MzkzgTransportCardEditor extends LitElement {
   }
 }
 
-customElements.define("mzkzg-transport-card-editor", MzkzgTransportCardEditor);
-customElements.define("polish-transport-card-editor", class extends MzkzgTransportCardEditor {});
+customElements.define("polish-transport-card-editor", PolishTransportCardEditor);

@@ -15,11 +15,11 @@ from mzkzg_transport.const import (
     DOMAIN, PROVIDER_ZTM, PROVIDER_ZKM, PROVIDER_MZK, PROVIDER_PLK, PROVIDER_LODZ,
     PLK_API_BASE, ZTM_GDANSK_DEPARTURES_URL, ZKM_GDYNIA_DELAYS_URL, ZKM_GDYNIA_ROUTES_URL,
 )
-from mzkzg_transport.coordinator import MzkzgTransportCoordinator
+from mzkzg_transport.coordinator import PolishTransportCoordinator
 from mzkzg_transport.gtfs_provider import GtfsData, get_gtfs_data
-from mzkzg_transport.binary_sensor import MzkzgPlkDelayBinarySensor
+from mzkzg_transport.binary_sensor import PlkDelayBinarySensor
 from mzkzg_transport.const import DELAY_THRESHOLD_SECONDS
-from mzkzg_transport.sensor import MzkzgPlkApiUsageSensor
+from mzkzg_transport.sensor import PlkApiUsageSensor
 
 
 @pytest.fixture(autouse=True)
@@ -38,7 +38,7 @@ def patch_session():
         sessions.append(session)
         return session
 
-    with patch.object(MzkzgTransportCoordinator, "_get_session", _patched_get):
+    with patch.object(PolishTransportCoordinator, "_get_session", _patched_get):
         yield
 
     for session in sessions:
@@ -140,7 +140,7 @@ async def test_plk_api_usage_sensor_restores_counters(mock_hass):
     """PLK API usage sensor should restore counters from previous HA state."""
     entry = MagicMock()
     entry.data = {"provider": "plk_rail", "stop_id": "7534"}
-    sensor = MzkzgPlkApiUsageSensor(mock_hass, entry)
+    sensor = PlkApiUsageSensor(mock_hass, entry)
 
     restored = MagicMock()
     restored.state = "321"
@@ -169,7 +169,7 @@ async def test_plk_api_usage_sensor_does_not_overwrite_existing_cache(mock_hass)
         "_429_count": 3,
         "_ts": "2026-05-14T09:40:00+02:00",
     }
-    sensor = MzkzgPlkApiUsageSensor(mock_hass, entry)
+    sensor = PlkApiUsageSensor(mock_hass, entry)
 
     restored = MagicMock()
     restored.state = "10"
@@ -202,7 +202,7 @@ def test_binary_sensor_is_on_with_delay():
     entry = MagicMock()
     entry.data = {"stop_id": "123", "provider": PROVIDER_ZTM, "name": "Test"}
     
-    sensor = MzkzgPlkDelayBinarySensor(coordinator, entry)
+    sensor = PlkDelayBinarySensor(coordinator, entry)
     assert sensor.is_on is True
 
 
@@ -219,7 +219,7 @@ def test_binary_sensor_is_off_no_delay():
     entry = MagicMock()
     entry.data = {"stop_id": "123", "provider": PROVIDER_ZTM, "name": "Test"}
     
-    sensor = MzkzgPlkDelayBinarySensor(coordinator, entry)
+    sensor = PlkDelayBinarySensor(coordinator, entry)
     assert sensor.is_on is False
 
 
@@ -231,7 +231,7 @@ def test_binary_sensor_is_off_empty():
     entry = MagicMock()
     entry.data = {"stop_id": "123", "provider": PROVIDER_ZKM, "name": ""}
     
-    sensor = MzkzgPlkDelayBinarySensor(coordinator, entry)
+    sensor = PlkDelayBinarySensor(coordinator, entry)
     assert sensor.is_on is False
 
 
@@ -248,7 +248,7 @@ def test_binary_sensor_attributes():
     entry = MagicMock()
     entry.data = {"stop_id": "123", "provider": PROVIDER_ZTM, "name": "Test"}
     
-    sensor = MzkzgPlkDelayBinarySensor(coordinator, entry)
+    sensor = PlkDelayBinarySensor(coordinator, entry)
     attrs = sensor.extra_state_attributes
     assert len(attrs["delayed_trains"]) == 1
     assert attrs["delayed_trains"][0]["route"] == "131"
@@ -262,7 +262,7 @@ def test_binary_sensor_attributes():
 async def test_plk_rate_limit(mock_hass):
     """Test PLK handles 429 rate limit gracefully."""
     from re import compile as re_compile
-    coordinator = MzkzgTransportCoordinator(mock_hass, "7534", PROVIDER_PLK, "Gdańsk Wrzeszcz", "fake-key")
+    coordinator = PolishTransportCoordinator(mock_hass, "7534", PROVIDER_PLK, "Gdańsk Wrzeszcz", "fake-key")
     
     with aioresponses() as m:
         # 429 on operations, schedules also fails
@@ -283,7 +283,7 @@ async def test_plk_rate_limit(mock_hass):
 async def test_plk_empty_schedules(mock_hass):
     """Test PLK with empty schedule response."""
     from re import compile as re_compile
-    coordinator = MzkzgTransportCoordinator(mock_hass, "7534", PROVIDER_PLK, "Test", "fake-key")
+    coordinator = PolishTransportCoordinator(mock_hass, "7534", PROVIDER_PLK, "Test", "fake-key")
     
     with aioresponses() as m:
         m.get(re_compile(r".*/operations.*"), payload={"trains": []})
@@ -300,7 +300,7 @@ async def test_plk_empty_schedules(mock_hass):
 async def test_plk_with_schedule_data(mock_hass):
     """Test PLK parses schedule data correctly."""
     from re import compile as re_compile
-    coordinator = MzkzgTransportCoordinator(mock_hass, "7534", PROVIDER_PLK, "", "fake-key")
+    coordinator = PolishTransportCoordinator(mock_hass, "7534", PROVIDER_PLK, "", "fake-key")
     from homeassistant.util import dt as dt_util
     now = dt_util.now()
     today = now.strftime("%Y-%m-%d")
@@ -344,7 +344,7 @@ async def test_plk_with_schedule_data(mock_hass):
 async def test_zkm_time_over_24(mock_hass):
     """Test ZKM handles times >= 24:00 (after midnight)."""
     from re import compile as re_compile
-    coordinator = MzkzgTransportCoordinator(mock_hass, "37030", PROVIDER_ZKM, "Test")
+    coordinator = PolishTransportCoordinator(mock_hass, "37030", PROVIDER_ZKM, "Test")
     coordinator._routes_map = {"1": "21"}
     
     with aioresponses() as m:
@@ -368,7 +368,7 @@ async def test_zkm_time_over_24(mock_hass):
 @pytest.mark.plk
 def test_plk_time_parsing_normal():
     """Test PLK time parsing with normal HH:MM:SS."""
-    result = MzkzgTransportCoordinator._plk_time_to_datetime("2026-05-12", "14:30:00")
+    result = PolishTransportCoordinator._plk_time_to_datetime("2026-05-12", "14:30:00")
     assert result.hour == 14
     assert result.minute == 30
 
@@ -376,7 +376,7 @@ def test_plk_time_parsing_normal():
 @pytest.mark.plk
 def test_plk_time_parsing_with_day_offset():
     """Test PLK time parsing with day offset."""
-    result = MzkzgTransportCoordinator._plk_time_to_datetime("2026-05-12", "02:00:00", day_offset=1)
+    result = PolishTransportCoordinator._plk_time_to_datetime("2026-05-12", "02:00:00", day_offset=1)
     assert result.day == 13
     assert result.hour == 2
 
@@ -384,7 +384,7 @@ def test_plk_time_parsing_with_day_offset():
 @pytest.mark.plk
 def test_plk_time_parsing_iso_duration():
     """Test PLK time parsing with PT format (if ever used)."""
-    result = MzkzgTransportCoordinator._plk_time_to_datetime("2026-05-12", "PT12H30M0S")
+    result = PolishTransportCoordinator._plk_time_to_datetime("2026-05-12", "PT12H30M0S")
     assert result.hour == 12
     assert result.minute == 30
 
@@ -392,7 +392,7 @@ def test_plk_time_parsing_iso_duration():
 @pytest.mark.plk
 def test_plk_update_interval_respects_daily_cap(mock_hass):
     """Test PLK coordinator stays below the daily hard cap for a single station."""
-    coordinator = MzkzgTransportCoordinator(mock_hass, "7534", PROVIDER_PLK, "Test", "fake-key")
+    coordinator = PolishTransportCoordinator(mock_hass, "7534", PROVIDER_PLK, "Test", "fake-key")
     assert coordinator.update_interval.total_seconds() >= 108
 
 
@@ -404,7 +404,7 @@ async def test_lodz_fallback_min_default(mock_hass):
     """Test _fallback_min returns default when coordinator has no options."""
     from mzkzg_transport.provider_lodz import _fallback_min
     from mzkzg_transport.const import DEFAULT_FALLBACK_MIN
-    coordinator = MzkzgTransportCoordinator(mock_hass, "100", PROVIDER_LODZ, "Test")
+    coordinator = PolishTransportCoordinator(mock_hass, "100", PROVIDER_LODZ, "Test")
     assert _fallback_min(coordinator) == DEFAULT_FALLBACK_MIN
 
 
@@ -413,7 +413,7 @@ async def test_lodz_fallback_min_default(mock_hass):
 async def test_lodz_fallback_min_custom(mock_hass):
     """Test _fallback_min reads from coordinator options."""
     from mzkzg_transport.provider_lodz import _fallback_min
-    coordinator = MzkzgTransportCoordinator(mock_hass, "100", PROVIDER_LODZ, "Test")
+    coordinator = PolishTransportCoordinator(mock_hass, "100", PROVIDER_LODZ, "Test")
     coordinator._options = {"fallback_min": 15}
     assert _fallback_min(coordinator) == 15
 
@@ -526,7 +526,7 @@ async def test_lodz_fetch_empty_boards_fallback(mock_hass):
     from mzkzg_transport.provider_lodz import _fallback_min
     from mzkzg_transport.const import DOMAIN
 
-    coordinator = MzkzgTransportCoordinator(mock_hass, "205", PROVIDER_LODZ, "Test Stop")
+    coordinator = PolishTransportCoordinator(mock_hass, "205", PROVIDER_LODZ, "Test Stop")
 
     with aioresponses() as m:
         # All 20 boards fail with empty response
@@ -552,7 +552,7 @@ async def test_lodz_fetch_single_board(mock_hass):
     """Test fetch with single-board stop_id (busStopId:stopNr format)."""
     from mzkzg_transport import provider_lodz
 
-    coordinator = MzkzgTransportCoordinator(mock_hass, "100:3", PROVIDER_LODZ, "Test Single")
+    coordinator = PolishTransportCoordinator(mock_hass, "100:3", PROVIDER_LODZ, "Test Single")
 
     with aioresponses() as m:
         m.get(
@@ -587,7 +587,7 @@ async def test_lodz_fetch_rt_preservation(mock_hass):
     """Test that old RT departures are preserved when API returns empty."""
     from mzkzg_transport import provider_lodz
 
-    coordinator = MzkzgTransportCoordinator(mock_hass, "205", PROVIDER_LODZ, "Test")
+    coordinator = PolishTransportCoordinator(mock_hass, "205", PROVIDER_LODZ, "Test")
     # Seed previous data with a realtime departure
     old_rt_time = (datetime.now() + timedelta(minutes=5)).isoformat()
     coordinator.data = {
@@ -618,7 +618,7 @@ async def test_lodz_fetch_enrich_with_delays(mock_hass):
     """Test fetch applies GTFS-RT delays when stop mapping succeeds."""
     from mzkzg_transport import provider_lodz
 
-    coordinator = MzkzgTransportCoordinator(mock_hass, "205", PROVIDER_LODZ, "Test")
+    coordinator = PolishTransportCoordinator(mock_hass, "205", PROVIDER_LODZ, "Test")
 
     # Create a realistic stop_mapping and gtfs data
     gtfs_mock = {"stops": {}, "routes": {}, "trips": {}, "stop_times": {}, "_raw": b""}

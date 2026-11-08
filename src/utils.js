@@ -1,10 +1,10 @@
 /**
  * Polish Transport Card
  * Unified Lovelace card for Polish public transport providers.
- * Reads data from mzkzg_transport HA integration sensors.
+ * Reads data from the Polish Transport HA integration sensors.
  */
 
-export const MZKZG_VERSION = "1.7.0";
+export const CARD_VERSION = "2.0.0";
 
 export const LOCALE = {
   pl: {

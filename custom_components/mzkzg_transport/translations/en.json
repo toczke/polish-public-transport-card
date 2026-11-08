@@ -48,6 +48,7 @@
     },
     "abort": {
       "already_configured": "This stop is already configured",
+      "stop_added": "Stop added to the existing hub",
       "lodz_groups_failed": "Failed to load bus stop groups — check network connection"
     }
   },

@@ -5,7 +5,7 @@ import pytest
 from mzkzg_transport.config_flow import (
     MAX_STOP_RESULTS,
     STOP_QUERY,
-    MzkzgTransportConfigFlow,
+    PolishTransportConfigFlow,
     _match_stops,
 )
 
@@ -47,8 +47,8 @@ def _form_keys(result: dict) -> list[str]:
     return [getattr(key, "schema", key) for key in result["data_schema"].schema]
 
 
-def _large_flow() -> MzkzgTransportConfigFlow:
-    flow = MzkzgTransportConfigFlow()
+def _large_flow() -> PolishTransportConfigFlow:
+    flow = PolishTransportConfigFlow()
     flow._provider = "zbiorkom_krakow"
     flow._stops = [
         {"id": "XYZ", "name": "Kraków Unikat"},

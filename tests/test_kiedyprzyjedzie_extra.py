@@ -31,7 +31,7 @@ from mzkzg_transport.const import (
     PROVIDER_PKS_SLUPSK,
     PROVIDER_PKS_STAROGARD,
 )
-from mzkzg_transport.coordinator import MzkzgTransportCoordinator
+from mzkzg_transport.coordinator import PolishTransportCoordinator
 from mzkzg_transport.provider_kiedyprzyjedzie import _parse_timetable
 
 
@@ -52,7 +52,7 @@ def patch_session():
         sessions.append(session)
         return session
 
-    with patch.object(MzkzgTransportCoordinator, "_get_session", _patched_get):
+    with patch.object(PolishTransportCoordinator, "_get_session", _patched_get):
         yield
 
     for session in sessions:
@@ -192,7 +192,7 @@ def mock_hass():
 )
 async def test_kiedyprzyjedzie_cases(mock_hass, case):
     """Parametric coverage for kiedyPrzyjedzie payload shapes across carriers."""
-    coordinator = MzkzgTransportCoordinator(mock_hass, case["stop_id"], case["provider"], "")
+    coordinator = PolishTransportCoordinator(mock_hass, case["stop_id"], case["provider"], "")
     response = dict(case["response"])
     if response.get("timestamp") == "now":
         response["timestamp"] = int(datetime.now().timestamp())

@@ -1,10 +1,10 @@
 """Tests for departure deduplication in the coordinator."""
 
-from mzkzg_transport.coordinator import MzkzgTransportCoordinator
+from mzkzg_transport.coordinator import PolishTransportCoordinator
 
 
 def _dedup(deps):
-    return MzkzgTransportCoordinator._deduplicate_prefer_rt(deps)
+    return PolishTransportCoordinator._deduplicate_prefer_rt(deps)
 
 
 def test_prefix_headsigns_are_merged_into_one_departure():

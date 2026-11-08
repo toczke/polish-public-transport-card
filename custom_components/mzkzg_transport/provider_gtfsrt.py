@@ -20,7 +20,7 @@ from .gtfsrt_parser import _parse_gtfs_zip, _parse_stop_times_for, _parse_stop_t
 from .gtfsrt_gzm import _get_gzm_gtfs_url
 
 
-async def fetch(coord: "MzkzgTransportCoordinator") -> dict:
+async def fetch(coord: "PolishTransportCoordinator") -> dict:
     """Fetch departures using static GTFS + GTFS-RT TripUpdates."""
     session = await coord._get_session()
     now = dt_util.now()
@@ -219,7 +219,7 @@ async def _get_gtfs_data(coord, session, city_cfg, now):
 
 async def _download_zip(coord, session, url, path_suffix):
     import os
-    zip_path = coord.hass.config.path(f"mzkzg_gtfs_{coord.provider}{path_suffix}.zip")
+    zip_path = coord.hass.config.path(f"polish_transport_gtfs_{coord.provider}{path_suffix}.zip")
     try:
         async with session.get(url, timeout=aiohttp.ClientTimeout(total=120)) as resp:
             if resp.status != 200:

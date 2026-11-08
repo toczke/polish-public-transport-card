@@ -42,7 +42,7 @@ from mzkzg_transport.const import (
     ZKM_GDYNIA_ROUTES_URL,
     ZTM_GDANSK_DEPARTURES_URL,
 )
-from mzkzg_transport.coordinator import MzkzgTransportCoordinator
+from mzkzg_transport.coordinator import PolishTransportCoordinator
 
 
 # ── Patch HA frame helper globally ───────────────────────────────────────────
@@ -66,7 +66,7 @@ def patch_session():
         sessions.append(session)
         return session
 
-    with patch.object(MzkzgTransportCoordinator, "_get_session", _patched_get):
+    with patch.object(PolishTransportCoordinator, "_get_session", _patched_get):
         yield
 
     for session in sessions:
@@ -126,7 +126,7 @@ def ztm_response():
 @pytest.mark.asyncio
 async def test_ztm_fetch_departures(mock_hass, ztm_response):
     """Test ZTM Gdańsk departure fetching and parsing."""
-    coordinator = MzkzgTransportCoordinator(mock_hass, "1327", PROVIDER_ZTM, "Test Stop")
+    coordinator = PolishTransportCoordinator(mock_hass, "1327", PROVIDER_ZTM, "Test Stop")
 
     with aioresponses() as m:
         m.get(f"{ZTM_GDANSK_DEPARTURES_URL}?stopId=1327", payload=ztm_response)
@@ -153,12 +153,12 @@ async def test_ztm_fetch_departures(mock_hass, ztm_response):
 @pytest.mark.asyncio
 async def test_ztm_vehicle_type():
     """Test vehicle type detection for ZTM."""
-    assert MzkzgTransportCoordinator._ztm_vehicle_type("9") == "tram"
-    assert MzkzgTransportCoordinator._ztm_vehicle_type("12") == "tram"
-    assert MzkzgTransportCoordinator._ztm_vehicle_type("99") == "tram"
-    assert MzkzgTransportCoordinator._ztm_vehicle_type("100") == "bus"
-    assert MzkzgTransportCoordinator._ztm_vehicle_type("131") == "bus"
-    assert MzkzgTransportCoordinator._ztm_vehicle_type("N8") == "bus"
+    assert PolishTransportCoordinator._ztm_vehicle_type("9") == "tram"
+    assert PolishTransportCoordinator._ztm_vehicle_type("12") == "tram"
+    assert PolishTransportCoordinator._ztm_vehicle_type("99") == "tram"
+    assert PolishTransportCoordinator._ztm_vehicle_type("100") == "bus"
+    assert PolishTransportCoordinator._ztm_vehicle_type("131") == "bus"
+    assert PolishTransportCoordinator._ztm_vehicle_type("N8") == "bus"
 
 
 # ── ZKM Gdynia tests ────────────────────────────────────────────────────────
@@ -201,7 +201,7 @@ def zkm_delays_response():
 @pytest.mark.asyncio
 async def test_zkm_fetch_departures(mock_hass, zkm_routes_response, zkm_delays_response):
     """Test ZKM Gdynia departure fetching and parsing."""
-    coordinator = MzkzgTransportCoordinator(mock_hass, "38220", PROVIDER_ZKM, "Chylonia")
+    coordinator = PolishTransportCoordinator(mock_hass, "38220", PROVIDER_ZKM, "Chylonia")
 
     with aioresponses() as m:
         m.get(ZKM_GDYNIA_ROUTES_URL, payload=zkm_routes_response)
@@ -224,10 +224,10 @@ async def test_zkm_fetch_departures(mock_hass, zkm_routes_response, zkm_delays_r
 @pytest.mark.asyncio
 async def test_zkm_vehicle_type():
     """Test vehicle type detection for ZKM."""
-    assert MzkzgTransportCoordinator._zkm_vehicle_type("21") == "trolleybus"
-    assert MzkzgTransportCoordinator._zkm_vehicle_type("25") == "trolleybus"
-    assert MzkzgTransportCoordinator._zkm_vehicle_type("181") == "bus"
-    assert MzkzgTransportCoordinator._zkm_vehicle_type("N21") == "bus"
+    assert PolishTransportCoordinator._zkm_vehicle_type("21") == "trolleybus"
+    assert PolishTransportCoordinator._zkm_vehicle_type("25") == "trolleybus"
+    assert PolishTransportCoordinator._zkm_vehicle_type("181") == "bus"
+    assert PolishTransportCoordinator._zkm_vehicle_type("N21") == "bus"
 
 
 # â”€â”€ kiedyPrzyjedzie.pl tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -301,7 +301,7 @@ def kiedyprzyjedzie_response():
 )
 async def test_kiedyprzyjedzie_fetch_departures(mock_hass, kiedyprzyjedzie_response, provider, base_url, stop_id, station_name):
     """Test kiedyPrzyjedzie departure fetching and parsing."""
-    coordinator = MzkzgTransportCoordinator(mock_hass, stop_id, provider, "Test Stop")
+    coordinator = PolishTransportCoordinator(mock_hass, stop_id, provider, "Test Stop")
 
     response = dict(kiedyprzyjedzie_response)
     response["station_name"] = station_name
@@ -357,7 +357,7 @@ def test_import_all_modules():
 @pytest.mark.asyncio
 async def test_ztm_empty_response(mock_hass):
     """Test handling of empty departures."""
-    coordinator = MzkzgTransportCoordinator(mock_hass, "9999", PROVIDER_ZTM, "Empty")
+    coordinator = PolishTransportCoordinator(mock_hass, "9999", PROVIDER_ZTM, "Empty")
 
     with aioresponses() as m:
         m.get(f"{ZTM_GDANSK_DEPARTURES_URL}?stopId=9999", payload={"departures": []})
@@ -370,7 +370,7 @@ async def test_ztm_empty_response(mock_hass):
 @pytest.mark.asyncio
 async def test_zkm_routes_caching(mock_hass, zkm_routes_response, zkm_delays_response):
     """Test that ZKM routes are cached after first load."""
-    coordinator = MzkzgTransportCoordinator(mock_hass, "38220", PROVIDER_ZKM, "Test")
+    coordinator = PolishTransportCoordinator(mock_hass, "38220", PROVIDER_ZKM, "Test")
 
     with aioresponses() as m:
         m.get(ZKM_GDYNIA_ROUTES_URL, payload=zkm_routes_response)
@@ -389,7 +389,7 @@ async def test_zkm_routes_caching(mock_hass, zkm_routes_response, zkm_delays_res
 async def test_ztm_vehicle_code_and_fleet(mock_hass):
     """Test ZTM departure includes vehicle_code and fleet capabilities."""
     from re import compile as re_compile
-    coordinator = MzkzgTransportCoordinator(mock_hass, "1327", PROVIDER_ZTM, "Test")
+    coordinator = PolishTransportCoordinator(mock_hass, "1327", PROVIDER_ZTM, "Test")
 
     fleet_response = {"results": [
         {"vehicleCode": "2742", "airConditioning": True, "wheelchairsRamp": True, "bikeHolders": 2, "usb": True, "ticketMachine": True}

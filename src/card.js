@@ -14,7 +14,7 @@ const ICON_AC = `<svg viewBox="0 0 24 24" width="14" height="14"><path fill="cur
 
 const stateIcon = (icon) => html`<ha-icon class="state-icon" icon=${icon}></ha-icon>`;
 
-export class MzkzgTransportCard extends LitElement {
+export class PolishTransportCard extends LitElement {
   static get properties() {
     return {
       hass: { type: Object },
@@ -38,7 +38,7 @@ export class MzkzgTransportCard extends LitElement {
   }
 
   static getConfigElement() {
-    return document.createElement("mzkzg-transport-card-editor");
+    return document.createElement("polish-transport-card-editor");
   }
 
   setConfig(config) {
@@ -372,10 +372,10 @@ export class MzkzgTransportCard extends LitElement {
 
   _getTitle() {
     if (this._config.title) return this._config.title;
-    if (!this.hass || !this._config.entities?.length) return "MZKZG Transport";
+    if (!this.hass || !this._config.entities?.length) return "Polish Transport";
     const firstId = this._getEntityIds()[0];
     const first = firstId ? this.hass.states[firstId] : null;
-    return first?.attributes?.stop_name || first?.attributes?.friendly_name || "MZKZG Transport";
+    return first?.attributes?.stop_name || first?.attributes?.friendly_name || "Polish Transport";
   }
 
   _getSubtitle() {
@@ -387,7 +387,7 @@ export class MzkzgTransportCard extends LitElement {
         providers.add(s.attributes.provider);
       }
     }
-    return [...providers].map(providerLabel).join(" • ") || "MZKZG";
+    return [...providers].map(providerLabel).join(" • ") || "Polish Transport";
   }
 
   _getClock() {
@@ -746,7 +746,7 @@ export class MzkzgTransportCard extends LitElement {
       <ha-card class="${cardClass}" data-theme="${c.theme_mode}" data-header="${c.header_style}">
         ${c.show_header ? html`
           <div class="header" style="background:${this._getHeaderColor()}">
-            <span class="header-icon">${c.icon ? html`<ha-icon icon="${c.icon}" style="color:var(--mzkzg-header-text, #fff);--mdc-icon-size:20px"></ha-icon>` : this._getAutoIcon()}</span>
+            <span class="header-icon">${c.icon ? html`<ha-icon icon="${c.icon}" style="color:var(--ptc-header-text, #fff);--mdc-icon-size:20px"></ha-icon>` : this._getAutoIcon()}</span>
             <div class="header-body">
               <div class="header-title">${this._getTitle()}</div>
               <div class="header-sub">${this._getSubtitle()}</div>
