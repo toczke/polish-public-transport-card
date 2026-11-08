@@ -22,9 +22,12 @@ from io import BytesIO
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "custom_components"))
+INTEGRATION_DIR = ROOT / "custom_components" / "mzkzg_transport"
+sys.path.insert(0, str(INTEGRATION_DIR))
 
-from mzkzg_transport.const import (  # noqa: E402
+# Import the standalone modules directly. Importing the package would execute
+# ``__init__.py`` and require Home Assistant, which this validator does not need.
+from const import (  # noqa: E402
     KIEDYPRZYJEDZIE_BASE_URLS,
     MZK_GTFS_URL,
     PLK_API_BASE,
@@ -33,7 +36,7 @@ from mzkzg_transport.const import (  # noqa: E402
     ZKM_GDYNIA_STOPS_URL,
     ZTM_GDANSK_STOPS_URL,
 )
-from mzkzg_transport.gtfsrt_cities import GTFSRT_CITIES  # noqa: E402
+from gtfsrt_cities import GTFSRT_CITIES  # noqa: E402
 
 USER_AGENT = "polish-public-transport-card-provider-check/1.0"
 TIMEOUT = 90
