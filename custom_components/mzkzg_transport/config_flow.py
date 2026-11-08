@@ -189,6 +189,7 @@ _LOGGER = logging.getLogger(__name__)
 
 MAX_STOP_OPTIONS = 3000
 MAX_STOP_RESULTS = 500
+OPTIONS_STOP_SEARCH_THRESHOLD = 50
 STOP_QUERY = "stop_query"
 
 
@@ -906,7 +907,10 @@ class PolishTransportOptionsFlow(config_entries.OptionsFlow):
             self._api_key = self.config_entry.data.get(CONF_API_KEY, "")
             self._stops = await _load_stops(self, provider)
 
-        large_list = bool(self._stops) and len(self._stops) > MAX_STOP_OPTIONS
+        large_list = (
+            bool(self._stops)
+            and len(self._stops) > OPTIONS_STOP_SEARCH_THRESHOLD
+        )
 
         if user_input is not None:
             query = str(user_input.get(STOP_QUERY, "") or "").strip()
