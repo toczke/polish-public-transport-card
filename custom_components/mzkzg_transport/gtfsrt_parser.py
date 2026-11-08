@@ -383,13 +383,17 @@ def _parse_gtfsrt_positions(raw):
 
 
 def _parse_rt_feed(feed) -> dict:
-    """Parse a GTFS-RT FeedMessage into {key: (delay, vehicle_label)} with route-level fallback."""
+    """Parse a GTFS-RT FeedMessage into {key: (delay, vehicle_label)}.
+
+    Only trip-specific keys are emitted. A route-level fallback would copy one
+    trip's delay and vehicle to every other trip on the same route, which is
+    especially visible in Poznań where many later trips share one bus.
+    """
     delays = {}
     for entity in feed.entity:
         if not entity.HasField("trip_update"):
             continue
         trip_id = entity.trip_update.trip.trip_id
-        route_id = entity.trip_update.trip.route_id if entity.trip_update.trip.route_id else ""
         vehicle_label = ""
         if entity.trip_update.HasField("vehicle"):
             v = entity.trip_update.vehicle
@@ -399,13 +403,9 @@ def _parse_rt_feed(feed) -> dict:
             delay = stu.departure.delay if stu.HasField("departure") else (stu.arrival.delay if stu.HasField("arrival") else 0)
             if stu.stop_id:
                 delays[f"{trip_id}_{stu.stop_id}"] = (delay, vehicle_label)
-                if route_id:
-                    delays[f"route_{route_id}_{stu.stop_id}"] = (delay, vehicle_label)
             if stu.stop_sequence:
                 delays[f"{trip_id}_seq{stu.stop_sequence}"] = (delay, vehicle_label)
             delays[trip_id] = (delay, vehicle_label)
-            if route_id:
-                delays[f"route_{route_id}"] = (delay, vehicle_label)
     return delays
 
 
