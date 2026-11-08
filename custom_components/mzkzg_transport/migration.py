@@ -100,18 +100,20 @@ def _reconcile_entity(
     ]
 
     if new_entity_id:
+        entity = registry.async_get(new_entity_id)
         for old_entity_id in old_entity_ids:
             if old_entity_id != new_entity_id:
                 registry.async_remove(old_entity_id)
         wanted = desired_entity_id.split(".", 1)[-1]
         target = _unique_entity_id(registry, domain, wanted, new_entity_id)
-        registry.async_update_entity(
-            new_entity_id,
-            new_entity_id=target,
-            new_unique_id=new_unique,
-            config_entry_id=hub_entry_id,
-            device_id=device_id,
-        )
+        update_kwargs = {
+            "new_entity_id": target,
+            "config_entry_id": hub_entry_id,
+            "device_id": device_id,
+        }
+        if entity is not None and entity.unique_id != new_unique:
+            update_kwargs["new_unique_id"] = new_unique
+        registry.async_update_entity(new_entity_id, **update_kwargs)
         return
 
     if not old_entity_ids:
