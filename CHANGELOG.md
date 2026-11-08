@@ -31,6 +31,17 @@
   stop (with search for providers with large stop lists) or remove a stop. Removing
   a stop also removes its device and entities; the last stop cannot be removed.
 
+### Performance
+- **Offline Leaflet** - the map library and its CSS are now shipped inside the
+  integration and loaded from `/polish_transport/leaflet/` instead of unpkg. The
+  card also loads Leaflet lazily, only when the vehicle map is opened.
+- **Lower memory use** - the parsed GTFS raw zip is released once every stop in
+  the hub has been extracted, tomorrow's small fallback schedule is precomputed,
+  and the kiedyPrzyjeżdża timetable cache is pruned and capped.
+- **Less redundant work** - the merged hub sensor caches its sorted departures
+  between coordinator updates instead of rebuilding the list for every attribute
+  read.
+
 ## [1.7.0] - unreleased
 
 ### Added

@@ -149,6 +149,11 @@ When a departure includes GPS coordinates, clicking the row opens a Leaflet map 
 - **Hub options** — open the hub entry options to change settings, add a stop
   (searchable for large providers) or remove a stop together with its device and
   entities. A hub always keeps at least one stop.
+- **Offline map library** — Leaflet and its CSS ship with the integration and load
+  from `/polish_transport/leaflet/` on demand, without unpkg/CDN access.
+- **Lower memory use** — raw GTFS archives are released after the hub stops are
+  parsed, tomorrow's fallback schedule is precomputed, and long-lived caches are
+  pruned and capped.
 - **Technical domain** — `mzkzg_transport` remains only as the hidden integration
   domain required for in-place upgrades; it is not used in entity or device names.
 - **Card cleanup** — only `custom:polish-transport-card` is registered; the legacy

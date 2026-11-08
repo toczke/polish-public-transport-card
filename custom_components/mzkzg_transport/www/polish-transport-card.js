@@ -254,34 +254,34 @@ var x = class extends HTMLElement {
 x.elementStyles = [], x.shadowRootOptions = { mode: "open" }, x[_("elementProperties")] = /* @__PURE__ */ new Map(), x[_("finalized")] = /* @__PURE__ */ new Map(), te?.({ ReactiveElement: x }), (h.reactiveElementVersions ??= []).push("2.1.2");
 //#endregion
 //#region node_modules/lit-html/lit-html.js
-var S = globalThis, ne = (e) => e, C = S.trustedTypes, re = C ? C.createPolicy("lit-html", { createHTML: (e) => e }) : void 0, ie = "$lit$", w = `lit$${Math.random().toFixed(9).slice(2)}$`, ae = "?" + w, oe = `<${ae}>`, T = document, E = () => T.createComment(""), D = (e) => e === null || typeof e != "object" && typeof e != "function", se = Array.isArray, ce = (e) => se(e) || typeof e?.[Symbol.iterator] == "function", le = "[ 	\n\f\r]", O = /<(?:(!--|\/[^a-zA-Z])|(\/?[a-zA-Z][^>\s]*)|(\/?$))/g, ue = /-->/g, de = />/g, k = RegExp(`>|${le}(?:([^\\s"'>=/]+)(${le}*=${le}*(?:[^ \t\n\f\r"'\`<>=]|("|')|))|$)`, "g"), fe = /'/g, pe = /"/g, me = /^(?:script|style|textarea|title)$/i, he = (e) => (t, ...n) => ({
+var S = globalThis, ne = (e) => e, C = S.trustedTypes, re = C ? C.createPolicy("lit-html", { createHTML: (e) => e }) : void 0, ie = "$lit$", w = `lit$${Math.random().toFixed(9).slice(2)}$`, ae = "?" + w, oe = `<${ae}>`, T = document, E = () => T.createComment(""), D = (e) => e === null || typeof e != "object" && typeof e != "function", O = Array.isArray, se = (e) => O(e) || typeof e?.[Symbol.iterator] == "function", ce = "[ 	\n\f\r]", k = /<(?:(!--|\/[^a-zA-Z])|(\/?[a-zA-Z][^>\s]*)|(\/?$))/g, le = /-->/g, ue = />/g, A = RegExp(`>|${ce}(?:([^\\s"'>=/]+)(${ce}*=${ce}*(?:[^ \t\n\f\r"'\`<>=]|("|')|))|$)`, "g"), de = /'/g, fe = /"/g, pe = /^(?:script|style|textarea|title)$/i, me = (e) => (t, ...n) => ({
 	_$litType$: e,
 	strings: t,
 	values: n
-}), A = he(1), j = he(2), M = Symbol.for("lit-noChange"), N = Symbol.for("lit-nothing"), ge = /* @__PURE__ */ new WeakMap(), P = T.createTreeWalker(T, 129);
-function _e(e, t) {
-	if (!se(e) || !e.hasOwnProperty("raw")) throw Error("invalid template strings array");
+}), j = me(1), M = me(2), N = Symbol.for("lit-noChange"), P = Symbol.for("lit-nothing"), he = /* @__PURE__ */ new WeakMap(), F = T.createTreeWalker(T, 129);
+function ge(e, t) {
+	if (!O(e) || !e.hasOwnProperty("raw")) throw Error("invalid template strings array");
 	return re === void 0 ? t : re.createHTML(t);
 }
-var ve = (e, t) => {
-	let n = e.length - 1, r = [], i, a = t === 2 ? "<svg>" : t === 3 ? "<math>" : "", o = O;
+var _e = (e, t) => {
+	let n = e.length - 1, r = [], i, a = t === 2 ? "<svg>" : t === 3 ? "<math>" : "", o = k;
 	for (let t = 0; t < n; t++) {
 		let n = e[t], s, c, l = -1, u = 0;
-		for (; u < n.length && (o.lastIndex = u, c = o.exec(n), c !== null);) u = o.lastIndex, o === O ? c[1] === "!--" ? o = ue : c[1] === void 0 ? c[2] === void 0 ? c[3] !== void 0 && (o = k) : (me.test(c[2]) && (i = RegExp("</" + c[2], "g")), o = k) : o = de : o === k ? c[0] === ">" ? (o = i ?? O, l = -1) : c[1] === void 0 ? l = -2 : (l = o.lastIndex - c[2].length, s = c[1], o = c[3] === void 0 ? k : c[3] === "\"" ? pe : fe) : o === pe || o === fe ? o = k : o === ue || o === de ? o = O : (o = k, i = void 0);
-		let d = o === k && e[t + 1].startsWith("/>") ? " " : "";
-		a += o === O ? n + oe : l >= 0 ? (r.push(s), n.slice(0, l) + ie + n.slice(l) + w + d) : n + w + (l === -2 ? t : d);
+		for (; u < n.length && (o.lastIndex = u, c = o.exec(n), c !== null);) u = o.lastIndex, o === k ? c[1] === "!--" ? o = le : c[1] === void 0 ? c[2] === void 0 ? c[3] !== void 0 && (o = A) : (pe.test(c[2]) && (i = RegExp("</" + c[2], "g")), o = A) : o = ue : o === A ? c[0] === ">" ? (o = i ?? k, l = -1) : c[1] === void 0 ? l = -2 : (l = o.lastIndex - c[2].length, s = c[1], o = c[3] === void 0 ? A : c[3] === "\"" ? fe : de) : o === fe || o === de ? o = A : o === le || o === ue ? o = k : (o = A, i = void 0);
+		let d = o === A && e[t + 1].startsWith("/>") ? " " : "";
+		a += o === k ? n + oe : l >= 0 ? (r.push(s), n.slice(0, l) + ie + n.slice(l) + w + d) : n + w + (l === -2 ? t : d);
 	}
-	return [_e(e, a + (e[n] || "<?>") + (t === 2 ? "</svg>" : t === 3 ? "</math>" : "")), r];
-}, F = class e {
+	return [ge(e, a + (e[n] || "<?>") + (t === 2 ? "</svg>" : t === 3 ? "</math>" : "")), r];
+}, I = class e {
 	constructor({ strings: t, _$litType$: n }, r) {
 		let i;
 		this.parts = [];
-		let a = 0, o = 0, s = t.length - 1, c = this.parts, [l, u] = ve(t, n);
-		if (this.el = e.createElement(l, r), P.currentNode = this.el.content, n === 2 || n === 3) {
+		let a = 0, o = 0, s = t.length - 1, c = this.parts, [l, u] = _e(t, n);
+		if (this.el = e.createElement(l, r), F.currentNode = this.el.content, n === 2 || n === 3) {
 			let e = this.el.content.firstChild;
 			e.replaceWith(...e.childNodes);
 		}
-		for (; (i = P.nextNode()) !== null && c.length < s;) {
+		for (; (i = F.nextNode()) !== null && c.length < s;) {
 			if (i.nodeType === 1) {
 				if (i.hasAttributes()) for (let e of i.getAttributeNames()) if (e.endsWith(ie)) {
 					let t = u[o++], n = i.getAttribute(e).split(w), r = /([.?@])?(.*)/.exec(t);
@@ -290,17 +290,17 @@ var ve = (e, t) => {
 						index: a,
 						name: r[2],
 						strings: n,
-						ctor: r[1] === "." ? be : r[1] === "?" ? xe : r[1] === "@" ? Se : R
+						ctor: r[1] === "." ? ye : r[1] === "?" ? be : r[1] === "@" ? xe : z
 					}), i.removeAttribute(e);
 				} else e.startsWith(w) && (c.push({
 					type: 6,
 					index: a
 				}), i.removeAttribute(e));
-				if (me.test(i.tagName)) {
+				if (pe.test(i.tagName)) {
 					let e = i.textContent.split(w), t = e.length - 1;
 					if (t > 0) {
 						i.textContent = C ? C.emptyScript : "";
-						for (let n = 0; n < t; n++) i.append(e[n], E()), P.nextNode(), c.push({
+						for (let n = 0; n < t; n++) i.append(e[n], E()), F.nextNode(), c.push({
 							type: 2,
 							index: ++a
 						});
@@ -328,12 +328,12 @@ var ve = (e, t) => {
 		return n.innerHTML = e, n;
 	}
 };
-function I(e, t, n = e, r) {
-	if (t === M) return t;
+function L(e, t, n = e, r) {
+	if (t === N) return t;
 	let i = r === void 0 ? n._$Cl : n._$Co?.[r], a = D(t) ? void 0 : t._$litDirective$;
-	return i?.constructor !== a && (i?._$AO?.(!1), a === void 0 ? i = void 0 : (i = new a(e), i._$AT(e, n, r)), r === void 0 ? n._$Cl = i : (n._$Co ??= [])[r] = i), i !== void 0 && (t = I(e, i._$AS(e, t.values), i, r)), t;
+	return i?.constructor !== a && (i?._$AO?.(!1), a === void 0 ? i = void 0 : (i = new a(e), i._$AT(e, n, r)), r === void 0 ? n._$Cl = i : (n._$Co ??= [])[r] = i), i !== void 0 && (t = L(e, i._$AS(e, t.values), i, r)), t;
 }
-var ye = class {
+var ve = class {
 	constructor(e, t) {
 		this._$AV = [], this._$AN = void 0, this._$AD = e, this._$AM = t;
 	}
@@ -345,27 +345,27 @@ var ye = class {
 	}
 	u(e) {
 		let { el: { content: t }, parts: n } = this._$AD, r = (e?.creationScope ?? T).importNode(t, !0);
-		P.currentNode = r;
-		let i = P.nextNode(), a = 0, o = 0, s = n[0];
+		F.currentNode = r;
+		let i = F.nextNode(), a = 0, o = 0, s = n[0];
 		for (; s !== void 0;) {
 			if (a === s.index) {
 				let t;
-				s.type === 2 ? t = new L(i, i.nextSibling, this, e) : s.type === 1 ? t = new s.ctor(i, s.name, s.strings, this, e) : s.type === 6 && (t = new Ce(i, this, e)), this._$AV.push(t), s = n[++o];
+				s.type === 2 ? t = new R(i, i.nextSibling, this, e) : s.type === 1 ? t = new s.ctor(i, s.name, s.strings, this, e) : s.type === 6 && (t = new Se(i, this, e)), this._$AV.push(t), s = n[++o];
 			}
-			a !== s?.index && (i = P.nextNode(), a++);
+			a !== s?.index && (i = F.nextNode(), a++);
 		}
-		return P.currentNode = T, r;
+		return F.currentNode = T, r;
 	}
 	p(e) {
 		let t = 0;
 		for (let n of this._$AV) n !== void 0 && (n.strings === void 0 ? n._$AI(e[t]) : (n._$AI(e, n, t), t += n.strings.length - 2)), t++;
 	}
-}, L = class e {
+}, R = class e {
 	get _$AU() {
 		return this._$AM?._$AU ?? this._$Cv;
 	}
 	constructor(e, t, n, r) {
-		this.type = 2, this._$AH = N, this._$AN = void 0, this._$AA = e, this._$AB = t, this._$AM = n, this.options = r, this._$Cv = r?.isConnected ?? !0;
+		this.type = 2, this._$AH = P, this._$AN = void 0, this._$AA = e, this._$AB = t, this._$AM = n, this.options = r, this._$Cv = r?.isConnected ?? !0;
 	}
 	get parentNode() {
 		let e = this._$AA.parentNode, t = this._$AM;
@@ -378,7 +378,7 @@ var ye = class {
 		return this._$AB;
 	}
 	_$AI(e, t = this) {
-		e = I(this, e, t), D(e) ? e === N || e == null || e === "" ? (this._$AH !== N && this._$AR(), this._$AH = N) : e !== this._$AH && e !== M && this._(e) : e._$litType$ === void 0 ? e.nodeType === void 0 ? ce(e) ? this.k(e) : this._(e) : this.T(e) : this.$(e);
+		e = L(this, e, t), D(e) ? e === P || e == null || e === "" ? (this._$AH !== P && this._$AR(), this._$AH = P) : e !== this._$AH && e !== N && this._(e) : e._$litType$ === void 0 ? e.nodeType === void 0 ? se(e) ? this.k(e) : this._(e) : this.T(e) : this.$(e);
 	}
 	O(e) {
 		return this._$AA.parentNode.insertBefore(e, this._$AB);
@@ -387,22 +387,22 @@ var ye = class {
 		this._$AH !== e && (this._$AR(), this._$AH = this.O(e));
 	}
 	_(e) {
-		this._$AH !== N && D(this._$AH) ? this._$AA.nextSibling.data = e : this.T(T.createTextNode(e)), this._$AH = e;
+		this._$AH !== P && D(this._$AH) ? this._$AA.nextSibling.data = e : this.T(T.createTextNode(e)), this._$AH = e;
 	}
 	$(e) {
-		let { values: t, _$litType$: n } = e, r = typeof n == "number" ? this._$AC(e) : (n.el === void 0 && (n.el = F.createElement(_e(n.h, n.h[0]), this.options)), n);
+		let { values: t, _$litType$: n } = e, r = typeof n == "number" ? this._$AC(e) : (n.el === void 0 && (n.el = I.createElement(ge(n.h, n.h[0]), this.options)), n);
 		if (this._$AH?._$AD === r) this._$AH.p(t);
 		else {
-			let e = new ye(r, this), n = e.u(this.options);
+			let e = new ve(r, this), n = e.u(this.options);
 			e.p(t), this.T(n), this._$AH = e;
 		}
 	}
 	_$AC(e) {
-		let t = ge.get(e.strings);
-		return t === void 0 && ge.set(e.strings, t = new F(e)), t;
+		let t = he.get(e.strings);
+		return t === void 0 && he.set(e.strings, t = new I(e)), t;
 	}
 	k(t) {
-		se(this._$AH) || (this._$AH = [], this._$AR());
+		O(this._$AH) || (this._$AH = [], this._$AR());
 		let n = this._$AH, r, i = 0;
 		for (let a of t) i === n.length ? n.push(r = new e(this.O(E()), this.O(E()), this, this.options)) : r = n[i], r._$AI(a), i++;
 		i < n.length && (this._$AR(r && r._$AB.nextSibling, i), n.length = i);
@@ -416,7 +416,7 @@ var ye = class {
 	setConnected(e) {
 		this._$AM === void 0 && (this._$Cv = e, this._$AP?.(e));
 	}
-}, R = class {
+}, z = class {
 	get tagName() {
 		return this.element.tagName;
 	}
@@ -424,47 +424,47 @@ var ye = class {
 		return this._$AM._$AU;
 	}
 	constructor(e, t, n, r, i) {
-		this.type = 1, this._$AH = N, this._$AN = void 0, this.element = e, this.name = t, this._$AM = r, this.options = i, n.length > 2 || n[0] !== "" || n[1] !== "" ? (this._$AH = Array(n.length - 1).fill(/* @__PURE__ */ new String()), this.strings = n) : this._$AH = N;
+		this.type = 1, this._$AH = P, this._$AN = void 0, this.element = e, this.name = t, this._$AM = r, this.options = i, n.length > 2 || n[0] !== "" || n[1] !== "" ? (this._$AH = Array(n.length - 1).fill(/* @__PURE__ */ new String()), this.strings = n) : this._$AH = P;
 	}
 	_$AI(e, t = this, n, r) {
 		let i = this.strings, a = !1;
-		if (i === void 0) e = I(this, e, t, 0), a = !D(e) || e !== this._$AH && e !== M, a && (this._$AH = e);
+		if (i === void 0) e = L(this, e, t, 0), a = !D(e) || e !== this._$AH && e !== N, a && (this._$AH = e);
 		else {
 			let r = e, o, s;
-			for (e = i[0], o = 0; o < i.length - 1; o++) s = I(this, r[n + o], t, o), s === M && (s = this._$AH[o]), a ||= !D(s) || s !== this._$AH[o], s === N ? e = N : e !== N && (e += (s ?? "") + i[o + 1]), this._$AH[o] = s;
+			for (e = i[0], o = 0; o < i.length - 1; o++) s = L(this, r[n + o], t, o), s === N && (s = this._$AH[o]), a ||= !D(s) || s !== this._$AH[o], s === P ? e = P : e !== P && (e += (s ?? "") + i[o + 1]), this._$AH[o] = s;
 		}
 		a && !r && this.j(e);
 	}
 	j(e) {
-		e === N ? this.element.removeAttribute(this.name) : this.element.setAttribute(this.name, e ?? "");
+		e === P ? this.element.removeAttribute(this.name) : this.element.setAttribute(this.name, e ?? "");
 	}
-}, be = class extends R {
+}, ye = class extends z {
 	constructor() {
 		super(...arguments), this.type = 3;
 	}
 	j(e) {
-		this.element[this.name] = e === N ? void 0 : e;
+		this.element[this.name] = e === P ? void 0 : e;
 	}
-}, xe = class extends R {
+}, be = class extends z {
 	constructor() {
 		super(...arguments), this.type = 4;
 	}
 	j(e) {
-		this.element.toggleAttribute(this.name, !!e && e !== N);
+		this.element.toggleAttribute(this.name, !!e && e !== P);
 	}
-}, Se = class extends R {
+}, xe = class extends z {
 	constructor(e, t, n, r, i) {
 		super(e, t, n, r, i), this.type = 5;
 	}
 	_$AI(e, t = this) {
-		if ((e = I(this, e, t, 0) ?? N) === M) return;
-		let n = this._$AH, r = e === N && n !== N || e.capture !== n.capture || e.once !== n.once || e.passive !== n.passive, i = e !== N && (n === N || r);
+		if ((e = L(this, e, t, 0) ?? P) === N) return;
+		let n = this._$AH, r = e === P && n !== P || e.capture !== n.capture || e.once !== n.once || e.passive !== n.passive, i = e !== P && (n === P || r);
 		r && this.element.removeEventListener(this.name, this, n), i && this.element.addEventListener(this.name, this, e), this._$AH = e;
 	}
 	handleEvent(e) {
 		typeof this._$AH == "function" ? this._$AH.call(this.options?.host ?? this.element, e) : this._$AH.handleEvent(e);
 	}
-}, Ce = class {
+}, Se = class {
 	constructor(e, t, n) {
 		this.element = e, this.type = 6, this._$AN = void 0, this._$AM = t, this.options = n;
 	}
@@ -472,18 +472,18 @@ var ye = class {
 		return this._$AM._$AU;
 	}
 	_$AI(e) {
-		I(this, e);
+		L(this, e);
 	}
-}, we = S.litHtmlPolyfillSupport;
-we?.(F, L), (S.litHtmlVersions ??= []).push("3.3.3");
-var Te = (e, t, n) => {
+}, Ce = S.litHtmlPolyfillSupport;
+Ce?.(I, R), (S.litHtmlVersions ??= []).push("3.3.3");
+var we = (e, t, n) => {
 	let r = n?.renderBefore ?? t, i = r._$litPart$;
 	if (i === void 0) {
 		let e = n?.renderBefore ?? null;
-		r._$litPart$ = i = new L(t.insertBefore(E(), e), e, void 0, n ?? {});
+		r._$litPart$ = i = new R(t.insertBefore(E(), e), e, void 0, n ?? {});
 	}
 	return i._$AI(e), i;
-}, z = globalThis, B = class extends x {
+}, B = globalThis, V = class extends x {
 	constructor() {
 		super(...arguments), this.renderOptions = { host: this }, this._$Do = void 0;
 	}
@@ -493,7 +493,7 @@ var Te = (e, t, n) => {
 	}
 	update(e) {
 		let t = this.render();
-		this.hasUpdated || (this.renderOptions.isConnected = this.isConnected), super.update(e), this._$Do = Te(t, this.renderRoot, this.renderOptions);
+		this.hasUpdated || (this.renderOptions.isConnected = this.isConnected), super.update(e), this._$Do = we(t, this.renderRoot, this.renderOptions);
 	}
 	connectedCallback() {
 		super.connectedCallback(), this._$Do?.setConnected(!0);
@@ -502,15 +502,15 @@ var Te = (e, t, n) => {
 		super.disconnectedCallback(), this._$Do?.setConnected(!1);
 	}
 	render() {
-		return M;
+		return N;
 	}
 };
-B._$litElement$ = !0, B.finalized = !0, z.litElementHydrateSupport?.({ LitElement: B });
-var Ee = z.litElementPolyfillSupport;
-Ee?.({ LitElement: B }), (z.litElementVersions ??= []).push("4.2.2");
+V._$litElement$ = !0, V.finalized = !0, B.litElementHydrateSupport?.({ LitElement: V });
+var Te = B.litElementPolyfillSupport;
+Te?.({ LitElement: V }), (B.litElementVersions ??= []).push("4.2.2");
 //#endregion
 //#region src/utils.js
-var De = "2.0.0", V = {
+var Ee = "2.0.0", H = {
 	pl: {
 		no_entities: "Dodaj encje sensorów w konfiguracji",
 		no_departures: "Brak nadchodzących odjazdów",
@@ -584,10 +584,10 @@ var De = "2.0.0", V = {
 		editor_advanced: "Advanced"
 	}
 };
-function H(e) {
-	return (V[(document.documentElement.lang || navigator.language || "pl").slice(0, 2)] || V.pl)[e] || V.pl[e] || e;
-}
 function U(e) {
+	return (H[(document.documentElement.lang || navigator.language || "pl").slice(0, 2)] || H.pl)[e] || H.pl[e] || e;
+}
+function W(e) {
 	return String(e ?? "").replace(/[&<>"']/g, (e) => ({
 		"&": "&amp;",
 		"<": "&lt;",
@@ -596,12 +596,12 @@ function U(e) {
 		"'": "&#39;"
 	})[e]);
 }
-function W(e, t) {
+function G(e, t) {
 	if (e == null || t == null || e === "" || t === "") return null;
 	let n = Number(e), r = Number(t);
 	return !Number.isFinite(n) || !Number.isFinite(r) || n < -90 || n > 90 || r < -180 || r > 180 ? null : [n, r];
 }
-function Oe(e) {
+function K(e) {
 	if (!e) return null;
 	let t;
 	if (/^\d{1,2}:\d{2}/.test(e)) {
@@ -610,13 +610,13 @@ function Oe(e) {
 	} else t = new Date(e);
 	return isNaN(t.getTime()) ? null : Math.round((t - Date.now()) / 6e4);
 }
-function G(e, t = null) {
+function q(e, t = null) {
 	return e ? /^\d{1,2}:\d{2}/.test(e) ? e.slice(0, 5) : new Date(e).toLocaleTimeString(t || document.documentElement.lang || "pl-PL", {
 		hour: "2-digit",
 		minute: "2-digit"
 	}) : "—";
 }
-function ke(e) {
+function De(e) {
 	if (e === null || e < 0) return "";
 	if (e === 0) return "&lt;1 min";
 	if (e >= 60) {
@@ -625,7 +625,7 @@ function ke(e) {
 	}
 	return `${e} min`;
 }
-function K(e, t, n = null) {
+function J(e, t, n = null) {
 	if (n) return n;
 	let r = String(e || "");
 	if (/^[Nn]/.test(r)) return "#1e293b";
@@ -680,30 +680,30 @@ function K(e, t, n = null) {
 		let e = parseInt(r, 10);
 		return !isNaN(e) && e <= 20 ? "#ad1457" : "#c62828";
 	}
-	return Ne[t] ? Ne[t] : "#005eb8";
+	return je[t] ? je[t] : "#005eb8";
 }
-function q(e) {
+function Y(e) {
 	return Array.isArray(e) ? e.map((e) => String(e).trim()).filter(Boolean) : e == null ? [] : String(e).split(",").map((e) => e.trim()).filter(Boolean);
 }
-function Ae(e) {
+function Oe(e) {
 	if (typeof e == "string") return { entity: e };
 	if (!e || typeof e != "object" || typeof e.entity != "string") return null;
 	let t = { entity: e.entity };
-	return "filter_routes" in e && (t.filter_routes = q(e.filter_routes)), "exclude_routes" in e && (t.exclude_routes = q(e.exclude_routes)), "max_departures" in e && (t.max_departures = Math.max(1, Math.min(100, parseInt(e.max_departures) || 0)) || null), "destination_filter" in e && (t.destination_filter = q(e.destination_filter)), "exclude_destinations" in e && (t.exclude_destinations = q(e.exclude_destinations)), "filter_vehicle_types" in e && (t.filter_vehicle_types = q(e.filter_vehicle_types).map((e) => e.toLowerCase())), "filter_providers" in e && (t.filter_providers = q(e.filter_providers)), "filter_platform" in e && (t.filter_platform = e.filter_platform == null ? "" : String(e.filter_platform)), "filter_track" in e && (t.filter_track = e.filter_track == null ? "" : String(e.filter_track)), "realtime_only" in e && (t.realtime_only = e.realtime_only === !0), "hide_terminus" in e && (t.hide_terminus = e.hide_terminus === !0), "hide_cancelled" in e && (t.hide_cancelled = e.hide_cancelled === !0), "max_minutes" in e && (t.max_minutes = Math.max(0, Math.min(1440, parseInt(e.max_minutes) || 0))), "hide_departed" in e && (t.hide_departed = e.hide_departed === !0), "departed_grace_minutes" in e && (t.departed_grace_minutes = Math.max(0, Math.min(60, parseInt(e.departed_grace_minutes) || 0))), "only_low_floor" in e && (t.only_low_floor = e.only_low_floor === !0), "only_bike" in e && (t.only_bike = e.only_bike === !0), "only_ac" in e && (t.only_ac = e.only_ac === !0), "only_ticket_machine" in e && (t.only_ticket_machine = e.only_ticket_machine === !0), "highlight_mode" in e && (t.highlight_mode = e.highlight_mode === !0), t;
+	return "filter_routes" in e && (t.filter_routes = Y(e.filter_routes)), "exclude_routes" in e && (t.exclude_routes = Y(e.exclude_routes)), "max_departures" in e && (t.max_departures = Math.max(1, Math.min(100, parseInt(e.max_departures) || 0)) || null), "destination_filter" in e && (t.destination_filter = Y(e.destination_filter)), "exclude_destinations" in e && (t.exclude_destinations = Y(e.exclude_destinations)), "filter_vehicle_types" in e && (t.filter_vehicle_types = Y(e.filter_vehicle_types).map((e) => e.toLowerCase())), "filter_providers" in e && (t.filter_providers = Y(e.filter_providers)), "filter_platform" in e && (t.filter_platform = e.filter_platform == null ? "" : String(e.filter_platform)), "filter_track" in e && (t.filter_track = e.filter_track == null ? "" : String(e.filter_track)), "realtime_only" in e && (t.realtime_only = e.realtime_only === !0), "hide_terminus" in e && (t.hide_terminus = e.hide_terminus === !0), "hide_cancelled" in e && (t.hide_cancelled = e.hide_cancelled === !0), "max_minutes" in e && (t.max_minutes = Math.max(0, Math.min(1440, parseInt(e.max_minutes) || 0))), "hide_departed" in e && (t.hide_departed = e.hide_departed === !0), "departed_grace_minutes" in e && (t.departed_grace_minutes = Math.max(0, Math.min(60, parseInt(e.departed_grace_minutes) || 0))), "only_low_floor" in e && (t.only_low_floor = e.only_low_floor === !0), "only_bike" in e && (t.only_bike = e.only_bike === !0), "only_ac" in e && (t.only_ac = e.only_ac === !0), "only_ticket_machine" in e && (t.only_ticket_machine = e.only_ticket_machine === !0), "highlight_mode" in e && (t.highlight_mode = e.highlight_mode === !0), t;
 }
-function J(e, t = "none") {
+function X(e, t = "none") {
 	if (!e || typeof e != "object") return { action: t };
 	let n = { action: String(e.action || t).toLowerCase() };
 	return e.navigation_path && (n.navigation_path = String(e.navigation_path)), e.url_path && (n.url_path = String(e.url_path)), e.perform_action && (n.perform_action = String(e.perform_action)), e.service && (n.service = String(e.service)), e.data && typeof e.data == "object" && (n.data = e.data), e.target && typeof e.target == "object" && (n.target = e.target), n;
 }
-function je(e, t, n = {}) {
+function ke(e, t, n = {}) {
 	e.dispatchEvent(new CustomEvent(t, {
 		detail: n,
 		bubbles: !0,
 		composed: !0
 	}));
 }
-var Me = {
+var Ae = {
 	kiedyprzyjedzie_pks_gdansk: "#475569",
 	kiedyprzyjedzie_albatros: "#166534",
 	kiedyprzyjedzie_gryf: "#2f2f2f",
@@ -740,7 +740,7 @@ var Me = {
 	gtfs_rzeszow: "#4338ca",
 	gtfs_leszno: "#0f766e",
 	mpk_lodz: "#e11d48"
-}, Ne = {
+}, je = {
 	kiedyprzyjedzie_pks_gdansk: "#0f766e",
 	kiedyprzyjedzie_albatros: "#22c55e",
 	kiedyprzyjedzie_gryf: "#facc15",
@@ -777,7 +777,7 @@ var Me = {
 	gtfs_rzeszow: "#8b5cf6",
 	gtfs_leszno: "#14b8a6",
 	mpk_lodz: "#fb7185"
-}, Pe = {
+}, Me = {
 	ztm_gdansk: "ZTM Gdańsk",
 	zkm_gdynia: "ZKM Gdynia",
 	mzk_wejherowo: "MZK Wejherowo",
@@ -841,18 +841,18 @@ var Me = {
 	zbiorkom_krakow: "ZTP Kraków",
 	mpk_lodz: "MPK Łódź"
 };
-function Fe(e) {
-	return Pe[e] || String(e || "").replaceAll("_", " ");
+function Ne(e) {
+	return Me[e] || String(e || "").replaceAll("_", " ");
 }
 //#endregion
 //#region src/editor.js
-var Y = (e) => ({ select: { options: e } }), Ie = (e) => ({ select: {
+var Z = (e) => ({ select: { options: e } }), Pe = (e) => ({ select: {
 	multiple: !0,
 	options: e
-} }), Le = Object.entries(Pe).map(([e, t]) => ({
+} }), Fe = Object.entries(Me).map(([e, t]) => ({
 	value: e,
 	label: t
-})).sort((e, t) => e.label.localeCompare(t.label, "pl")), Re = [
+})).sort((e, t) => e.label.localeCompare(t.label, "pl")), Ie = [
 	{
 		name: "entities",
 		selector: { entity: {
@@ -877,7 +877,7 @@ var Y = (e) => ({ select: { options: e } }), Ie = (e) => ({ select: {
 		schema: [
 			{
 				name: "display_preset",
-				selector: Y([
+				selector: Z([
 					{
 						value: "standard",
 						label: "preset_standard"
@@ -902,7 +902,7 @@ var Y = (e) => ({ select: { options: e } }), Ie = (e) => ({ select: {
 			},
 			{
 				name: "view_mode",
-				selector: Y([
+				selector: Z([
 					{
 						value: "mixed",
 						label: "view_mixed"
@@ -933,7 +933,7 @@ var Y = (e) => ({ select: { options: e } }), Ie = (e) => ({ select: {
 		schema: [
 			{
 				name: "header_style",
-				selector: Y([
+				selector: Z([
 					{
 						value: "provider",
 						label: "header_provider"
@@ -997,7 +997,7 @@ var Y = (e) => ({ select: { options: e } }), Ie = (e) => ({ select: {
 			},
 			{
 				name: "time_format",
-				selector: Y([
+				selector: Z([
 					{
 						value: "auto",
 						label: "time_auto"
@@ -1094,7 +1094,7 @@ var Y = (e) => ({ select: { options: e } }), Ie = (e) => ({ select: {
 			},
 			{
 				name: "filter_providers",
-				selector: Ie(Le)
+				selector: Pe(Fe)
 			},
 			{
 				name: "filter_platform",
@@ -1178,7 +1178,7 @@ var Y = (e) => ({ select: { options: e } }), Ie = (e) => ({ select: {
 			}
 		]
 	}
-], ze = [{
+], Le = [{
 	type: "grid",
 	name: "",
 	schema: [{
@@ -1215,7 +1215,7 @@ var Y = (e) => ({ select: { options: e } }), Ie = (e) => ({ select: {
 		},
 		{
 			name: "filter_providers",
-			selector: Ie(Le)
+			selector: Pe(Fe)
 		},
 		{
 			name: "filter_platform",
@@ -1280,14 +1280,14 @@ var Y = (e) => ({ select: { options: e } }), Ie = (e) => ({ select: {
 			selector: { boolean: {} }
 		}
 	]
-}], Be = /* @__PURE__ */ new Set([
+}], Re = /* @__PURE__ */ new Set([
 	"filter_routes",
 	"exclude_routes",
 	"destination_filter",
 	"exclude_destinations",
 	"filter_vehicle_types",
 	"filter_providers"
-]), Ve = class extends B {
+]), ze = class extends V {
 	static get properties() {
 		return {
 			hass: { type: Object },
@@ -1408,7 +1408,7 @@ var Y = (e) => ({ select: { options: e } }), Ie = (e) => ({ select: {
 		if (!this._config || !this.hass) return;
 		let t = { ...e.detail.value };
 		Array.isArray(t.entities) && (t.entities = this._mergeEntitySelection(t.entities));
-		for (let e of Be) e in t && (t[e] = q(t[e]));
+		for (let e of Re) e in t && (t[e] = Y(t[e]));
 		this._config = {
 			...this._config,
 			...t
@@ -1454,7 +1454,7 @@ var Y = (e) => ({ select: { options: e } }), Ie = (e) => ({ select: {
 	_overrideChanged(e) {
 		if (!this._config || !this._targetEntity) return;
 		let t = { ...e.detail.value };
-		for (let e of Be) e in t && (t[e] = q(t[e]));
+		for (let e of Re) e in t && (t[e] = Y(t[e]));
 		let n = this._entries().map((e) => {
 			if (e.entity !== this._targetEntity) return e;
 			let n = {
@@ -1462,7 +1462,7 @@ var Y = (e) => ({ select: { options: e } }), Ie = (e) => ({ select: {
 				...t,
 				entity: e.entity
 			};
-			return Object.keys(n).length > 1 ? Ae(n) : e.entity;
+			return Object.keys(n).length > 1 ? Oe(n) : e.entity;
 		});
 		this._config = {
 			...this._config,
@@ -1477,18 +1477,18 @@ var Y = (e) => ({ select: { options: e } }), Ie = (e) => ({ select: {
 		}));
 	}
 	render() {
-		if (!this.hass || !this._config) return N;
-		let e = this._entries(), t = this._validation(), n = this._preview(), r = this._localizeSchema(Re), i = this._localizeSchema(ze), a = e.findIndex((e) => e.entity === this._targetEntity);
-		return A`
+		if (!this.hass || !this._config) return P;
+		let e = this._entries(), t = this._validation(), n = this._preview(), r = this._localizeSchema(Ie), i = this._localizeSchema(Le), a = e.findIndex((e) => e.entity === this._targetEntity);
+		return j`
       <div class="editor">
-        ${t.length ? A`
+        ${t.length ? j`
           <div class="validation">
-            <ul>${t.map((e) => A`<li>${e}</li>`)}</ul>
+            <ul>${t.map((e) => j`<li>${e}</li>`)}</ul>
           </div>
-        ` : N}
-        ${n ? A`
+        ` : P}
+        ${n ? j`
           <div class="preview">${this._label("preview_rows")}: <strong>${n.filtered ?? "—"}</strong> / ${n.total}</div>
-        ` : N}
+        ` : P}
         <ha-form
           .hass=${this.hass}
           .data=${this._formData()}
@@ -1496,12 +1496,12 @@ var Y = (e) => ({ select: { options: e } }), Ie = (e) => ({ select: {
           .computeLabel=${(e) => this._computeLabel(e)}
           @value-changed=${this._valueChanged}
         ></ha-form>
-        ${e.length ? A`
+        ${e.length ? j`
           <div class="override">
             <div class="override-title">${this._label("override_title")}</div>
             <div class="override-label">${this._label("override_hint")}</div>
             <select @change=${this._targetChanged} .value=${this._targetEntity}>
-              ${e.map((e) => A`<option value=${e.entity} ?selected=${e.entity === this._targetEntity}>${this._entryLabel(e)}</option>`)}
+              ${e.map((e) => j`<option value=${e.entity} ?selected=${e.entity === this._targetEntity}>${this._entryLabel(e)}</option>`)}
             </select>
             <div class="override-actions">
               <button ?disabled=${a <= 0} @click=${() => this._moveEntry(-1)}>↑ ${this._label("move_up")}</button>
@@ -1516,7 +1516,7 @@ var Y = (e) => ({ select: { options: e } }), Ie = (e) => ({ select: {
               @value-changed=${this._overrideChanged}
             ></ha-form>
           </div>
-        ` : N}
+        ` : P}
       </div>
     `;
 	}
@@ -1677,20 +1677,20 @@ var Y = (e) => ({ select: { options: e } }), Ie = (e) => ({ select: {
 		})[e] || e;
 	}
 };
-customElements.define("polish-transport-card-editor", Ve);
+customElements.define("polish-transport-card-editor", ze);
 //#endregion
 //#region node_modules/lit-html/directive.js
-var He = {
+var Be = {
 	ATTRIBUTE: 1,
 	CHILD: 2,
 	PROPERTY: 3,
 	BOOLEAN_ATTRIBUTE: 4,
 	EVENT: 5,
 	ELEMENT: 6
-}, Ue = (e) => (...t) => ({
+}, Ve = (e) => (...t) => ({
 	_$litDirective$: e,
 	values: t
-}), We = class {
+}), He = class {
 	constructor(e) {}
 	get _$AU() {
 		return this._$AM._$AU;
@@ -1704,13 +1704,13 @@ var He = {
 	update(e, t) {
 		return this.render(...t);
 	}
-}, X = class extends We {
+}, Ue = class extends He {
 	constructor(e) {
-		if (super(e), this.it = N, e.type !== He.CHILD) throw Error(this.constructor.directiveName + "() can only be used in child bindings");
+		if (super(e), this.it = P, e.type !== Be.CHILD) throw Error(this.constructor.directiveName + "() can only be used in child bindings");
 	}
 	render(e) {
-		if (e === N || e == null) return this._t = void 0, this.it = e;
-		if (e === M) return e;
+		if (e === P || e == null) return this._t = void 0, this.it = e;
+		if (e === N) return e;
 		if (typeof e != "string") throw Error(this.constructor.directiveName + "() called with a non-string value");
 		if (e === this.it) return this._t;
 		this.it = e;
@@ -1722,8 +1722,8 @@ var He = {
 		};
 	}
 };
-X.directiveName = "unsafeHTML", X.resultType = 1;
-var Ge = Ue(X), Ke = o`
+Ue.directiveName = "unsafeHTML", Ue.resultType = 1;
+var We = Ve(Ue), Ge = o`
 :host {
   display: block;
   --ptc-bg: var(--card-background-color, #fff);
@@ -2005,7 +2005,14 @@ ha-card.compact .footer { padding: 5px 12px; }
 /* Container query setup */
 :host { container-type: inline-size; }
 ha-card { container-type: inline-size; }
-`, Z = null, Q = null, qe = class {
+`;
+//#endregion
+//#region src/map.js
+function Ke(e) {
+	let t = [...document.querySelectorAll("script[src*=\"polish-transport-card.js\"]")].pop();
+	return `${t?.src ? new URL("leaflet/", t.src).href : "/polish_transport/leaflet/"}${e}`;
+}
+var Q = null, qe = null, Je = class {
 	constructor(e) {
 		this.card = e;
 	}
@@ -2013,31 +2020,34 @@ ha-card { container-type: inline-size; }
 		this.mapCtx && this.mapCtx.destroy();
 	}
 	ensureLeafletCss() {
-		return Q || (Q = new Promise((e) => {
+		return qe || (qe = new Promise((e) => {
 			let t = document.getElementById("polish-transport-leaflet-css");
 			if (t) {
-				if (t.sheet) {
-					e();
+				if (t.href.includes("/leaflet/leaflet.css")) {
+					if (t.sheet) {
+						e();
+						return;
+					}
+					t.addEventListener("load", () => e(), { once: !0 }), t.addEventListener("error", () => e(), { once: !0 });
 					return;
 				}
-				t.addEventListener("load", () => e(), { once: !0 }), t.addEventListener("error", () => e(), { once: !0 });
-				return;
+				t.remove();
 			}
 			let n = document.createElement("link");
-			n.id = "polish-transport-leaflet-css", n.rel = "stylesheet", n.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css", n.addEventListener("load", () => e(), { once: !0 }), n.addEventListener("error", () => e(), { once: !0 }), document.head.appendChild(n);
-		}), Q);
+			n.id = "polish-transport-leaflet-css", n.rel = "stylesheet", n.href = Ke("leaflet.css"), n.addEventListener("load", () => e(), { once: !0 }), n.addEventListener("error", () => e(), { once: !0 }), document.head.appendChild(n);
+		}), qe);
 	}
 	preloadLeaflet() {
-		return Z || (Z = this.ensureLeafletCss().then(() => window.L ? window.L : new Promise((e, t) => {
+		return this.ensureLeafletCss(), window.L ? (Q = Promise.resolve(window.L), Q) : Q || (Q = new Promise((e, t) => {
 			let n = document.getElementById("polish-transport-leaflet-js");
-			n || (n = document.createElement("script"), n.id = "polish-transport-leaflet-js", n.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js", document.head.appendChild(n));
+			n && !n.src.includes("/leaflet/leaflet.js") && (n.remove(), n = null), n || (n = document.createElement("script"), n.id = "polish-transport-leaflet-js", n.src = Ke("leaflet.js"), document.head.appendChild(n));
 			let r = () => {
 				n.removeEventListener("error", i), e(window.L);
 			}, i = () => {
-				n.removeEventListener("load", r), n.remove(), Z = null, t(/* @__PURE__ */ Error("Failed to load Leaflet"));
+				n.removeEventListener("load", r), n.remove(), Q = null, t(/* @__PURE__ */ Error("Failed to load Leaflet"));
 			};
 			n.addEventListener("load", r, { once: !0 }), n.addEventListener("error", i, { once: !0 });
-		})), Z);
+		}), Q);
 	}
 	buildVehicleMarker(e, t, n, r, i, a) {
 		let o = a ? 32 : 40, s = a ? 11 : 13, c = o + 10, l = c / 2, u = o / 2 - 2;
@@ -2047,19 +2057,19 @@ ha-card { container-type: inline-size; }
         <path d="M${l},${l - (u + 5)} L${l - 6},${l - u + 2} L${l + 6},${l - u + 2} Z" fill="${t}" stroke="#fff" stroke-width="1.5" stroke-linejoin="round"/>
       </g>
       <circle cx="${l}" cy="${l}" r="${u}" fill="${t}" stroke="#fff" stroke-width="2"/>
-      <text x="${l}" y="${l}" text-anchor="middle" dominant-baseline="central" font-weight="700" font-size="${s}" fill="#fff" font-family="system-ui,sans-serif">${U(n)}</text>
+      <text x="${l}" y="${l}" text-anchor="middle" dominant-baseline="central" font-weight="700" font-size="${s}" fill="#fff" font-family="system-ui,sans-serif">${W(n)}</text>
     </svg>`,
 			size: c
 		};
 	}
 	buildPopupContent(e) {
-		let t = Math.round((e.delay_seconds || 0) / 60), n = t > 0 ? `+${t} min` : t < 0 ? `${t} min` : H("on_time"), r = t > 0 ? "zm-popup-delay" : t < 0 ? "zm-popup-delay early" : "zm-popup-delay ontime";
-		return `<div class="zm-popup"><div class="zm-popup-route">${U(e.route)}</div>${e.headsign ? `<div class="zm-popup-headsign">→ ${U(e.headsign)}</div>` : ""}${e.vehicle_code ? `<div class="zm-popup-meta">#${U(e.vehicle_code)}</div>` : ""}<div class="zm-popup-delay-row"><span class="${r}">${U(n)}</span></div></div>`;
+		let t = Math.round((e.delay_seconds || 0) / 60), n = t > 0 ? `+${t} min` : t < 0 ? `${t} min` : U("on_time"), r = t > 0 ? "zm-popup-delay" : t < 0 ? "zm-popup-delay early" : "zm-popup-delay ontime";
+		return `<div class="zm-popup"><div class="zm-popup-route">${W(e.route)}</div>${e.headsign ? `<div class="zm-popup-headsign">→ ${W(e.headsign)}</div>` : ""}${e.vehicle_code ? `<div class="zm-popup-meta">#${W(e.vehicle_code)}</div>` : ""}<div class="zm-popup-delay-row"><span class="${r}">${W(n)}</span></div></div>`;
 	}
 	showVehicleMap(e, t, n) {
 		this.mapCtx && this.mapCtx.destroy();
 		let r = window.innerWidth < 480, i = Math.min(window.innerWidth * .92, 520), a = Math.min(window.innerHeight * .65, 420), o = this._isDarkTheme(), s = document.createElement("div");
-		o && s.classList.add("zm-dark"), s.setAttribute("role", "dialog"), s.setAttribute("aria-modal", "true"), s.setAttribute("aria-label", `${H("map_title")}: ${n.route || ""} ${n.headsign || ""}`.trim()), s.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:100000;display:flex;align-items:center;justify-content:center;", s.innerHTML = `<div style="position:relative;width:${i}px;height:${a}px;background:${o ? "#1c1c1e" : "#fff"};border-radius:12px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.3);"><button aria-label="${U(H("close"))}" style="position:absolute;top:8px;right:8px;z-index:1001;background:rgba(0,0,0,0.6);border:none;border-radius:50%;width:32px;height:32px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;color:#fff;">✕</button><div id="vmap" style="width:${i}px;height:${a}px;background:${o ? "#1c1c1e" : "#fff"};"></div><div id="vmap-status" class="zm-map-status">${U(H("map_refresh"))}</div></div>`;
+		o && s.classList.add("zm-dark"), s.setAttribute("role", "dialog"), s.setAttribute("aria-modal", "true"), s.setAttribute("aria-label", `${U("map_title")}: ${n.route || ""} ${n.headsign || ""}`.trim()), s.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:100000;display:flex;align-items:center;justify-content:center;", s.innerHTML = `<div style="position:relative;width:${i}px;height:${a}px;background:${o ? "#1c1c1e" : "#fff"};border-radius:12px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.3);"><button aria-label="${W(U("close"))}" style="position:absolute;top:8px;right:8px;z-index:1001;background:rgba(0,0,0,0.6);border:none;border-radius:50%;width:32px;height:32px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;color:#fff;">✕</button><div id="vmap" style="width:${i}px;height:${a}px;background:${o ? "#1c1c1e" : "#fff"};"></div><div id="vmap-status" class="zm-map-status">${W(U("map_refresh"))}</div></div>`;
 		let c = document.activeElement;
 		document.body.appendChild(s);
 		let l = () => {
@@ -2099,7 +2109,7 @@ ha-card { container-type: inline-size; }
 			let n = t[0], r = t[t.length - 1];
 			e.shiftKey && document.activeElement === n ? (e.preventDefault(), r.focus()) : !e.shiftKey && document.activeElement === r && (e.preventDefault(), n.focus());
 		}, document.addEventListener("keydown", f.onKeyDown);
-		let p = K(n.route, n.provider || "", n.route_color);
+		let p = J(n.route, n.provider || "", n.route_color);
 		this.preloadLeaflet().then(() => {
 			requestAnimationFrame(() => {
 				if (f.destroyed) return;
@@ -2118,7 +2128,7 @@ ha-card { container-type: inline-size; }
 					let e = `https://ckan2.multimediagdansk.pl/shapes?date=${(/* @__PURE__ */ new Date()).toISOString().split("T")[0]}&routeId=${n.route_id_int}&tripId=${n.trip_id}`;
 					fetch(e).then((e) => e.json()).then((e) => {
 						if (!(f.destroyed || !f.map) && e && e.coordinates && Array.isArray(e.coordinates)) {
-							let t = e.coordinates.map((e) => [e[1], e[0]]), r = K(n.route, n.provider) || "#e53935";
+							let t = e.coordinates.map((e) => [e[1], e[0]]), r = J(n.route, n.provider) || "#e53935";
 							window.L.polyline(t, {
 								color: r,
 								weight: 4,
@@ -2172,7 +2182,7 @@ ha-card { container-type: inline-size; }
 		return [e[0] + Math.sin(i) * a, e[1] + Math.cos(i) * a];
 	}
 	_createVehicleMarker(e, t, n, r) {
-		let i = !!(t.vehicle_code && t.vehicle_code === e.vehicleCode), a = K(t.route, t._provider || t.provider || "", t.route_color), o = t.vehicle_direction || t.direction || 0, s = this.buildVehicleMarker(o, a, t.route || "?", t.vehicle_type || "bus", t, r), c = `<div class="zm-arrow" style="opacity:${i ? 1 : .72}">${s.svg}</div>`, l = window.L.divIcon({
+		let i = !!(t.vehicle_code && t.vehicle_code === e.vehicleCode), a = J(t.route, t._provider || t.provider || "", t.route_color), o = t.vehicle_direction || t.direction || 0, s = this.buildVehicleMarker(o, a, t.route || "?", t.vehicle_type || "bus", t, r), c = `<div class="zm-arrow" style="opacity:${i ? 1 : .72}">${s.svg}</div>`, l = window.L.divIcon({
 			className: "",
 			html: c,
 			iconSize: [s.size, s.size],
@@ -2193,14 +2203,14 @@ ha-card { container-type: inline-size; }
 	_addAllMarkers(e, t) {
 		let n = this.card.hass?.states[e.entityId];
 		if (!n?.attributes?.departures) return;
-		let r = n.attributes.departures || [], i = {}, a = r.find((t) => t.vehicle_code && t.vehicle_code === e.vehicleCode && W(t.vehicle_lat, t.vehicle_lng));
+		let r = n.attributes.departures || [], i = {}, a = r.find((t) => t.vehicle_code && t.vehicle_code === e.vehicleCode && G(t.vehicle_lat, t.vehicle_lng));
 		if (a) {
-			let n = W(a.vehicle_lat, a.vehicle_lng);
+			let n = G(a.vehicle_lat, a.vehicle_lng);
 			i[`${n[0].toFixed(4)}|${n[1].toFixed(4)}`] = 1, e.markers.push(this._createVehicleMarker(e, a, n, t));
 		}
 		for (let n of r) {
 			if (n === a) continue;
-			let r = W(n.vehicle_lat, n.vehicle_lng);
+			let r = G(n.vehicle_lat, n.vehicle_lng);
 			if (!r) continue;
 			let o = this._spreadPosition(r, i);
 			e.markers.push(this._createVehicleMarker(e, n, o, t));
@@ -2220,12 +2230,12 @@ ha-card { container-type: inline-size; }
 		let t = this.card.hass.states[e.entityId];
 		if (t?.attributes?.departures) {
 			for (let n of t.attributes.departures) if (n.vehicle_code && n.vehicle_code === e.vehicleCode) {
-				let t = W(n.vehicle_lat, n.vehicle_lng);
+				let t = G(n.vehicle_lat, n.vehicle_lng);
 				if (!t) continue;
 				let [r, i] = t, a = e.marker.getLatLng();
 				if (Math.abs(a.lat - r) < 1e-5 && Math.abs(a.lng - i) < 1e-5) return;
 				e.marker.setLatLng([r, i]);
-				let o = n.vehicle_direction || n.direction || 0, s = K(n.route, n._provider || n.provider || "", n.route_color), c = n.vehicle_type || "bus", l = window.innerWidth < 480, u = this.buildVehicleMarker(o, s, n.route, c, n, l), d = `<div class="zm-arrow">${u.svg}</div>`;
+				let o = n.vehicle_direction || n.direction || 0, s = J(n.route, n._provider || n.provider || "", n.route_color), c = n.vehicle_type || "bus", l = window.innerWidth < 480, u = this.buildVehicleMarker(o, s, n.route, c, n, l), d = `<div class="zm-arrow">${u.svg}</div>`;
 				e.marker.setIcon(window.L.divIcon({
 					className: "",
 					html: d,
@@ -2236,7 +2246,7 @@ ha-card { container-type: inline-size; }
 			}
 		}
 	}
-}, Je = j`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 16.01L16.01 15.99"/><path d="M6 16.01L6.01 15.99"/><path d="M20 22V15V8M20 8H18V2H22V8H20Z"/><path d="M4 20V22H6V20H4Z" fill="currentColor"/><path d="M14 20V22H16V20H14Z" fill="currentColor"/><path d="M16 20H2.6A.6.6 0 012 19.4V12.6c0-.33.27-.6.6-.6H16"/><path d="M14 8H6M14 2H6C3.79 2 2 3.79 2 6V8"/></svg>`, Ye = j`<svg viewBox="0 0 24 24" width="20" height="20" style="color:#fff"><path fill="currentColor" d="M12,2C8,2 4,2.5 4,6V15.5A3.5,3.5 0 0,0 7.5,19L6,20.5V21H18V20.5L16.5,19A3.5,3.5 0 0,0 20,15.5V6C20,2.5 16,2 12,2M7.5,17A1.5,1.5 0 0,1 6,15.5A1.5,1.5 0 0,1 7.5,14A1.5,1.5 0 0,1 9,15.5A1.5,1.5 0 0,1 7.5,17M11,10H6V7H11V10M13,10V7H18V10H13M16.5,17A1.5,1.5 0 0,1 15,15.5A1.5,1.5 0 0,1 16.5,14A1.5,1.5 0 0,1 18,15.5A1.5,1.5 0 0,1 16.5,17Z"/></svg>`, Xe = j`<svg viewBox="0 0 24 24" width="20" height="20" style="color:#fff"><path fill="currentColor" d="M14,14A2,2 0 0,1 12,16A2,2 0 0,1 10,14A2,2 0 0,1 12,12A2,2 0 0,1 14,14M12,19C10.74,19 9.38,18.42 8.44,17.44L10,15.93C10.55,16.29 11.23,16.5 12,16.5C12.77,16.5 13.45,16.29 14,15.93L15.56,17.44C14.62,18.42 13.26,19 12,19M20,6C20,4.89 19.11,4 18,4H6C4.89,4 4,4.89 4,6V18C4,19.11 4.89,20 6,20H18C19.11,20 20,19.11 20,18V6M12,10A4,4 0 0,0 8,14A4,4 0 0,0 12,18A4,4 0 0,0 16,14A4,4 0 0,0 12,10M17.5,7C17.22,7 17,6.78 17,6.5C17,6.22 17.22,6 17.5,6C17.78,6 18,6.22 18,6.5C18,6.78 17.78,7 17.5,7M15,7C14.72,7 14.5,6.78 14.5,6.5C14.5,6.22 14.72,6 15,6C15.28,6 15.5,6.22 15.5,6.5C15.5,6.78 15.28,7 15,7Z"/></svg>`, Ze = "<svg viewBox=\"0 0 24 24\" width=\"14\" height=\"14\"><path fill=\"currentColor\" d=\"M5,20.5A3.5,3.5 0 0,1 1.5,17A3.5,3.5 0 0,1 5,13.5A3.5,3.5 0 0,1 8.5,17A3.5,3.5 0 0,1 5,20.5M5,12A5,5 0 0,0 0,17A5,5 0 0,0 5,22A5,5 0 0,0 10,17A5,5 0 0,0 5,12M14.8,10H19V8.2H15.8L13.86,4.93C13.57,4.43 13,4.1 12.4,4.1C11.93,4.1 11.5,4.29 11.2,4.6L7.5,8.29C7.19,8.6 7,9 7,9.5C7,10.13 7.33,10.66 7.85,10.97L11.2,13V18H13V11.5L10.75,9.85L13.07,7.5M19,20.5A3.5,3.5 0 0,1 15.5,17A3.5,3.5 0 0,1 19,13.5A3.5,3.5 0 0,1 22.5,17A3.5,3.5 0 0,1 19,20.5M19,12A5,5 0 0,0 14,17A5,5 0 0,0 19,22A5,5 0 0,0 24,17A5,5 0 0,0 19,12M16,4.8C17,4.8 17.8,4 17.8,3C17.8,2 17,1.2 16,1.2C15,1.2 14.2,2 14.2,3C14.2,4 15,4.8 16,4.8Z\"/></svg>", Qe = "<svg viewBox=\"0 0 24 24\" width=\"14\" height=\"14\"><path fill=\"currentColor\" d=\"M18.4,11.2L14.3,11.4L16.6,8.8C16.8,8.5 16.9,8 16.8,7.5C16.7,7.2 16.6,6.9 16.3,6.7L10.9,3.5C10.5,3.2 9.9,3.3 9.5,3.6L6.8,6.1C6.3,6.6 6.2,7.3 6.7,7.8C7.1,8.3 7.9,8.3 8.4,7.9L10.4,6.1L12.3,7.2L8.1,11.5C8,11.6 8,11.7 7.9,11.7C7.4,11.9 6.9,12.1 6.5,12.4L8,13.9C8.5,13.7 9,13.5 9.5,13.5C11.4,13.5 13,15.1 13,17C13,17.6 12.9,18.1 12.6,18.5L14.1,20C14.7,19.1 15,18.1 15,17C15,15.8 14.6,14.6 13.9,13.7L17.2,13.4L17,18.2C16.9,18.9 17.4,19.4 18.1,19.5H18.2C18.8,19.5 19.3,19 19.4,18.4L19.6,12.5C19.6,12.2 19.5,11.8 19.3,11.6C19,11.3 18.7,11.2 18.4,11.2M18,5.5A2,2 0 0,0 20,3.5A2,2 0 0,0 18,1.5A2,2 0 0,0 16,3.5A2,2 0 0,0 18,5.5M12.5,21.6C11.6,22.2 10.6,22.5 9.5,22.5C6.5,22.5 4,20 4,17C4,15.9 4.3,14.9 4.9,14L6.4,15.5C6.2,16 6,16.5 6,17C6,18.9 7.6,20.5 9.5,20.5C10.1,20.5 10.6,20.4 11,20.1L12.5,21.6Z\"/></svg>", $e = "<svg viewBox=\"0 0 24 24\" width=\"14\" height=\"14\"><path fill=\"currentColor\" d=\"M20.79,13.95L18.46,14.57L16.46,13.44V10.56L18.46,9.43L20.79,10.05L21.31,8.12L19.54,7.65L20,5.88L18.07,5.36L17.45,7.69L15.45,8.82L13,7.38V5.12L14.71,3.41L13.29,2L12,3.29L10.71,2L9.29,3.41L11,5.12V7.38L8.5,8.82L6.5,7.69L5.92,5.36L4,5.88L4.47,7.65L2.7,8.12L3.22,10.05L5.55,9.43L7.55,10.56V13.45L5.55,14.58L3.22,13.96L2.7,15.89L4.47,16.36L4,18.12L5.93,18.64L6.55,16.31L8.55,15.18L11,16.62V18.88L9.29,20.59L10.71,22L12,20.71L13.29,22L14.7,20.59L13,18.88V16.62L15.5,15.17L17.5,16.3L18.12,18.63L20,18.12L19.53,16.35L21.3,15.88L20.79,13.95M9.5,10.56L12,9.11L14.5,10.56V13.44L12,14.89L9.5,13.44V10.56Z\"/></svg>", $ = (e) => A`<ha-icon class="state-icon" icon=${e}></ha-icon>`, et = class extends B {
+}, Ye = M`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 16.01L16.01 15.99"/><path d="M6 16.01L6.01 15.99"/><path d="M20 22V15V8M20 8H18V2H22V8H20Z"/><path d="M4 20V22H6V20H4Z" fill="currentColor"/><path d="M14 20V22H16V20H14Z" fill="currentColor"/><path d="M16 20H2.6A.6.6 0 012 19.4V12.6c0-.33.27-.6.6-.6H16"/><path d="M14 8H6M14 2H6C3.79 2 2 3.79 2 6V8"/></svg>`, Xe = M`<svg viewBox="0 0 24 24" width="20" height="20" style="color:#fff"><path fill="currentColor" d="M12,2C8,2 4,2.5 4,6V15.5A3.5,3.5 0 0,0 7.5,19L6,20.5V21H18V20.5L16.5,19A3.5,3.5 0 0,0 20,15.5V6C20,2.5 16,2 12,2M7.5,17A1.5,1.5 0 0,1 6,15.5A1.5,1.5 0 0,1 7.5,14A1.5,1.5 0 0,1 9,15.5A1.5,1.5 0 0,1 7.5,17M11,10H6V7H11V10M13,10V7H18V10H13M16.5,17A1.5,1.5 0 0,1 15,15.5A1.5,1.5 0 0,1 16.5,14A1.5,1.5 0 0,1 18,15.5A1.5,1.5 0 0,1 16.5,17Z"/></svg>`, Ze = M`<svg viewBox="0 0 24 24" width="20" height="20" style="color:#fff"><path fill="currentColor" d="M14,14A2,2 0 0,1 12,16A2,2 0 0,1 10,14A2,2 0 0,1 12,12A2,2 0 0,1 14,14M12,19C10.74,19 9.38,18.42 8.44,17.44L10,15.93C10.55,16.29 11.23,16.5 12,16.5C12.77,16.5 13.45,16.29 14,15.93L15.56,17.44C14.62,18.42 13.26,19 12,19M20,6C20,4.89 19.11,4 18,4H6C4.89,4 4,4.89 4,6V18C4,19.11 4.89,20 6,20H18C19.11,20 20,19.11 20,18V6M12,10A4,4 0 0,0 8,14A4,4 0 0,0 12,18A4,4 0 0,0 16,14A4,4 0 0,0 12,10M17.5,7C17.22,7 17,6.78 17,6.5C17,6.22 17.22,6 17.5,6C17.78,6 18,6.22 18,6.5C18,6.78 17.78,7 17.5,7M15,7C14.72,7 14.5,6.78 14.5,6.5C14.5,6.22 14.72,6 15,6C15.28,6 15.5,6.22 15.5,6.5C15.5,6.78 15.28,7 15,7Z"/></svg>`, Qe = "<svg viewBox=\"0 0 24 24\" width=\"14\" height=\"14\"><path fill=\"currentColor\" d=\"M5,20.5A3.5,3.5 0 0,1 1.5,17A3.5,3.5 0 0,1 5,13.5A3.5,3.5 0 0,1 8.5,17A3.5,3.5 0 0,1 5,20.5M5,12A5,5 0 0,0 0,17A5,5 0 0,0 5,22A5,5 0 0,0 10,17A5,5 0 0,0 5,12M14.8,10H19V8.2H15.8L13.86,4.93C13.57,4.43 13,4.1 12.4,4.1C11.93,4.1 11.5,4.29 11.2,4.6L7.5,8.29C7.19,8.6 7,9 7,9.5C7,10.13 7.33,10.66 7.85,10.97L11.2,13V18H13V11.5L10.75,9.85L13.07,7.5M19,20.5A3.5,3.5 0 0,1 15.5,17A3.5,3.5 0 0,1 19,13.5A3.5,3.5 0 0,1 22.5,17A3.5,3.5 0 0,1 19,20.5M19,12A5,5 0 0,0 14,17A5,5 0 0,0 19,22A5,5 0 0,0 24,17A5,5 0 0,0 19,12M16,4.8C17,4.8 17.8,4 17.8,3C17.8,2 17,1.2 16,1.2C15,1.2 14.2,2 14.2,3C14.2,4 15,4.8 16,4.8Z\"/></svg>", $e = "<svg viewBox=\"0 0 24 24\" width=\"14\" height=\"14\"><path fill=\"currentColor\" d=\"M18.4,11.2L14.3,11.4L16.6,8.8C16.8,8.5 16.9,8 16.8,7.5C16.7,7.2 16.6,6.9 16.3,6.7L10.9,3.5C10.5,3.2 9.9,3.3 9.5,3.6L6.8,6.1C6.3,6.6 6.2,7.3 6.7,7.8C7.1,8.3 7.9,8.3 8.4,7.9L10.4,6.1L12.3,7.2L8.1,11.5C8,11.6 8,11.7 7.9,11.7C7.4,11.9 6.9,12.1 6.5,12.4L8,13.9C8.5,13.7 9,13.5 9.5,13.5C11.4,13.5 13,15.1 13,17C13,17.6 12.9,18.1 12.6,18.5L14.1,20C14.7,19.1 15,18.1 15,17C15,15.8 14.6,14.6 13.9,13.7L17.2,13.4L17,18.2C16.9,18.9 17.4,19.4 18.1,19.5H18.2C18.8,19.5 19.3,19 19.4,18.4L19.6,12.5C19.6,12.2 19.5,11.8 19.3,11.6C19,11.3 18.7,11.2 18.4,11.2M18,5.5A2,2 0 0,0 20,3.5A2,2 0 0,0 18,1.5A2,2 0 0,0 16,3.5A2,2 0 0,0 18,5.5M12.5,21.6C11.6,22.2 10.6,22.5 9.5,22.5C6.5,22.5 4,20 4,17C4,15.9 4.3,14.9 4.9,14L6.4,15.5C6.2,16 6,16.5 6,17C6,18.9 7.6,20.5 9.5,20.5C10.1,20.5 10.6,20.4 11,20.1L12.5,21.6Z\"/></svg>", et = "<svg viewBox=\"0 0 24 24\" width=\"14\" height=\"14\"><path fill=\"currentColor\" d=\"M20.79,13.95L18.46,14.57L16.46,13.44V10.56L18.46,9.43L20.79,10.05L21.31,8.12L19.54,7.65L20,5.88L18.07,5.36L17.45,7.69L15.45,8.82L13,7.38V5.12L14.71,3.41L13.29,2L12,3.29L10.71,2L9.29,3.41L11,5.12V7.38L8.5,8.82L6.5,7.69L5.92,5.36L4,5.88L4.47,7.65L2.7,8.12L3.22,10.05L5.55,9.43L7.55,10.56V13.45L5.55,14.58L3.22,13.96L2.7,15.89L4.47,16.36L4,18.12L5.93,18.64L6.55,16.31L8.55,15.18L11,16.62V18.88L9.29,20.59L10.71,22L12,20.71L13.29,22L14.7,20.59L13,18.88V16.62L15.5,15.17L17.5,16.3L18.12,18.63L20,18.12L19.53,16.35L21.3,15.88L20.79,13.95M9.5,10.56L12,9.11L14.5,10.56V13.44L12,14.89L9.5,13.44V10.56Z\"/></svg>", $ = (e) => j`<ha-icon class="state-icon" icon=${e}></ha-icon>`, tt = class extends V {
 	static get properties() {
 		return {
 			hass: { type: Object },
@@ -2244,9 +2254,9 @@ ha-card { container-type: inline-size; }
 			_activeTab: { state: !0 }
 		};
 	}
-	static styles = Ke;
+	static styles = Ge;
 	constructor() {
-		super(), this.vehicleMap = new qe(this), this._config = {}, this._activeTab = 0, this._tickTimer = null;
+		super(), this.vehicleMap = new Je(this), this._config = {}, this._activeTab = 0, this._tickTimer = null;
 	}
 	static getStubConfig() {
 		return {
@@ -2284,7 +2294,7 @@ ha-card { container-type: inline-size; }
 		].includes(e.header_style) ? e.header_style : e.header_color ? "custom" : "provider";
 		this._config = {
 			...e,
-			entities: (Array.isArray(e.entities) ? e.entities : []).map(Ae).filter(Boolean),
+			entities: (Array.isArray(e.entities) ? e.entities : []).map(Oe).filter(Boolean),
 			max_departures: Math.max(1, Math.min(100, parseInt(e.max_departures) || 10)),
 			min_departures: Math.min(Math.max(1, Math.min(100, parseInt(e.max_departures) || 10)), Math.max(0, Math.min(100, parseInt(e.min_departures) || 0))),
 			refresh_interval: Math.max(5, Math.min(600, parseInt(e.refresh_interval) || 60)),
@@ -2322,12 +2332,12 @@ ha-card { container-type: inline-size; }
 			only_bike: e.only_bike === !0,
 			only_ac: e.only_ac === !0,
 			only_ticket_machine: e.only_ticket_machine === !0,
-			filter_routes: q(e.filter_routes),
-			exclude_routes: q(e.exclude_routes),
-			destination_filter: q(e.destination_filter),
-			exclude_destinations: q(e.exclude_destinations),
-			filter_vehicle_types: q(e.filter_vehicle_types).map((e) => e.toLowerCase()),
-			filter_providers: q(e.filter_providers),
+			filter_routes: Y(e.filter_routes),
+			exclude_routes: Y(e.exclude_routes),
+			destination_filter: Y(e.destination_filter),
+			exclude_destinations: Y(e.exclude_destinations),
+			filter_vehicle_types: Y(e.filter_vehicle_types).map((e) => e.toLowerCase()),
+			filter_providers: Y(e.filter_providers),
 			filter_platform: e.filter_platform || "",
 			filter_track: e.filter_track || "",
 			time_format: [
@@ -2337,10 +2347,10 @@ ha-card { container-type: inline-size; }
 			].includes(e.time_format) ? e.time_format : "auto",
 			icon: e.icon || "",
 			show_footer: e.show_footer !== !1,
-			tap_action: J(e.tap_action, "more-info"),
-			hold_action: J(e.hold_action, "none"),
-			double_tap_action: J(e.double_tap_action, "none")
-		}, this._depCache = null, this.vehicleMap.preloadLeaflet();
+			tap_action: X(e.tap_action, "more-info"),
+			hold_action: X(e.hold_action, "none"),
+			double_tap_action: X(e.double_tap_action, "none")
+		}, this._depCache = null;
 	}
 	getCardSize() {
 		return (this._config.max_departures || 10) + 1;
@@ -2424,12 +2434,12 @@ ha-card { container-type: inline-size; }
 			if (u && String(e.track || "") !== String(u) || i(e, "hide_terminus", t.hide_terminus) && e.headsign && e._stopName && e.headsign.toLowerCase() === e._stopName.toLowerCase() || i(e, "hide_cancelled", t.hide_cancelled) && e.cancelled) return !1;
 			let d = parseInt(i(e, "max_minutes", t.max_minutes), 10) || 0;
 			if (d > 0) {
-				let t = Oe(e.estimated_time || e.theoretical_time);
+				let t = K(e.estimated_time || e.theoretical_time);
 				if (t === null || t > d) return !1;
 			}
 			if (i(e, "only_low_floor", t.only_low_floor) && !(e.wheelchair_accessible === !0 || e.floor_height && e.floor_height !== "Pojazd wysokopodłogowy") || i(e, "only_bike", t.only_bike) && e.bike_allowed !== !0 || i(e, "only_ac", t.only_ac) && e.air_conditioning !== !0 || i(e, "only_ticket_machine", t.only_ticket_machine) && e.ticket_machine !== !0) return !1;
 			if (i(e, "hide_departed", t.hide_departed)) {
-				let n = Oe(e.estimated_time || e.theoretical_time), r = parseInt(i(e, "departed_grace_minutes", t.departed_grace_minutes), 10);
+				let n = K(e.estimated_time || e.theoretical_time), r = parseInt(i(e, "departed_grace_minutes", t.departed_grace_minutes), 10);
 				if (n !== null && n < -(Number.isFinite(r) ? r : 1)) return !1;
 			}
 			return !0;
@@ -2481,13 +2491,13 @@ ha-card { container-type: inline-size; }
 		return t.map((e) => e.base);
 	}
 	_getAutoIcon() {
-		if (!this.hass || !this._config.entities?.length) return Je;
+		if (!this.hass || !this._config.entities?.length) return Ye;
 		let e = /* @__PURE__ */ new Set();
 		for (let t of this._getEntityIds()) {
 			let n = this.hass.states[t];
 			n?.attributes?.provider && e.add(n.attributes.provider);
 		}
-		return e.size === 1 && e.has("plk_rail") ? Ye : Xe;
+		return e.size === 1 && e.has("plk_rail") ? Xe : Ze;
 	}
 	_getHeaderColor() {
 		if (this._config.header_style === "theme") return "var(--primary-color, #005eb8)";
@@ -2504,7 +2514,7 @@ ha-card { container-type: inline-size; }
 			zkm_gdynia: "#005eb8",
 			mzk_wejherowo: "#478AC9",
 			plk_rail: "#1a1a2e",
-			...Me
+			...Ae
 		}, t = /* @__PURE__ */ new Set();
 		if (this.hass && this._config.entities?.length) for (let e of this._getEntityIds()) {
 			let n = this.hass.states[e];
@@ -2525,13 +2535,13 @@ ha-card { container-type: inline-size; }
 		return t?.attributes?.stop_name || t?.attributes?.friendly_name || "Polish Transport";
 	}
 	_getSubtitle() {
-		if (!this.hass || !this._config.entities?.length) return H("select_entities");
+		if (!this.hass || !this._config.entities?.length) return U("select_entities");
 		let e = /* @__PURE__ */ new Set();
 		for (let t of this._getEntityIds()) {
 			let n = this.hass.states[t];
 			n?.attributes?.provider && e.add(n.attributes.provider);
 		}
-		return [...e].map(Fe).join(" • ") || "Polish Transport";
+		return [...e].map(Ne).join(" • ") || "Polish Transport";
 	}
 	_getClock() {
 		let e = this.hass?.locale?.language || document.documentElement.lang || "pl-PL", t = this._config.time_format, n = t === "12h" || t === "auto" && this.hass?.locale?.time_format === "12";
@@ -2550,7 +2560,7 @@ ha-card { container-type: inline-size; }
 		}
 		if (!e) return "";
 		let t = new Date(e), n = this.hass?.locale?.language || document.documentElement.lang || "pl-PL";
-		return `${H("last_update")}: ${t.toLocaleTimeString(n, {
+		return `${U("last_update")}: ${t.toLocaleTimeString(n, {
 			hour: "2-digit",
 			minute: "2-digit",
 			second: "2-digit"
@@ -2572,20 +2582,20 @@ ha-card { container-type: inline-size; }
 	}
 	_resolveActionConfig(e) {
 		let t = this._config || {};
-		return e === "tap" ? J(t.tap_action, "more-info") : J(e === "hold" ? t.hold_action : t.double_tap_action, "none");
+		return e === "tap" ? X(t.tap_action, "more-info") : X(e === "hold" ? t.hold_action : t.double_tap_action, "none");
 	}
 	async _handleRowAction(e, t) {
 		let n = this._resolveActionConfig(e), r = n.action || "none";
 		if (r === "none") return;
 		let i = t._entityId || this._config.entities[0];
 		if (r === "more-info") {
-			je(this, "hass-more-info", { entityId: i });
+			ke(this, "hass-more-info", { entityId: i });
 			return;
 		}
 		if (r === "navigate") {
 			let e = n.navigation_path || "";
 			if (!e) return;
-			history.pushState(null, "", e), je(window, "location-changed", { replace: !1 });
+			history.pushState(null, "", e), ke(window, "location-changed", { replace: !1 });
 			return;
 		}
 		if (r === "url") {
@@ -2608,8 +2618,8 @@ ha-card { container-type: inline-size; }
 		}
 	}
 	_onRowClick(e, t) {
-		if (W(t.vehicle_lat, t.vehicle_lng) !== null) {
-			let e = W(t.vehicle_lat, t.vehicle_lng);
+		if (G(t.vehicle_lat, t.vehicle_lng) !== null) {
+			let e = G(t.vehicle_lat, t.vehicle_lng);
 			this.vehicleMap.showVehicleMap(e[0], e[1], {
 				route: t.route || "",
 				code: t.vehicle_code || "",
@@ -2640,11 +2650,11 @@ ha-card { container-type: inline-size; }
 	}
 	_renderTabs() {
 		let e = this._config, t = this._getEntityIds();
-		return e.view_mode !== "tabs" || t.length <= 1 ? N : A`
+		return e.view_mode !== "tabs" || t.length <= 1 ? P : j`
       <div class="tabs" role="tablist">
         ${t.map((e, t) => {
 			let n = (this.hass?.states[e])?.attributes?.stop_name || e.replace("sensor.", "");
-			return A`
+			return j`
             <span 
               class="tab ${t === this._activeTab ? "active" : ""}" 
               role="tab" 
@@ -2661,10 +2671,10 @@ ha-card { container-type: inline-size; }
 	}
 	_renderDeps() {
 		let e = this._config;
-		if (!e.entities?.length) return A`<div class="state-msg">${$("mdi:map-marker-off")}${H("no_entities")}</div>`;
+		if (!e.entities?.length) return j`<div class="state-msg">${$("mdi:map-marker-off")}${U("no_entities")}</div>`;
 		if (!this.hass) {
 			let t = e.min_departures !== void 0 && e.min_departures > 0 ? e.min_departures : Math.min(5, e.max_departures || 5);
-			return Array.from({ length: t }).map(() => A`
+			return Array.from({ length: t }).map(() => j`
         <div class="dep-row">
           <div class="skel" style="height:26px;width:40px;border-radius:6px"></div>
           <div class="skel" style="height:13px;flex:1"></div>
@@ -2677,62 +2687,62 @@ ha-card { container-type: inline-size; }
 			let e = this._getEntityIds().filter((e) => !this.hass.states[e]);
 			if (e.length) {
 				let t = e.map((e) => e.replace("sensor.", "")).join(", ");
-				return A`<div class="state-msg">${$("mdi:alert-circle-outline")}${H("missing_entities")}<br><small>${t}</small></div>`;
+				return j`<div class="state-msg">${$("mdi:alert-circle-outline")}${U("missing_entities")}<br><small>${t}</small></div>`;
 			}
 			let t = this._getEntityIds().filter((e) => {
 				let t = this.hass.states[e];
 				return t && (t.state === "unavailable" || t.state === "unknown");
 			});
 			if (t.length) {
-				let e = t.some((e) => this.hass.states[e]?.attributes?.provider === "plk_rail"), n = H(e ? "plk_rate_limit" : "unavailable");
-				return A`<div class="state-msg">${$(e ? "mdi:cloud-alert-outline" : "mdi:alert-outline")}${n}</div>`;
+				let e = t.some((e) => this.hass.states[e]?.attributes?.provider === "plk_rail"), n = U(e ? "plk_rate_limit" : "unavailable");
+				return j`<div class="state-msg">${$(e ? "mdi:cloud-alert-outline" : "mdi:alert-outline")}${n}</div>`;
 			}
 			let n = this._getAllDepartures();
 			if (n.length) {
-				let e = n[0], t = e.estimated_time ? G(e.estimated_time) : "";
-				return A`<div class="state-msg">${$("mdi:clock-outline")}${H("no_departures")}<br><small>${t ? `${H("next")}: ${e.route} → ${e.headsign} ${t}` : ""}</small></div>`;
+				let e = n[0], t = e.estimated_time ? q(e.estimated_time) : "";
+				return j`<div class="state-msg">${$("mdi:clock-outline")}${U("no_departures")}<br><small>${t ? `${U("next")}: ${e.route} → ${e.headsign} ${t}` : ""}</small></div>`;
 			}
-			return A`<div class="state-msg">${$("mdi:timer-sand-empty")}${H("no_departures")}</div>`;
+			return j`<div class="state-msg">${$("mdi:timer-sand-empty")}${U("no_departures")}</div>`;
 		}
 		let n = this._resolveActionConfig("tap").action || "none", r = this._resolveActionConfig("hold").action || "none", i = this._resolveActionConfig("double").action || "none", a = n !== "none" && n !== "more-info" || r !== "none" || i !== "none", o = (t) => {
-			let n = Oe(t.estimated_time), r = t.realtime && n !== null && n <= 2, i = Math.round((t.delay_seconds || 0) / 60), o = e.show_delays && t.realtime && Math.abs(i) >= 1, s = t.cancelled === !0, c;
-			if (s) c = A`<div class="time-main cancelled">${H("cancelled")}</div>`;
-			else if (e.display_preset === "e_ink") c = A`<div class="time-main">${G(t.estimated_time || t.theoretical_time)}</div>`;
+			let n = K(t.estimated_time), r = t.realtime && n !== null && n <= 2, i = Math.round((t.delay_seconds || 0) / 60), o = e.show_delays && t.realtime && Math.abs(i) >= 1, s = t.cancelled === !0, c;
+			if (s) c = j`<div class="time-main cancelled">${U("cancelled")}</div>`;
+			else if (e.display_preset === "e_ink") c = j`<div class="time-main">${q(t.estimated_time || t.theoretical_time)}</div>`;
 			else if (t.realtime) {
-				let r = o ? A` <span class="delay-badge ${i > 0 ? "late" : "early"}">${i > 0 ? "+" : ""}${i}min</span>` : N, a = o && G(t.theoretical_time || t.estimated_time) !== G(t.estimated_time) ? A`<span class="time-struck">${G(t.theoretical_time || t.estimated_time)}</span> ${G(t.estimated_time)}` : G(t.estimated_time), s = n === null ? "" : n <= 0 ? H("departing") : `${H("in")} ${ke(n)}`;
-				c = e.show_countdown ? A`<div class="time-main">${a}</div><div class="time-sub"><span class="dot">●</span> ${s}${r}</div>` : A`<div class="time-main">${a}${r}</div>`;
-			} else c = A`<div class="time-main">${G(t.theoretical_time || t.estimated_time)}</div>`;
+				let r = o ? j` <span class="delay-badge ${i > 0 ? "late" : "early"}">${i > 0 ? "+" : ""}${i}min</span>` : P, a = o && q(t.theoretical_time || t.estimated_time) !== q(t.estimated_time) ? j`<span class="time-struck">${q(t.theoretical_time || t.estimated_time)}</span> ${q(t.estimated_time)}` : q(t.estimated_time), s = n === null ? "" : n <= 0 ? U("departing") : `${U("in")} ${De(n)}`;
+				c = e.show_countdown ? j`<div class="time-main">${a}</div><div class="time-sub"><span class="dot">●</span> ${s}${r}</div>` : j`<div class="time-main">${a}${r}</div>`;
+			} else c = j`<div class="time-main">${q(t.theoretical_time || t.estimated_time)}</div>`;
 			let l = [];
-			e.show_platform && t._provider === "plk_rail" && (t.platform && l.push(`${H("platform")} ${t.platform}`), t.track && l.push(`${H("track")} ${t.track}`));
+			e.show_platform && t._provider === "plk_rail" && (t.platform && l.push(`${U("platform")} ${t.platform}`), t.track && l.push(`${U("track")} ${t.track}`));
 			let u = [];
 			if (t.train_number && t._provider === "plk_rail") {
 				let e = (t.carrier || "").replace(/^[„""'\s]+/, "").replace(/PKP\s*Szybka\s*Kolej\s*Miejska.*/i, "SKM").replace(/PKP\s*Intercity.*/i, "IC").replace(/POLREGIO.*/i, "Polregio").replace(/\s*sp\.?\s*z\s*o\.?\s*o\.?.*/i, "");
-				u.push(`${H("train_no")} ${t.train_number}`), e && u.push(e);
+				u.push(`${U("train_no")} ${t.train_number}`), e && u.push(e);
 			}
 			let d = [];
-			e.show_accessibility && (e.show_bike && t.bike_allowed === !0 && d.push(A`<span title=${H("bike")}>${Ge(Ze)}</span>`), e.show_wheelchair && t.wheelchair_accessible === !0 && d.push(A`<span title=${H("wheelchair")}>${Ge(Qe)}</span>`), e.show_ac && t.air_conditioning === !0 && d.push(A`<span title=${H("ac")}>${Ge($e)}</span>`));
-			let f = e.show_vehicle && t._provider !== "plk_rail" && t.vehicle_code && t.realtime ? A`<span class="vehicle-no" title=${H("show_vehicle")}>#${t.vehicle_code}</span>` : N, p = e.show_platform && t.platform && t._provider !== "plk_rail" ? A`<span class="platform" title=${H("platform")}>${t.platform}</span>` : N, m = W(t.vehicle_lat, t.vehicle_lng) !== null, h = [];
-			l.length && h.push(A`<span class="meta-pill">${l.join(" · ")}</span>`), p !== N && h.push(p);
-			let g = u.length ? A`<span class="train-info">${u.join(" · ")}</span>` : N, ee = d.length > 0 || h.length > 0 || g !== N ? A`<span class="meta-row">
-            ${d.length ? A`<span class="icons">${d}</span>` : N}
-            ${h.length || g !== N ? A`<span class="meta-chips">${h}${g}</span>` : N}
-          </span>` : N, te = e.show_stop_name && e.entities.length > 1 && e.view_mode !== "tabs" && t._stopName, _ = (t._stopName || "").replace(/\s*\(?(bus|tramwaj|tram|train|skm)\)?\s*/gi, " ").trim(), v = m || a, y = G(t.estimated_time || t.theoretical_time), b = `${t.route} → ${t.headsign || ""}${y ? `, ${y}` : ""}${m ? `, ${H("show_on_map")}` : ""}`;
-			return A`
+			e.show_accessibility && (e.show_bike && t.bike_allowed === !0 && d.push(j`<span title=${U("bike")}>${We(Qe)}</span>`), e.show_wheelchair && t.wheelchair_accessible === !0 && d.push(j`<span title=${U("wheelchair")}>${We($e)}</span>`), e.show_ac && t.air_conditioning === !0 && d.push(j`<span title=${U("ac")}>${We(et)}</span>`));
+			let f = e.show_vehicle && t._provider !== "plk_rail" && t.vehicle_code && t.realtime ? j`<span class="vehicle-no" title=${U("show_vehicle")}>#${t.vehicle_code}</span>` : P, p = e.show_platform && t.platform && t._provider !== "plk_rail" ? j`<span class="platform" title=${U("platform")}>${t.platform}</span>` : P, m = G(t.vehicle_lat, t.vehicle_lng) !== null, h = [];
+			l.length && h.push(j`<span class="meta-pill">${l.join(" · ")}</span>`), p !== P && h.push(p);
+			let g = u.length ? j`<span class="train-info">${u.join(" · ")}</span>` : P, ee = d.length > 0 || h.length > 0 || g !== P ? j`<span class="meta-row">
+            ${d.length ? j`<span class="icons">${d}</span>` : P}
+            ${h.length || g !== P ? j`<span class="meta-chips">${h}${g}</span>` : P}
+          </span>` : P, te = e.show_stop_name && e.entities.length > 1 && e.view_mode !== "tabs" && t._stopName, _ = (t._stopName || "").replace(/\s*\(?(bus|tramwaj|tram|train|skm)\)?\s*/gi, " ").trim(), v = m || a, y = q(t.estimated_time || t.theoretical_time), b = `${t.route} → ${t.headsign || ""}${y ? `, ${y}` : ""}${m ? `, ${U("show_on_map")}` : ""}`;
+			return j`
         <div class="dep-row ${v ? "interactive" : ""} ${r ? "imminent" : ""} ${t._dimmed ? "dimmed" : ""} ${s ? "cancelled" : ""}"
              tabindex=${v ? "0" : "-1"}
-             role=${v ? "button" : N}
-             aria-label=${v ? b : N}
+             role=${v ? "button" : P}
+             aria-label=${v ? b : P}
              @click=${(e) => this._onRowClick(e, t)}
              @dblclick=${(e) => this._onRowDblClick(e, t)}
              @contextmenu=${(e) => this._onRowContext(e, t)}
              @keydown=${(e) => {
 				(e.key === "Enter" || e.key === " ") && (e.preventDefault(), this._onRowClick(e, t));
 			}}>
-          <span class="badge" style="background:${K(t.route, t._provider || t.provider, t.route_color)}">${t.route}</span>
+          <span class="badge" style="background:${J(t.route, t._provider || t.provider, t.route_color)}">${t.route}</span>
           <span class="headsign">
             <span class="head-main"><span class="headsign-text" title=${t.headsign}>${t.headsign}</span>${f}</span>
             ${ee}
-            ${te ? A`<span class="stop-name" title=${_}>${_}</span>` : N}
+            ${te ? j`<span class="stop-name" title=${_}>${_}</span>` : P}
           </span>
           <div class="time-col">${c}</div>
         </div>
@@ -2746,7 +2756,7 @@ ha-card { container-type: inline-size; }
 			});
 			for (let t in e) {
 				let n;
-				n = t === "plk_rail" ? H("trains") : t === "Inne" ? H("other") : Fe(t), s.push(A`<div class="provider-header">${n}</div>`), e[t].forEach((e) => s.push(o(e)));
+				n = t === "plk_rail" ? U("trains") : t === "Inne" ? U("other") : Ne(t), s.push(j`<div class="provider-header">${n}</div>`), e[t].forEach((e) => s.push(o(e)));
 			}
 		} else if (e.view_mode === "grouped") {
 			let e = /* @__PURE__ */ new Map();
@@ -2756,46 +2766,46 @@ ha-card { container-type: inline-size; }
 			}
 			for (let [, t] of e) {
 				let e = t[0];
-				s.push(A`<div class="provider-header line-header">${e.route} → ${e.headsign || "—"}</div>`), t.forEach((e) => s.push(o(e)));
+				s.push(j`<div class="provider-header line-header">${e.route} → ${e.headsign || "—"}</div>`), t.forEach((e) => s.push(o(e)));
 			}
 		} else t.forEach((e) => s.push(o(e)));
 		let c = this._config.min_departures === void 0 ? 0 : parseInt(this._config.min_departures), l = t.length;
 		if (l > 0 && l < c) {
 			let e = c - l;
-			for (let t = 0; t < e; t++) s.push(A`<div class="dep-row" style="visibility:hidden">&nbsp;</div>`);
+			for (let t = 0; t < e; t++) s.push(j`<div class="dep-row" style="visibility:hidden">&nbsp;</div>`);
 		}
 		return s;
 	}
 	render() {
-		if (!this._config) return N;
+		if (!this._config) return P;
 		let e = this._config;
-		return A`
+		return j`
       <ha-card class="${e.display_preset === "e_ink" ? "e-ink" : e.display_preset === "compact" ? "compact" : e.display_preset === "minimal" ? "minimal" : e.display_preset === "native" ? "native" : ""}" data-theme="${e.theme_mode}" data-header="${e.header_style}">
-        ${e.show_header ? A`
+        ${e.show_header ? j`
           <div class="header" style="background:${this._getHeaderColor()}">
-            <span class="header-icon">${e.icon ? A`<ha-icon icon="${e.icon}" style="color:var(--ptc-header-text, #fff);--mdc-icon-size:20px"></ha-icon>` : this._getAutoIcon()}</span>
+            <span class="header-icon">${e.icon ? j`<ha-icon icon="${e.icon}" style="color:var(--ptc-header-text, #fff);--mdc-icon-size:20px"></ha-icon>` : this._getAutoIcon()}</span>
             <div class="header-body">
               <div class="header-title">${this._getTitle()}</div>
               <div class="header-sub">${this._getSubtitle()}</div>
             </div>
-            ${e.show_clock ? A`<div class="header-clock">${this._getClock()}</div>` : N}
-            ${e.show_refresh ? A`<button class="header-refresh ${this._refreshing ? "spinning" : ""}" title=${H("refresh")} @click=${this._refresh}><ha-icon icon="mdi:refresh"></ha-icon></button>` : N}
+            ${e.show_clock ? j`<div class="header-clock">${this._getClock()}</div>` : P}
+            ${e.show_refresh ? j`<button class="header-refresh ${this._refreshing ? "spinning" : ""}" title=${U("refresh")} @click=${this._refresh}><ha-icon icon="mdi:refresh"></ha-icon></button>` : P}
           </div>
-        ` : N}
+        ` : P}
         ${this._renderTabs()}
         <div class="dep-list ${e.columns > 1 ? `columns-${e.columns}` : ""}" aria-live="polite" aria-atomic="true">
           ${this._renderDeps()}
         </div>
-        ${e.show_footer && e.show_last_update ? A`<div class="footer">${this._getLastUpdate()}</div>` : N}
+        ${e.show_footer && e.show_last_update ? j`<div class="footer">${this._getLastUpdate()}</div>` : P}
       </ha-card>
     `;
 	}
 };
-customElements.get("polish-transport-card") || customElements.define("polish-transport-card", et), window.customCards = window.customCards || [], window.customCards.push({
+customElements.get("polish-transport-card") || customElements.define("polish-transport-card", tt), window.customCards = window.customCards || [], window.customCards.push({
 	type: "polish-transport-card",
 	name: "Polish Transport Card",
 	description: "Tablica odjazdów polskiej komunikacji miejskiej (dane z integracji Polish Transport)",
 	preview: !0,
 	documentationURL: "https://github.com/toczke/polish-public-transport-card"
-}), console.info(`%c POLISH-TRANSPORT %c v${De} `, "background:#005eb8;color:#fff;padding:2px 6px;border-radius:4px 0 0 4px;font-weight:bold", "background:#1f2937;color:#fff;padding:2px 6px;border-radius:0 4px 4px 0");
+}), console.info(`%c POLISH-TRANSPORT %c v${Ee} `, "background:#005eb8;color:#fff;padding:2px 6px;border-radius:4px 0 0 4px;font-weight:bold", "background:#1f2937;color:#fff;padding:2px 6px;border-radius:0 4px 4px 0");
 //#endregion

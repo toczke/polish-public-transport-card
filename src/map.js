@@ -1,5 +1,13 @@
 import { escapeHtml, routeColor, parseVehiclePosition, t } from "./utils.js";
 
+function leafletAsset(path) {
+  // Prefer the URL the Lovelace module was actually loaded from so a custom
+  // prefix keeps working; fall back to the path registered by the integration.
+  const script = [...document.querySelectorAll('script[src*="polish-transport-card.js"]')].pop();
+  const base = script?.src ? new URL("leaflet/", script.src).href : "/polish_transport/leaflet/";
+  return `${base}${path}`;
+}
+
 let leafletLoadPromise = null;
 let leafletCssPromise = null;
 
@@ -17,18 +25,22 @@ export class VehicleMap {
     leafletCssPromise = new Promise((resolve) => {
       const existing = document.getElementById("polish-transport-leaflet-css");
       if (existing) {
-        if (existing.sheet) {
-          resolve();
+        if (existing.href.includes("/leaflet/leaflet.css")) {
+          if (existing.sheet) {
+            resolve();
+            return;
+          }
+          existing.addEventListener("load", () => resolve(), { once: true });
+          existing.addEventListener("error", () => resolve(), { once: true });
           return;
         }
-        existing.addEventListener("load", () => resolve(), { once: true });
-        existing.addEventListener("error", () => resolve(), { once: true });
-        return;
+        // Drop the old CDN stylesheet from earlier versions.
+        existing.remove();
       }
       const link = document.createElement("link");
       link.id = "polish-transport-leaflet-css";
       link.rel = "stylesheet";
-      link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+      link.href = leafletAsset("leaflet.css");
       link.addEventListener("load", () => resolve(), { once: true });
       link.addEventListener("error", () => resolve(), { once: true });
       document.head.appendChild(link);
@@ -37,33 +49,41 @@ export class VehicleMap {
   }
 
   preloadLeaflet() {
+    // Load the stylesheet in parallel; the map can render as soon as the JS is
+    // available, and CSS arriving a moment later is fine.
+    this.ensureLeafletCss();
+    if (window.L) {
+      leafletLoadPromise = Promise.resolve(window.L);
+      return leafletLoadPromise;
+    }
     // Share one loader across every card on the dashboard instead of injecting
-    // duplicate Leaflet stylesheets/scripts per card.
+    // duplicate Leaflet scripts per card.
     if (leafletLoadPromise) return leafletLoadPromise;
 
-    leafletLoadPromise = this.ensureLeafletCss().then(() => {
-      if (window.L) return window.L;
-      return new Promise((resolve, reject) => {
-        let script = document.getElementById("polish-transport-leaflet-js");
-        if (!script) {
-          script = document.createElement("script");
-          script.id = "polish-transport-leaflet-js";
-          script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
-          document.head.appendChild(script);
-        }
-        const onLoad = () => {
-          script.removeEventListener("error", onError);
-          resolve(window.L);
-        };
-        const onError = () => {
-          script.removeEventListener("load", onLoad);
-          script.remove();
-          leafletLoadPromise = null;
-          reject(new Error("Failed to load Leaflet"));
-        };
-        script.addEventListener("load", onLoad, { once: true });
-        script.addEventListener("error", onError, { once: true });
-      });
+    leafletLoadPromise = new Promise((resolve, reject) => {
+      let script = document.getElementById("polish-transport-leaflet-js");
+      if (script && !script.src.includes("/leaflet/leaflet.js")) {
+        script.remove();
+        script = null;
+      }
+      if (!script) {
+        script = document.createElement("script");
+        script.id = "polish-transport-leaflet-js";
+        script.src = leafletAsset("leaflet.js");
+        document.head.appendChild(script);
+      }
+      const onLoad = () => {
+        script.removeEventListener("error", onError);
+        resolve(window.L);
+      };
+      const onError = () => {
+        script.removeEventListener("load", onLoad);
+        script.remove();
+        leafletLoadPromise = null;
+        reject(new Error("Failed to load Leaflet"));
+      };
+      script.addEventListener("load", onLoad, { once: true });
+      script.addEventListener("error", onError, { once: true });
     });
     return leafletLoadPromise;
   }

@@ -144,6 +144,7 @@ class PolishAggregatedSensor(SensorEntity):
             "manufacturer": DEVICE_MANUFACTURER,
             "model": provider,
         }
+        self._merged_cache = None
 
     @property
     def native_value(self) -> str | None:
@@ -173,13 +174,16 @@ class PolishAggregatedSensor(SensorEntity):
         return attrs
 
     def _merged_departures(self) -> list:
+        if self._merged_cache is not None:
+            return self._merged_cache
         all_deps = []
         for c in self._coordinators:
             if c.data:
                 all_deps.extend(c.data.get("departures", []))
         all_deps = PolishTransportCoordinator._deduplicate_prefer_rt(all_deps)
         all_deps.sort(key=lambda d: d.get("estimated_time") or "")
-        return all_deps[:MAX_DEPARTURES]
+        self._merged_cache = all_deps[:MAX_DEPARTURES]
+        return self._merged_cache
 
     @property
     def available(self) -> bool:
@@ -188,6 +192,7 @@ class PolishAggregatedSensor(SensorEntity):
     async def async_update(self) -> None:
         for c in self._coordinators:
             await c.async_refresh()
+        self._merged_cache = None
 
     async def async_added_to_hass(self) -> None:
         self.async_on_remove(
@@ -195,6 +200,7 @@ class PolishAggregatedSensor(SensorEntity):
         )
 
     async def _async_update_from_coordinators(self, hass, entry) -> None:
+        self._merged_cache = None
         self.async_write_ha_state()
 
 

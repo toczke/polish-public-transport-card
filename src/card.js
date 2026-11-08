@@ -109,7 +109,6 @@ export class PolishTransportCard extends LitElement {
       double_tap_action: normalizeActionConfig(config.double_tap_action, "none"),
     };
     this._depCache = null;
-    this.vehicleMap.preloadLeaflet();
   }
 
   getCardSize() { return (this._config.max_departures || 10) + 1; }
