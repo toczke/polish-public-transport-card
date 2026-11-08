@@ -1,6 +1,6 @@
 # Changelog
 
-## [2.0.0] - unreleased
+## [2.0.0] - 2026-11-08
 
 ### Breaking changes
 - **One hub per provider** - existing single-stop config entries are merged
@@ -27,6 +27,9 @@
   `sensor.ztm_gdansk_odjazdy`) next to the per-stop sensors.
 - **Add stop to existing hub** - adding another stop in the config flow appends it
   to the provider hub instead of creating a new config entry.
+- **Hub options** - each hub now has an options menu to change settings, add a
+  stop (with search for providers with large stop lists) or remove a stop. Removing
+  a stop also removes its device and entities; the last stop cannot be removed.
 
 ## [1.7.0] - unreleased
 

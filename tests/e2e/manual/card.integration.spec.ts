@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+﻿import { test, expect } from '@playwright/test';
 import * as path from 'path';
 
 const HA_URL = process.env.HA_URL || 'http://localhost:8123';
@@ -12,9 +12,9 @@ test('registers current and legacy card elements', async ({ page }) => {
   await page.addScriptTag({ path: scriptPath });
 
   const registrations = await page.evaluate(() => {
-    const card = customElements.get('mzkzg-transport-card');
+    const card = customElements.get('polish-transport-card');
     const legacyCard = customElements.get('polish-transport-card');
-    const editor = customElements.get('mzkzg-transport-card-editor');
+    const editor = customElements.get('polish-transport-card-editor');
     const legacyEditor = customElements.get('polish-transport-card-editor');
 
     return {
@@ -38,9 +38,9 @@ test('opens the vehicle map for positioned departures from any provider', async 
   await page.addScriptTag({ path: scriptPath });
 
   const result = await page.evaluate(() => {
-    const card = document.createElement('mzkzg-transport-card') as any;
+    const card = document.createElement('polish-transport-card') as any;
     card.setConfig({
-      type: 'custom:mzkzg-transport-card',
+      type: 'custom:polish-transport-card',
       entities: ['sensor.gzm_departures'],
       tap_action: { action: 'none' },
       hold_action: { action: 'none' },
@@ -91,9 +91,9 @@ test('does not accumulate tab listeners during departure updates', async ({ page
   await page.addScriptTag({ path: scriptPath });
 
   const calls = await page.evaluate(() => {
-    const card = document.createElement('mzkzg-transport-card') as any;
+    const card = document.createElement('polish-transport-card') as any;
     card.setConfig({
-      type: 'custom:mzkzg-transport-card',
+      type: 'custom:polish-transport-card',
       entities: ['sensor.first', 'sensor.second'],
       view_mode: 'tabs',
     });
@@ -130,8 +130,8 @@ test('shares Leaflet assets and destroys an open map on disconnect', async ({ pa
   await page.addScriptTag({ path: scriptPath });
 
   const result = await page.evaluate(async () => {
-    const first = document.createElement('mzkzg-transport-card') as any;
-    const second = document.createElement('mzkzg-transport-card') as any;
+    const first = document.createElement('polish-transport-card') as any;
+    const second = document.createElement('polish-transport-card') as any;
     const originalAppend = document.head.appendChild.bind(document.head);
     document.head.appendChild = ((node: Node) => {
       const result = originalAppend(node);
@@ -208,8 +208,8 @@ test('runs the refresh timer only while connected', async ({ page }) => {
   await page.addScriptTag({ path: scriptPath });
 
   const result = await page.evaluate(() => {
-    const card = document.createElement('mzkzg-transport-card') as any;
-    card.setConfig({ type: 'custom:mzkzg-transport-card', entities: [] });
+    const card = document.createElement('polish-transport-card') as any;
+    card.setConfig({ type: 'custom:polish-transport-card', entities: [] });
     card.hass = { states: {} };
     const detachedTimer = card._tickTimer;
     document.body.appendChild(card);
@@ -232,7 +232,7 @@ test.describe('Card rendering', () => {
   });
 
   test('cards render with correct provider color', async ({ page }) => {
-    const card = page.locator('mzkzg-transport-card, polish-transport-card').first();
+    const card = page.locator('polish-transport-card, polish-transport-card').first();
     await expect(card).toBeVisible();
     const header = card.locator('.header');
     const bg = await header.evaluate(el => getComputedStyle(el).backgroundColor);
@@ -241,22 +241,22 @@ test.describe('Card rendering', () => {
   });
 
   test('card shows provider display name in subtitle', async ({ page }) => {
-    const card = page.locator('mzkzg-transport-card, polish-transport-card').first();
+    const card = page.locator('polish-transport-card, polish-transport-card').first();
     const sub = card.locator('.header-sub');
     const text = await sub.textContent();
     expect(text).not.toContain('ztm_gdansk');
-    expect(text).toContain('ZTM Gdańsk');
+    expect(text).toContain('ZTM GdaĹ„sk');
   });
 
   test('card shows departure rows', async ({ page }) => {
-    const card = page.locator('mzkzg-transport-card, polish-transport-card').first();
+    const card = page.locator('polish-transport-card, polish-transport-card').first();
     const rows = card.locator('.dep-row');
     const count = await rows.count();
     expect(count).toBeGreaterThan(0);
   });
 
   test('departure row has route badge and time', async ({ page }) => {
-    const card = page.locator('mzkzg-transport-card, polish-transport-card').first();
+    const card = page.locator('polish-transport-card, polish-transport-card').first();
     const row = card.locator('.dep-row').first();
     const badge = row.locator('.route-badge');
     await expect(badge).toBeVisible();
@@ -265,7 +265,7 @@ test.describe('Card rendering', () => {
   });
 
   test('card height is consistent with padding', async ({ page }) => {
-    const cards = page.locator('mzkzg-transport-card, polish-transport-card');
+    const cards = page.locator('polish-transport-card, polish-transport-card');
     const count = await cards.count();
     if (count >= 2) {
       const h1 = await cards.nth(0).boundingBox();
@@ -310,7 +310,7 @@ test.describe('Multi-stop architecture', () => {
   test('operator hub has multiple stop devices', async ({ page }) => {
     await page.goto(`${HA_URL}/config/integrations/integration/mzkzg_transport`);
     await page.waitForSelector('text=Hubs', { timeout: 15000 });
-    // ZTM Gdańsk should have multiple devices listed
+    // ZTM GdaĹ„sk should have multiple devices listed
     const content = await page.content();
     expect(content).toContain('ztm_gdansk');
   });
@@ -324,7 +324,7 @@ test.describe('Visual editor', () => {
     await page.getByRole('button', { name: /edit/i }).click().catch(() => {});
     await page.waitForTimeout(1000);
     // The card should still show departures after edit mode
-    const card = page.locator('mzkzg-transport-card, polish-transport-card').first();
+    const card = page.locator('polish-transport-card, polish-transport-card').first();
     const rows = card.locator('.dep-row');
     const count = await rows.count();
     expect(count).toBeGreaterThanOrEqual(0);
@@ -334,7 +334,7 @@ test.describe('Visual editor', () => {
 test.describe('Provider colors', () => {
   const providers = [
     { path: 'kiedyprzyjedzie-albatros', name: 'Albatros', color: '#166534' },
-    { path: 'zbiorkom-krakow', name: 'ZTP Kraków', color: '#e2001a' },
+    { path: 'zbiorkom-krakow', name: 'ZTP KrakĂłw', color: '#e2001a' },
     { path: 'gtfsrt-szczecin', name: 'ZDiTM Szczecin', color: '#005ca9' },
   ];
 
@@ -342,7 +342,7 @@ test.describe('Provider colors', () => {
     test(`${p.name} has correct color and label`, async ({ page }) => {
       await page.goto(`${HA_URL}/dashboard-testing/${p.path}`);
       await page.waitForTimeout(5000);
-      const card = page.locator('mzkzg-transport-card, polish-transport-card').first();
+      const card = page.locator('polish-transport-card, polish-transport-card').first();
       const sub = card.locator('.header-sub');
       const text = await sub.textContent();
       expect(text).toContain(p.name);

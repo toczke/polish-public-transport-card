@@ -146,6 +146,9 @@ When a departure includes GPS coordinates, clicking the row opens a Leaflet map 
   `sensor.ztm_gdansk_odjazdy` alongside per-stop sensors.
 - **Add stops later** — a new stop added through the config flow joins the existing
   provider hub instead of creating another entry.
+- **Hub options** — open the hub entry options to change settings, add a stop
+  (searchable for large providers) or remove a stop together with its device and
+  entities. A hub always keeps at least one stop.
 - **Technical domain** — `mzkzg_transport` remains only as the hidden integration
   domain required for in-place upgrades; it is not used in entity or device names.
 - **Card cleanup** — only `custom:polish-transport-card` is registered; the legacy
