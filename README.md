@@ -333,12 +333,22 @@ npm run build
 npx playwright test
 ```
 
-**151 Python tests** cover GTFS-RT parsing, calendar filtering, position matching,
+**170 Python tests** cover GTFS-RT parsing, calendar filtering, position matching,
 route fallback, speed normalization, deduplication and provider-specific integration.
 **21 Playwright tests** cover card config, filters, the editor, the live-map popup,
 accessibility and visual snapshots for all five presets. Update visual baselines with
 `npx playwright test tests/e2e/visual-presets.spec.ts --update-snapshots`. CI runs
 lint, build, Python and Playwright on every push and pull request.
+
+A separate **Provider status** workflow runs every Monday at 04:17 UTC and checks
+every configured GTFS/GTFS-RT feed, realtime endpoint and vehicle-position endpoint.
+It uploads a Markdown/JSON report and opens (or updates) a GitHub issue when any
+provider fails. Run it manually from the Actions tab with **Provider status → Run
+workflow**, or locally with:
+
+```bash
+python scripts/validate_providers.py --markdown provider-status.md
+```
 
 ---
 

@@ -41,6 +41,9 @@
   use Home Assistant icons instead of emoji
 - **Quality gates** - GitHub Actions CI for lint/build/pytest/Playwright, visual
   snapshot baselines for all five presets, and a permanent map popup/marker test
+- **Provider status monitoring** - a weekly GitHub Actions workflow validates every
+  GTFS schedule, GTFS-RT and vehicle-position endpoint, uploads a Markdown/JSON
+  report and opens or updates an issue when any provider fails
 - **YAML documentation** - README options table and example config updated with all
   global/per-sensor keys and theme examples
 
