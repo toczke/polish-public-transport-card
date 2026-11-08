@@ -104,9 +104,9 @@ Home Assistant integration + Lovelace card for real-time public transport depart
 | [MKS Mielec](https://mks.mielec.pl) | Mielec (bus) | GTFS-RT (api6) | ✅ | 🗺️ | — |
 | [MZK Oświęcim](https://mzk.oswiecim.pl) | Oświęcim (bus) | GTFS-RT (api6) | ✅ | 🗺️ | — |
 | [MPK Radomsko](https://mpk.radomsko.pl) | Radomsko (bus) | GTFS-RT (api6) | ✅ | 🗺️ | — |
-| [MKS Dębica](https://mks.debica.pl) | Dębica (bus) | Static GTFS | ❌ | ❌ | — |
+| [MKS Dębica](https://mks.debica.pl) | Dębica (bus) | Source unavailable | ❌ | ❌ | — |
 | [KM Kołobrzeg](https://km.kolobrzeg.pl) | Kołobrzeg (bus) | Static GTFS | ❌ | ❌ | — |
-| [SPGK Sanok](https://spgk.sanok.pl) | Sanok (bus) | Static GTFS | ❌ | ❌ | — |
+| [SPGK Sanok](https://spgk.sanok.pl) | Sanok (bus) | Source unavailable | ❌ | ❌ | — |
 | [MZK Ostrołęka](https://mzk.ostroleka.pl) | Ostrołęka (bus) | Static GTFS | ❌ | ❌ | — |
 
 ¹ Kraków: GPS for buses (matched by route + brigade) and for trams within a few stops of the stop (matched by upcoming stop + scheduled time), via zbiorkom.live api6-open.

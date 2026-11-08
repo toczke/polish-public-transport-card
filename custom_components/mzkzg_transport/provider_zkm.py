@@ -21,7 +21,9 @@ async def fetch(coord: "MzkzgTransportCoordinator") -> dict:
         await _load_routes(coord, session)
 
     url = f"{ZKM_GDYNIA_DELAYS_URL}?stopId={coord.stop_id}"
-    data = await fetch_with_retry(session, url)
+    # api.zdiz.gdynia.pl currently serves an expired TLS certificate; the API
+    # itself works. Keep this scoped to ZKM Gdynia and remove once renewed.
+    data = await fetch_with_retry(session, url, ssl=False)
 
     departures = []
     now = dt_util.now()
@@ -86,7 +88,7 @@ async def _load_routes(coord, session: aiohttp.ClientSession) -> None:
     """Load ZKM route short names."""
     try:
         async with session.get(
-            ZKM_GDYNIA_ROUTES_URL, timeout=aiohttp.ClientTimeout(total=15)
+            ZKM_GDYNIA_ROUTES_URL, timeout=aiohttp.ClientTimeout(total=15), ssl=False
         ) as resp:
             if resp.status == 200:
                 data = await resp.json()

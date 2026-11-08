@@ -45,6 +45,13 @@
   global/per-sensor keys and theme examples
 
 ### Fixed
+- **City feed validation** - reviewed every configured GTFS/GTFS-RT city. All
+  reachable feeds return valid schedule, realtime and vehicle-position data. The
+  ZKM Gdynia endpoint currently has an expired TLS certificate, so requests for that
+  host skip certificate verification until the operator renews it. MKS Dębica and
+  SPGK Sanok no longer exist in the zbiorkom.live catalogue; they are hidden from the
+  provider picker and existing entries log a clear warning instead of silently
+  returning empty departures
 - **Changed GTFS stop IDs** - operators that replace numeric stop IDs with slug
   IDs (Lublin did this on 2026-11-04) no longer leave existing entries empty. The
   integration resolves the new ID by stop name and platform, exposes

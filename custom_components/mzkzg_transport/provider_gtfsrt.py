@@ -28,6 +28,14 @@ async def fetch(coord: "MzkzgTransportCoordinator") -> dict:
     if not city_cfg:
         return {"stop_id": coord.stop_id, "stop_name": coord.stop_name, "provider": coord.provider, "departures": [], "last_update": now.isoformat()}
 
+    if city_cfg.get("unavailable"):
+        _LOGGER.warning(
+            "GTFS-RT: %s has no public GTFS source anymore (%s)",
+            coord.provider,
+            coord.stop_name or coord.stop_id,
+        )
+        return {"stop_id": coord.stop_id, "stop_name": coord.stop_name, "provider": coord.provider, "departures": [], "last_update": now.isoformat()}
+
     # Load static GTFS (cached daily)
     gtfs = await _get_gtfs_data(coord, session, city_cfg, now)
     if not gtfs:

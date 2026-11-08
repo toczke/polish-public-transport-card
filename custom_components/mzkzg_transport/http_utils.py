@@ -11,12 +11,22 @@ MAX_RETRIES = 3
 RETRY_DELAYS = (1, 3, 7)
 
 
-async def fetch_with_retry(session: aiohttp.ClientSession, url: str, timeout: float = 15, as_text: bool = False) -> dict | str:
+async def fetch_with_retry(
+    session: aiohttp.ClientSession,
+    url: str,
+    timeout: float = 15,
+    as_text: bool = False,
+    ssl: bool | None = None,
+) -> dict | str:
     """Fetch URL with retry on connection errors."""
     last_err = None
     for attempt in range(MAX_RETRIES):
         try:
-            async with session.get(url, timeout=aiohttp.ClientTimeout(total=timeout)) as resp:
+            async with session.get(
+                url,
+                timeout=aiohttp.ClientTimeout(total=timeout),
+                ssl=ssl,
+            ) as resp:
                 resp.raise_for_status()
                 return await resp.text() if as_text else await resp.json()
         except (aiohttp.ClientConnectorError, aiohttp.ServerDisconnectedError, aiohttp.ClientResponseError, asyncio.TimeoutError) as err:
