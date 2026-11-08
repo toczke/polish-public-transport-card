@@ -215,7 +215,7 @@ async def _migrate_group(
         _reconcile_entity(
             ent_reg,
             domain="sensor",
-            platform="sensor",
+            platform=DOMAIN,
             new_unique=f"{ENTITY_UNIQUE_PREFIX}_{provider}_{stop_id}",
             old_uniques=[f"{DOMAIN}_{provider}_{stop_id}"],
             desired_entity_id=f"sensor.{slugify(stop_name)}_odjazdy",
@@ -226,7 +226,7 @@ async def _migrate_group(
             _reconcile_entity(
                 ent_reg,
                 domain="binary_sensor",
-                platform="binary_sensor",
+                platform=DOMAIN,
                 new_unique=f"{ENTITY_UNIQUE_PREFIX}_{provider}_{stop_id}_delay",
                 old_uniques=[f"{DOMAIN}_{provider}_{stop_id}_delay"],
                 desired_entity_id=f"binary_sensor.{slugify(stop_name)}_opoznienie",
@@ -238,7 +238,7 @@ async def _migrate_group(
         _reconcile_entity(
             ent_reg,
             domain="sensor",
-            platform="sensor",
+            platform=DOMAIN,
             new_unique=f"{ENTITY_UNIQUE_PREFIX}_{provider}_hub",
             old_uniques=old_hub_uniques,
             desired_entity_id=f"sensor.{slugify(provider_label)}_odjazdy",
@@ -250,7 +250,7 @@ async def _migrate_group(
         _reconcile_entity(
             ent_reg,
             domain="sensor",
-            platform="sensor",
+            platform=DOMAIN,
             new_unique=f"{ENTITY_UNIQUE_PREFIX}_plk_api_usage",
             old_uniques=[f"{DOMAIN}_plk_api_usage"],
             desired_entity_id="sensor.plk_api_usage",
