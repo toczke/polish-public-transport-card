@@ -19,9 +19,10 @@ def async_link_device_to_parent(
     registry = dr.async_get(hass)
 
     def _find(device_identifiers: set[tuple[str, str]]):
-        if config_entry_id and hasattr(registry, "async_get_device_by_identifier"):
+        lookup = getattr(registry, "async_get_device_by_identifier", None)
+        if config_entry_id and lookup:
             for identifier in device_identifiers:
-                device = registry.async_get_device_by_identifier(identifier, config_entry_id)
+                device = lookup(identifier, config_entry_id)
                 if device is not None:
                     return device
             return None
