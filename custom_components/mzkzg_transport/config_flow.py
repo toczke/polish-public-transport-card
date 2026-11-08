@@ -815,6 +815,7 @@ class PolishTransportOptionsFlow(config_entries.OptionsFlow):
     def __init__(self) -> None:
         self._stops = None
         self._api_key = ""
+        self._stop_query = ""
 
     async def async_step_init(self, user_input=None):
         """Show the hub menu."""
@@ -840,10 +841,6 @@ class PolishTransportOptionsFlow(config_entries.OptionsFlow):
             return current_opts.get(key, current_data.get(key, default))
 
         schema = {
-            vol.Optional(
-                CONF_NAME,
-                default=_opt(CONF_NAME, ""),
-            ): str,
             vol.Optional(
                 "destination_filter",
                 default=_opt("destination_filter", ""),
@@ -905,9 +902,21 @@ class PolishTransportOptionsFlow(config_entries.OptionsFlow):
         stops = entry_stops(self.config_entry)
         errors = {}
 
+        if self._stops is None:
+            self._api_key = self.config_entry.data.get(CONF_API_KEY, "")
+            self._stops = await _load_stops(self, provider)
+
+        large_list = bool(self._stops) and len(self._stops) > MAX_STOP_OPTIONS
+
         if user_input is not None:
+            query = str(user_input.get(STOP_QUERY, "") or "").strip()
             stop_id = str(user_input.get(CONF_STOP_ID, "") or "").strip()
             name = str(user_input.get(CONF_NAME, "") or "").strip()
+            # Large providers are not rendered as one huge dropdown. The first
+            # submit narrows the list by name/ID, then the user picks a match.
+            if large_list and query and not stop_id:
+                self._stop_query = query
+                return await self.async_step_add_stop()
             if not stop_id or not re.match(STOP_ID_PATTERN, stop_id):
                 errors[CONF_STOP_ID] = "invalid_stop_id"
             elif any(stop["stop_id"] == stop_id for stop in stops):
@@ -919,11 +928,37 @@ class PolishTransportOptionsFlow(config_entries.OptionsFlow):
                 await self.hass.config_entries.async_reload(self.config_entry.entry_id)
                 return self.async_create_entry(title="", data=self.config_entry.options)
 
-        if self._stops is None:
-            self._api_key = self.config_entry.data.get(CONF_API_KEY, "")
-            self._stops = await _load_stops(self, provider)
+        if large_list:
+            from homeassistant.helpers.selector import (
+                SelectOptionDict,
+                SelectSelector,
+                SelectSelectorConfig,
+                SelectSelectorMode,
+            )
 
-        if self._stops and len(self._stops) <= MAX_STOP_OPTIONS:
+            matches = _match_stops(self._stops, self._stop_query)
+            fields: dict = {
+                vol.Optional(STOP_QUERY, default=self._stop_query): str,
+            }
+            if matches:
+                fields[vol.Required(CONF_STOP_ID)] = SelectSelector(
+                    SelectSelectorConfig(
+                        options=[
+                            SelectOptionDict(
+                                value=str(stop["id"]),
+                                label=f"{stop['name']} ({stop['id']})",
+                            )
+                            for stop in matches
+                        ],
+                        mode=SelectSelectorMode.DROPDOWN,
+                        sort=False,
+                    )
+                )
+            elif self._stop_query:
+                errors[STOP_QUERY] = "no_stops_found"
+            fields[vol.Optional(CONF_NAME, default="")] = str
+            schema = vol.Schema(fields)
+        elif self._stops:
             from homeassistant.helpers.selector import (
                 SelectOptionDict,
                 SelectSelector,
@@ -970,14 +1005,19 @@ class PolishTransportOptionsFlow(config_entries.OptionsFlow):
 
     async def async_step_remove_stop(self, user_input=None):
         """Remove a stop from the provider hub."""
-        from .migration import entry_stops
+        from .migration import (
+            async_remove_hub_entity,
+            async_remove_stop_entities,
+            entry_stops,
+        )
 
         stops = entry_stops(self.config_entry)
+        if len(stops) <= 1:
+            return self.async_abort(reason="last_stop")
+
         errors = {}
         if user_input is not None:
             stop_id = str(user_input.get(CONF_STOP_ID, "") or "").strip()
-            if len(stops) <= 1:
-                return self.async_abort(reason="last_stop")
             remaining = [stop for stop in stops if stop["stop_id"] != stop_id]
             if len(remaining) == len(stops):
                 errors[CONF_STOP_ID] = "invalid_stop_id"
@@ -985,6 +1025,9 @@ class PolishTransportOptionsFlow(config_entries.OptionsFlow):
                 data = dict(self.config_entry.data)
                 data[CONF_STOPS] = remaining
                 self.hass.config_entries.async_update_entry(self.config_entry, data=data)
+                async_remove_stop_entities(self.hass, self.config_entry, stop_id)
+                if len(remaining) <= 1:
+                    async_remove_hub_entity(self.hass, self.config_entry)
                 await self.hass.config_entries.async_reload(self.config_entry.entry_id)
                 return self.async_create_entry(title="", data=self.config_entry.options)
 

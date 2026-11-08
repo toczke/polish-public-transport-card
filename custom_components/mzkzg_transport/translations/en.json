@@ -70,7 +70,12 @@
           "sleep_start": "Sleep start (HH:MM)",
           "sleep_end": "Sleep end (HH:MM)",
           "fallback_min": "Minimum scheduled departures for Łódź fallback",
-          "timetable_lines": "Timetable lines (comma-separated)"
+          "timetable_lines": "Timetable lines (comma-separated)",
+          "destination_filter": "Destination filter",
+          "filter_routes": "Route filter",
+          "highlight_mode": "Highlight mode",
+          "hide_terminus": "Hide terminus",
+          "realtime_only": "Realtime only"
         }
       },
       "add_stop": {
@@ -78,7 +83,8 @@
         "description": "Add another stop to this provider hub. Currently {count} stops.",
         "data": {
           "stop_id": "Stop",
-          "name": "Custom name (optional)"
+          "name": "Custom name (optional)",
+          "stop_query": "Search stop (name or ID)"
         }
       },
       "remove_stop": {
@@ -91,6 +97,11 @@
     },
     "abort": {
       "last_stop": "A hub must keep at least one stop."
+    },
+    "error": {
+      "invalid_stop_id": "Invalid stop ID",
+      "no_stops_found": "No stops match the query",
+      "base": "This stop is already in the hub"
     }
   }
 }

@@ -70,7 +70,12 @@
           "sleep_start": "Początek uśpienia (GG:MM)",
           "sleep_end": "Koniec uśpienia (GG:MM)",
           "fallback_min": "Minimalna liczba odjazdów do uzupełnienia rozkładem (Łódź)",
-          "timetable_lines": "Linie do pe?nego rozk?adu (oddzielone przecinkami)"
+          "timetable_lines": "Linie do pe?nego rozk?adu (oddzielone przecinkami)",
+          "destination_filter": "Filtr kierunku",
+          "filter_routes": "Filtr linii",
+          "highlight_mode": "Tryb wyróżnienia",
+          "hide_terminus": "Ukryj kierunek końcowy",
+          "realtime_only": "Tylko w czasie rzeczywistym"
         }
       },
       "add_stop": {
@@ -78,7 +83,8 @@
         "description": "Dodaj kolejny przystanek do huba. Obecnie {count} przystanków.",
         "data": {
           "stop_id": "Przystanek",
-          "name": "Własna nazwa (opcjonalnie)"
+          "name": "Własna nazwa (opcjonalnie)",
+          "stop_query": "Szukaj przystanku (nazwa lub ID)"
         }
       },
       "remove_stop": {
@@ -91,6 +97,11 @@
     },
     "abort": {
       "last_stop": "Hub musi mieć co najmniej jeden przystanek."
+    },
+    "error": {
+      "invalid_stop_id": "Nieprawidłowy ID przystanku",
+      "no_stops_found": "Brak przystanków pasujących do wyszukiwania",
+      "base": "Ten przystanek jest już w hubie"
     }
   }
 }

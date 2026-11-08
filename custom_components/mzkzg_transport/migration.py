@@ -298,6 +298,40 @@ async def async_normalize_hub_entity_ids(hass: HomeAssistant) -> None:
             registry.async_update_entity(entity_id, new_entity_id=target)
 
 
+def async_remove_stop_entities(
+    hass: HomeAssistant, entry: ConfigEntry, stop_id: str
+) -> None:
+    """Remove registry entries for a stop that was removed from a hub."""
+    provider = entry.data.get(CONF_PROVIDER)
+    if not provider:
+        return
+    dev_reg = dr.async_get(hass)
+    ent_reg = er.async_get(hass)
+    device = dev_reg.async_get_device(
+        identifiers={(DOMAIN, f"{provider}_{stop_id}")}
+    )
+    if device is None:
+        return
+    for entity in er.async_entries_for_device(
+        ent_reg, device.id, include_disabled_entities=True
+    ):
+        ent_reg.async_remove(entity.entity_id)
+    dev_reg.async_remove_device(device.id)
+
+
+def async_remove_hub_entity(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Remove the merged hub sensor when a hub drops to one stop."""
+    provider = entry.data.get(CONF_PROVIDER)
+    if not provider:
+        return
+    ent_reg = er.async_get(hass)
+    entity_id = ent_reg.async_get_entity_id(
+        "sensor", DOMAIN, f"{ENTITY_UNIQUE_PREFIX}_{provider}_hub"
+    )
+    if entity_id:
+        ent_reg.async_remove(entity_id)
+
+
 async def async_migrate_entries(hass: HomeAssistant) -> None:
     """Consolidate legacy single-stop entries into one hub per provider."""
     lock = hass.data.setdefault(DOMAIN, {}).setdefault("_migration_lock", asyncio.Lock())
