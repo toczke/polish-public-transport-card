@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.0.1] - 2026-11-08
+
+### Fixed
+- **GTFS-RT route fallback (#52)** - a trip without its own realtime update no
+  longer inherits the last delay and vehicle from another trip on the same route.
+  This fixes Poznań, where all later `156` trips showed one bus and a large negative
+  delay. Route positions are now assigned to at most one departure per vehicle, and
+  large negative delays at the first stop are clamped to the scheduled time.
+- **Changed stop IDs (#51)** - documented that when a feed replaces numeric stop IDs
+  (Lublin), the stop must be added again from the searchable picker. Hand-typing the
+  old numeric ID cannot be resolved against the new feed.
+
 ## [2.0.0] - 2026-11-08
 
 ### Breaking changes

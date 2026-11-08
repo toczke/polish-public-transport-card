@@ -1,7 +1,7 @@
 # Polish Public Transport Card
 
 [![HACS](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
-[![Version](https://img.shields.io/badge/version-2.0.0-blue.svg)](https://github.com/toczke/polish-public-transport-card/releases)
+[![Version](https://img.shields.io/badge/version-2.0.1-blue.svg)](https://github.com/toczke/polish-public-transport-card/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Tests](https://img.shields.io/badge/tests-passing-success.svg)]()
 
@@ -191,6 +191,15 @@ When a departure includes GPS coordinates, clicking the row opens a Leaflet map 
   operators with expired certificates.
 - **Quality gates** — GitHub Actions CI for lint/build/pytest/Playwright, visual
   snapshots, map tests and a weekly provider-status workflow.
+
+### 2.0.1 fixes
+
+- **GTFS-RT trip isolation** — a trip without its own realtime update no longer
+  inherits another trip's delay and vehicle. This fixes duplicate Poznań markers
+  and large negative delays at the terminus.
+- **Changed stop IDs** — for feeds such as Lublin that replaced numeric stop IDs,
+  add the stop from the searchable picker; typing the old number by hand will not
+  resolve against the new feed.
 
 ### Upgrading from 1.6.x or a 2.0 pre-release
 
