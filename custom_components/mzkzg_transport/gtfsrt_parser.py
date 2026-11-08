@@ -60,6 +60,17 @@ def resolve_stop_id(stops: dict, old_id: str, old_name: str) -> str | None:
     if not candidates:
         return None
 
+    # Some zbiorkom feeds keep the old numeric stop code inside the new slug
+    # (for example "urzad-miasta1141-mhwf5"). That is the strongest signal.
+    if old_id.isdigit():
+        embedded = [
+            stop_id
+            for stop_id, _info in candidates
+            if re.search(rf"(?<!\d){re.escape(old_id)}(?!\d)", stop_id)
+        ]
+        if len(embedded) == 1:
+            return embedded[0]
+
     wanted = _platform_suffix(old_name)
     if not wanted:
         match = re.search(r"(\d)$", old_id)

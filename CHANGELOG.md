@@ -48,7 +48,8 @@
 - **Changed GTFS stop IDs** - operators that replace numeric stop IDs with slug
   IDs (Lublin did this on 2026-11-04) no longer leave existing entries empty. The
   integration resolves the new ID by stop name and platform, exposes
-  `resolved_stop_id`, and logs the feed/row counts for diagnostics
+  `resolved_stop_id`, and logs the feed/row counts for diagnostics. Slugs that
+  embed the old numeric code are matched directly as well
 - **Device registry deprecation** - device links now use the per-entry
   `async_get_device_by_identifier` API where available, removing the Home Assistant
   2027.8 deprecation warning

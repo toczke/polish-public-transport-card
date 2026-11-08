@@ -12,6 +12,8 @@ STOPS = {
     "sulislawicka02-jd3ka": {"name": "Sulisławicka 02"},
     "sulislawicka03-k2m1x": {"name": "Sulisławicka 03"},
     "dworzec-lublin": {"name": "Dworzec Lublin"},
+    "urzad-miasta1141-mhwf5": {"name": "Urząd Miasta"},
+    "urzad-miasta1142-mf76t": {"name": "Urząd Miasta"},
 }
 
 
@@ -21,6 +23,10 @@ def test_existing_id_is_returned_unchanged():
 
 def test_old_numeric_id_resolves_by_name_and_last_digit():
     assert resolve_stop_id(STOPS, "3142", "Majdanek - pomnik NŻ") == "majdanek-pomnik02-liv9t"
+
+
+def test_embedded_numeric_id_disambiguates_same_name():
+    assert resolve_stop_id(STOPS, "1141", "Urząd Miasta") == "urzad-miasta1141-mhwf5"
 
 
 def test_platform_from_old_name_wins():
