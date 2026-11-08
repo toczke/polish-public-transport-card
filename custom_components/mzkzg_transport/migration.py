@@ -79,6 +79,57 @@ def _unique_entity_id(registry: er.EntityRegistry, domain: str, wanted: str, cur
     return f"{candidate}_{suffix}"
 
 
+def _reconcile_entity(
+    registry: er.EntityRegistry,
+    *,
+    domain: str,
+    platform: str,
+    new_unique: str,
+    old_uniques: list[str],
+    desired_entity_id: str,
+    hub_entry_id: str,
+    device_id: str,
+) -> None:
+    """Keep the 2.0 entity, remove legacy duplicates and fix its registry data."""
+    new_entity_id = registry.async_get_entity_id(domain, platform, new_unique)
+    old_entity_ids = [
+        entity_id
+        for unique in old_uniques
+        if (entity_id := registry.async_get_entity_id(domain, platform, unique))
+    ]
+
+    if new_entity_id:
+        for old_entity_id in old_entity_ids:
+            if old_entity_id != new_entity_id:
+                registry.async_remove(old_entity_id)
+        wanted = desired_entity_id.split(".", 1)[-1]
+        target = _unique_entity_id(registry, domain, wanted, new_entity_id)
+        registry.async_update_entity(
+            new_entity_id,
+            new_entity_id=target,
+            new_unique_id=new_unique,
+            config_entry_id=hub_entry_id,
+            device_id=device_id,
+        )
+        return
+
+    if not old_entity_ids:
+        return
+
+    primary, *duplicates = old_entity_ids
+    for duplicate in duplicates:
+        registry.async_remove(duplicate)
+    wanted = desired_entity_id.split(".", 1)[-1]
+    target = _unique_entity_id(registry, domain, wanted, primary)
+    registry.async_update_entity(
+        primary,
+        new_entity_id=target,
+        new_unique_id=new_unique,
+        config_entry_id=hub_entry_id,
+        device_id=device_id,
+    )
+
+
 async def _migrate_group(
     hass: HomeAssistant,
     provider: str,
@@ -147,64 +198,74 @@ async def _migrate_group(
         if device:
             stop_devices[stop_id] = device.id
 
+    group_entities = []
     for entry in group:
-        for entity in er.async_entries_for_config_entry(ent_reg, entry.entry_id):
-            unique_id = entity.unique_id or ""
-            new_unique = None
-            new_entity = None
-            device_id = hub_device.id
+        group_entities.extend(er.async_entries_for_config_entry(ent_reg, entry.entry_id))
 
-            if unique_id == f"{DOMAIN}_plk_api_usage":
-                new_unique = f"{ENTITY_UNIQUE_PREFIX}_plk_api_usage"
-                new_entity = _unique_entity_id(ent_reg, "sensor", "plk_api_usage", entity.entity_id)
-            elif "_multi_" in unique_id:
-                new_unique = f"{ENTITY_UNIQUE_PREFIX}_{provider}_hub"
-                new_entity = _unique_entity_id(
-                    ent_reg, "sensor", f"{slugify(provider_label)}_odjazdy", entity.entity_id
-                )
-            elif unique_id.startswith(f"{DOMAIN}_{provider}_") and unique_id.endswith("_delay"):
-                stop_id = unique_id[len(f"{DOMAIN}_{provider}_") : -len("_delay")]
-                new_unique = f"{ENTITY_UNIQUE_PREFIX}_{provider}_{stop_id}_delay"
-                new_entity = _unique_entity_id(
-                    ent_reg,
-                    "binary_sensor",
-                    f"{slugify(stop_names.get(stop_id, stop_id))}_opoznienie",
-                    entity.entity_id,
-                )
-                device_id = stop_devices.get(stop_id, hub_device.id)
-            elif unique_id.startswith(f"{DOMAIN}_{provider}_"):
-                stop_id = unique_id[len(f"{DOMAIN}_{provider}_") :]
-                new_unique = f"{ENTITY_UNIQUE_PREFIX}_{provider}_{stop_id}"
-                new_entity = _unique_entity_id(
-                    ent_reg,
-                    "sensor",
-                    f"{slugify(stop_names.get(stop_id, stop_id))}_odjazdy",
-                    entity.entity_id,
-                )
-                device_id = stop_devices.get(stop_id, hub_device.id)
-            elif unique_id.endswith("_health") or unique_id.endswith("_delay"):
-                # Old health sensors and non-PLK delay sensors were removed in 1.7.
-                ent_reg.async_remove(entity.entity_id)
-                continue
+    old_hub_uniques = [
+        entity.unique_id
+        for entity in group_entities
+        if entity.unique_id and "_multi_" in entity.unique_id
+    ]
 
-            if not new_unique or not new_entity:
-                continue
+    for stop in stops:
+        stop_id = stop["stop_id"]
+        stop_name = stop_names.get(stop_id, stop_id)
+        _reconcile_entity(
+            ent_reg,
+            domain="sensor",
+            platform="sensor",
+            new_unique=f"{ENTITY_UNIQUE_PREFIX}_{provider}_{stop_id}",
+            old_uniques=[f"{DOMAIN}_{provider}_{stop_id}"],
+            desired_entity_id=f"sensor.{slugify(stop_name)}_odjazdy",
+            hub_entry_id=hub.entry_id,
+            device_id=stop_devices.get(stop_id, hub_device.id),
+        )
+        if provider == PROVIDER_PLK:
+            _reconcile_entity(
+                ent_reg,
+                domain="binary_sensor",
+                platform="binary_sensor",
+                new_unique=f"{ENTITY_UNIQUE_PREFIX}_{provider}_{stop_id}_delay",
+                old_uniques=[f"{DOMAIN}_{provider}_{stop_id}_delay"],
+                desired_entity_id=f"binary_sensor.{slugify(stop_name)}_opoznienie",
+                hub_entry_id=hub.entry_id,
+                device_id=stop_devices.get(stop_id, hub_device.id),
+            )
 
-            try:
-                ent_reg.async_update_entity(
-                    entity.entity_id,
-                    new_unique_id=new_unique,
-                    new_entity_id=new_entity,
-                    config_entry_id=hub.entry_id,
-                    device_id=device_id,
-                )
-            except Exception as err:  # noqa: BLE001 - migration must not abort setup
-                _LOGGER.warning(
-                    "2.0 migration: could not migrate entity %s (%s): %s",
-                    entity.entity_id,
-                    unique_id,
-                    err,
-                )
+    if len(stops) > 1:
+        _reconcile_entity(
+            ent_reg,
+            domain="sensor",
+            platform="sensor",
+            new_unique=f"{ENTITY_UNIQUE_PREFIX}_{provider}_hub",
+            old_uniques=old_hub_uniques,
+            desired_entity_id=f"sensor.{slugify(provider_label)}_odjazdy",
+            hub_entry_id=hub.entry_id,
+            device_id=hub_device.id,
+        )
+
+    if provider == PROVIDER_PLK:
+        _reconcile_entity(
+            ent_reg,
+            domain="sensor",
+            platform="sensor",
+            new_unique=f"{ENTITY_UNIQUE_PREFIX}_plk_api_usage",
+            old_uniques=[f"{DOMAIN}_plk_api_usage"],
+            desired_entity_id="sensor.plk_api_usage",
+            hub_entry_id=hub.entry_id,
+            device_id=hub_device.id,
+        )
+
+    # Remove entities the integration stopped creating in 1.7/2.0.
+    for entity in group_entities:
+        unique_id = entity.unique_id or ""
+        if unique_id.endswith("_health") or (
+            provider != PROVIDER_PLK
+            and unique_id.startswith(f"{DOMAIN}_{provider}_")
+            and unique_id.endswith("_delay")
+        ):
+            ent_reg.async_remove(entity.entity_id)
 
     for entry in group:
         if entry.entry_id != hub.entry_id:
