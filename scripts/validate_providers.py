@@ -174,6 +174,9 @@ def _feed_check(provider: str, kind: str, url: str | None) -> Result:
 
 
 def check_city(provider: str, cfg: dict) -> list[Result]:
+    if cfg.get("status_check") == "skip":
+        note = cfg.get("status_note") or "provider status check skipped"
+        return [Result(provider, "all", "SKIP", note)]
     results = [_gtfs_check(provider, cfg)]
     if cfg.get("unavailable"):
         return results

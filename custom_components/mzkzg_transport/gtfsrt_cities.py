@@ -293,6 +293,11 @@ GTFSRT_CITIES = {
         "positions_url": "https://gtfsrt.transportgzm.pl:5443/gtfsrt/gzm/vehiclePositions",
         "positions_format": "gtfsrt_protobuf",
         "label": "ZTM GZM (Katowice)",
+        # The operator endpoint is only reachable on port 5443 and is blocked
+        # from GitHub Actions egress. It works from typical home networks, so
+        # the weekly report skips it instead of reporting a false outage.
+        "status_check": "skip",
+        "status_note": "operator port 5443 is blocked from GitHub Actions; verified locally",
     },
     "mpk_lodz": {
         "gtfs_url": "https://otwarte.miasto.lodz.pl/wp-content/uploads/2025/06/GTFS.zip",
