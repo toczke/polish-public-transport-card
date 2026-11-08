@@ -31,6 +31,7 @@ from .const import (
     ENTITY_UNIQUE_PREFIX,
     PROVIDER_LABELS,
     PROVIDER_PLK,
+    provider_entity_slug,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -243,7 +244,7 @@ async def _migrate_group(
             platform=DOMAIN,
             new_unique=f"{ENTITY_UNIQUE_PREFIX}_{provider}_hub",
             old_uniques=old_hub_uniques,
-            desired_entity_id=f"sensor.{slugify(provider_label)}_odjazdy",
+            desired_entity_id=f"sensor.{provider_entity_slug(provider)}_odjazdy",
             hub_entry_id=hub.entry_id,
             device_id=hub_device.id,
         )
@@ -276,6 +277,25 @@ async def _migrate_group(
                 await hass.config_entries.async_remove(entry.entry_id)
             except Exception as err:  # noqa: BLE001
                 _LOGGER.warning("2.0 migration: could not remove %s: %s", entry.title, err)
+
+
+async def async_normalize_hub_entity_ids(hass: HomeAssistant) -> None:
+    """Keep provider hub entity IDs short and stable across 2.0 updates."""
+    registry = er.async_get(hass)
+    for entry in hass.config_entries.async_entries(DOMAIN):
+        provider = entry.data.get(CONF_PROVIDER)
+        if not provider or len(entry_stops(entry)) <= 1:
+            continue
+        unique_id = f"{ENTITY_UNIQUE_PREFIX}_{provider}_hub"
+        entity_id = registry.async_get_entity_id("sensor", DOMAIN, unique_id)
+        if not entity_id:
+            continue
+        desired = f"sensor.{provider_entity_slug(provider)}_odjazdy"
+        if entity_id != desired:
+            target = _unique_entity_id(
+                registry, "sensor", desired.split(".", 1)[1], entity_id
+            )
+            registry.async_update_entity(entity_id, new_entity_id=target)
 
 
 async def async_migrate_entries(hass: HomeAssistant) -> None:

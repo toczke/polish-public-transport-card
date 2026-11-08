@@ -16,6 +16,7 @@ from .const import (
     MAX_DEPARTURES,
     PROVIDER_LABELS,
     PROVIDER_PLK,
+    provider_entity_slug,
 )
 from .coordinator import PolishTransportCoordinator
 from .device_utils import async_link_device_to_parent
@@ -135,6 +136,7 @@ class PolishAggregatedSensor(SensorEntity):
         self._provider = provider
         self._attr_unique_id = f"{ENTITY_UNIQUE_PREFIX}_{provider}_hub"
         self._attr_name = "Odjazdy"
+        self._attr_suggested_object_id = f"{provider_entity_slug(provider)}_odjazdy"
         self._attr_icon = "mdi:bus-multiple"
         self._attr_device_info = {
             "identifiers": {(DOMAIN, provider)},

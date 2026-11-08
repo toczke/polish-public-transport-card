@@ -36,9 +36,10 @@ if _CARD_BUILD:
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     """Run domain-wide 2.0 migration before config entries are set up."""
     hass.data.setdefault(DOMAIN, {})
-    from .migration import async_migrate_entries
+    from .migration import async_migrate_entries, async_normalize_hub_entity_ids
 
     await async_migrate_entries(hass)
+    await async_normalize_hub_entity_ids(hass)
     return True
 
 
@@ -46,9 +47,10 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Migrate a legacy entry to the 2.0 hub format."""
     if entry.version >= CONFIG_ENTRY_VERSION:
         return True
-    from .migration import async_migrate_entries
+    from .migration import async_migrate_entries, async_normalize_hub_entity_ids
 
     await async_migrate_entries(hass)
+    await async_normalize_hub_entity_ids(hass)
     return True
 
 

@@ -2,6 +2,7 @@
 
 from types import SimpleNamespace
 
+from mzkzg_transport.const import provider_entity_slug
 from mzkzg_transport.migration import entry_stops, slugify
 
 
@@ -9,6 +10,13 @@ def test_slugify_handles_polish_names():
     assert slugify("Gdańsk Śródmieście") == "gdansk_srodmiescie"
     assert slugify("Płocka 01") == "plocka_01"
     assert slugify("") == "odjazdy"
+
+
+def test_provider_entity_slugs_are_short():
+    assert provider_entity_slug("plk_rail") == "plk"
+    assert provider_entity_slug("gtfsrt_lublin") == "lublin"
+    assert provider_entity_slug("zbiorkom_krakow") == "krakow"
+    assert provider_entity_slug("ztm_gdansk") == "ztm_gdansk"
 
 
 def test_entry_stops_from_legacy_single_stop():

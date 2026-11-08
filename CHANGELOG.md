@@ -1,5 +1,33 @@
 # Changelog
 
+## [2.0.0] - unreleased
+
+### Breaking changes
+- **One hub per provider** - existing single-stop config entries are merged
+  automatically into one hub per provider. The 2.0 migration keeps existing
+  entity IDs where possible, renames sensors and devices to the new
+  `polish_transport` namespace, and removes legacy `mzkzg_*` entity IDs.
+- **Entity and device naming** - user-facing card classes, custom elements, CSS
+  variables and entity unique IDs no longer use the `mzkzg` prefix. Examples:
+  `sensor.mzkzg_plk_258458` becomes `sensor.gdansk_srodmiescie_odjazdy`, and each
+  provider gets one hub sensor such as `sensor.ztm_gdansk_odjazdy`.
+- **Card element** - `custom:polish-transport-card` is the only registered card
+  element; the legacy `custom:mzkzg-transport-card` alias was removed.
+- **Technical domain** - the integration domain remains `mzkzg_transport` so
+  Home Assistant can load and migrate existing config entries in place. It is not
+  shown in entity IDs or device names and will be removed in a future major release.
+
+### Added
+- **Automatic hub migration** - groups all entries of one provider into a single
+  hub with a shared stop list, one operator device and stop child devices.
+- **Automatic entity migration** - moves per-stop sensors, hub sensors, PLK delay
+  sensors and the PLK usage sensor to the new namespace while removing duplicates
+  left by older releases.
+- **Hub sensor** - multi-stop providers expose one merged sensor (for example
+  `sensor.ztm_gdansk_odjazdy`) next to the per-stop sensors.
+- **Add stop to existing hub** - adding another stop in the config flow appends it
+  to the provider hub instead of creating a new config entry.
+
 ## [1.7.0] - unreleased
 
 ### Added

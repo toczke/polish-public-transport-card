@@ -1,7 +1,7 @@
 # Polish Public Transport Card
 
 [![HACS](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
-[![Version](https://img.shields.io/badge/version-1.7.0-blue.svg)](https://github.com/toczke/polish-public-transport-card/releases)
+[![Version](https://img.shields.io/badge/version-2.0.0-blue.svg)](https://github.com/toczke/polish-public-transport-card/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Tests](https://img.shields.io/badge/tests-90%20passed-success.svg)]()
 
@@ -135,6 +135,34 @@ When a departure includes GPS coordinates, clicking the row opens a Leaflet map 
 > **Note:** A provider marked as 🗺️ may have individual departures without a map when the upstream feed omits a position or vehicle identifier for that specific trip.
 
 ---
+
+## What's New in 2.0.0
+
+- **One hub per provider** — existing single-stop entries are merged automatically;
+  Gdańsk ZTM stops become one `ZTM Gdańsk` hub, PLK stations one `PLK` hub.
+- **New entity names** — `mzkzg_*` entity IDs are migrated, e.g.
+  `sensor.mzkzg_plk_258458` → `sensor.gdansk_srodmiescie_odjazdy`.
+- **Hub sensors** — multi-stop providers expose a merged sensor such as
+  `sensor.ztm_gdansk_odjazdy` alongside per-stop sensors.
+- **Add stops later** — a new stop added through the config flow joins the existing
+  provider hub instead of creating another entry.
+- **Technical domain** — `mzkzg_transport` remains only as the hidden integration
+  domain required for in-place upgrades; it is not used in entity or device names.
+- **Card cleanup** — only `custom:polish-transport-card` is registered; the legacy
+  `custom:mzkzg-transport-card` alias was removed.
+
+### Upgrading from 1.7.x
+
+Update through HACS (or replace the integration files) and restart Home Assistant.
+The first start runs the 2.0 migration automatically:
+
+1. entries of the same provider are merged into one hub,
+2. per-stop sensors and devices are moved to the hub,
+3. `mzkzg_*` entity IDs are renamed,
+4. duplicate legacy entities are removed.
+
+Keep a backup of `/config/.storage/` if you have custom automations that reference
+old entity IDs. The migration is idempotent and can be retried.
 
 ## What's New in 1.7.0
 
@@ -366,7 +394,7 @@ Lovelace card (reads entity attributes + renders map)
 
 - **Providers** (`provider_*.py`): fetch departures from upstream APIs, apply RT delays, enrich with GPS
 - **Coordinator** (`coordinator.py`): dispatches to the correct provider, handles sleep mode, deduplicates
-- **Sensors** (`sensor.py`, `binary_sensor.py`): expose data to HA; `MzkzgAggregatedSensor` merges multi-stop entries
+- **Sensors** (`sensor.py`, `binary_sensor.py`): expose data to HA; `PolishAggregatedSensor` merges multi-stop entries
 - **Card** (`polish-transport-card.js`): Lit-based web component rendering the Lovelace UI and Leaflet map
 
 ---
