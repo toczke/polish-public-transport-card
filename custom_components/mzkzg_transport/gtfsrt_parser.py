@@ -440,10 +440,14 @@ def _scheduled_seconds(stu, entry, stop_id):
 
 def _stop_time_delay(stu, entry, stop_id, day_start):
     """Return the delay of a StopTimeUpdate in seconds, or None when it is unknown."""
+    events = []
     if stu.HasField("departure"):
-        event = stu.departure
-    elif stu.HasField("arrival"):
-        event = stu.arrival
+        events.append(stu.departure)
+    if stu.HasField("arrival"):
+        events.append(stu.arrival)
+    for event in events:
+        if event.HasField("delay") or event.HasField("time"):
+            break
     else:
         return 0
     if event.HasField("delay"):
