@@ -356,6 +356,7 @@ class TestGetRtDelays:
 
         mock_trip_update = MagicMock()
         mock_trip_update.trip.trip_id = "TRIP1"
+        mock_trip_update.trip.start_date = ""
         mock_trip_update.HasField = lambda f: f == "vehicle"
         mock_trip_update.vehicle = mock_vehicle
         mock_trip_update.stop_time_update = [mock_stu]
@@ -404,6 +405,7 @@ class TestGetRtDelays:
 
         mock_trip_update = MagicMock()
         mock_trip_update.trip.trip_id = "TRIP2"
+        mock_trip_update.trip.start_date = ""
         mock_trip_update.HasField = lambda f: f == "vehicle"
         mock_trip_update.vehicle = mock_vehicle
         mock_trip_update.stop_time_update = [mock_stu]
