@@ -13,6 +13,7 @@ from mzkzg_transport.const import (
     KIEDYPRZYJEDZIE_BIELSKO_URL,
     TIME4BUS_BASE_URLS,
     KIEDYPRZYJEDZIE_CZLUCHOW_URL,
+    KIEDYPRZYJEDZIE_CZERNICA_URL,
     KIEDYPRZYJEDZIE_GRYF_URL,
     KIEDYPRZYJEDZIE_MZK_MALBORK_URL,
     KIEDYPRZYJEDZIE_MZK_STAROGARD_URL,
@@ -23,6 +24,7 @@ from mzkzg_transport.const import (
     PROVIDER_BIELSKO,
     PROVIDER_BYTOW,
     PROVIDER_CZLUCHOW,
+    PROVIDER_CZERNICA,
     PROVIDER_GRYF,
     PROVIDER_MZK_MALBORK,
     PROVIDER_MZK_STAROGARD,
@@ -244,6 +246,7 @@ def test_kiedyprzyjedzie_extra_urls():
         KIEDYPRZYJEDZIE_PKS_STAROGARD_URL: "pksstarogard.kiedyprzyjedzie.pl",
         KIEDYPRZYJEDZIE_BIELSKO_URL: "bielsko.kiedyprzyjedzie.pl",
         KIEDYPRZYJEDZIE_CZLUCHOW_URL: "czluchow.kiedyprzyjedzie.pl",
+        KIEDYPRZYJEDZIE_CZERNICA_URL: "czernica.kiedyprzyjedzie.pl",
     }
     for url, host in expected_hosts.items():
         assert url.endswith(host)
@@ -252,3 +255,4 @@ def test_kiedyprzyjedzie_extra_urls():
     assert PROVIDER_BYTOW in TIME4BUS_BASE_URLS
     assert PROVIDER_BYTOW not in KIEDYPRZYJEDZIE_BASE_URLS
     assert KIEDYPRZYJEDZIE_BASE_URLS[PROVIDER_BIELSKO] == "https://bielsko.kiedyprzyjedzie.pl"
+    assert KIEDYPRZYJEDZIE_BASE_URLS[PROVIDER_CZERNICA] == "https://czernica.kiedyprzyjedzie.pl"

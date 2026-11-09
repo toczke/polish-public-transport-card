@@ -111,6 +111,9 @@ from .const import (
     PROVIDER_BIELSKO,
 
 
+    PROVIDER_CZERNICA,
+
+
     PROVIDER_PLK,
 
 
@@ -233,6 +236,7 @@ PROVIDER_OPTIONS = {
     PROVIDER_BIELSKO: "MZK Bielsko-Bia\u0142a",
     PROVIDER_BYTOW: "Byt\u00f3w",
     PROVIDER_CZLUCHOW: "Powiat Cz\u0142uchowski",
+    PROVIDER_CZERNICA: "Gmina Czernica",
     PROVIDER_TCZEW: "Tczew (Time4BUS)",
     PROVIDER_LODZ: "MPK \u0141\u00f3d\u017a",
     PROVIDER_POZNAN: "ZTM Pozna\u0144",
