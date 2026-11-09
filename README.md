@@ -69,8 +69,8 @@ HACS does not publish per-repository install counts. The badge above uses **GitH
 - Live countdown, delay indicators, vehicle chips, platform/track chips and accessibility icons.
 - Tap / hold / double-tap actions editable in the GUI.
 - Per-sensor overrides in the visual editor.
-- ZTM Gdańsk alerts above the departures, filtered by line/stop or city-wide
-  (`alerts_scope: matching|city`).
+- Service alerts above the departures where the provider publishes them,
+  filtered by line/stop or city-wide (`alerts_scope: matching|city`).
 - Offline Leaflet bundle loaded only when the vehicle map opens.
 - Optional header clock, refresh button and last-update footer.
 
@@ -167,8 +167,8 @@ Common sensor attributes:
 - `departures` — list of departure objects for the card,
 - `stop_id`, `stop_name`, `provider`, `last_update`,
 - `resolved_stop_id` when an old GTFS stop ID was mapped to a new one,
-- `alerts` for ZTM Gdańsk stops (messages matching the stop's lines or name),
-- `alerts_city` for ZTM Gdańsk stops (all current city alerts),
+- `alerts` for providers with service alerts (messages matching the stop's lines/name or stop id),
+- `alerts_city` for providers with service alerts (all current messages),
 - `walking_distance_m` / `walking_time_min` when Home Assistant has a home location and the stop has coordinates,
 - `timetable` for kiedyPrzyjedzie providers when configured.
 
@@ -204,8 +204,8 @@ The card registers itself automatically. In Lovelace: **Add Card → Polish Tran
 | `show_vehicle` | bool | `true` | Show vehicle number chips |
 | `show_platform` | bool | `true` | Show platform/stand/track |
 | `show_accessibility` | bool | `true` | Show accessibility icons |
-| `show_alerts` | bool | `true` | Show ZTM Gdańsk alerts above the rows |
-| `alerts_scope` | string | `matching` | `matching` (line/stop) or `city` (all Gdańsk alerts) |
+| `show_alerts` | bool | `true` | Show provider service alerts above the rows |
+| `alerts_scope` | string | `matching` | `matching` (line/stop) or `city` (all provider alerts) |
 | `show_bike` | bool | `true` | Show the bike icon when allowed |
 | `show_wheelchair` | bool | `true` | Show the wheelchair icon |
 | `show_ac` | bool | `true` | Show the air-conditioning icon |
@@ -324,21 +324,26 @@ Caching and memory behaviour:
 - `kiedyPrzyjedzie` timetables are cached for one hour and capped at 500 entries.
 - `departures`, `last_update`, `timetable` and `alerts` are excluded from recorder history.
 
-### ZTM Gdańsk alerts
+### Service alerts
 
-For Gdańsk stops the integration fetches the current-situation RSS feed
-`https://www.gdansk.pl/subpages/rss/bsk_rss.xml` (cached for two minutes). Each
-message is matched to the stop by:
+Alerts are fetched from the best source each provider exposes:
 
-- its affected line list (`lineNumbers` from the RSS JSON), or
-- the stop name/base name mentioned in the message.
+- **ZTM Gdańsk** — `bsk_rss.xml` current-situation RSS (line and stop-name matching),
+- **api6-open cities** — GTFS-RT `serviceAlerts` (e.g. Lublin, Poznań, GZM, Kraków, Wrocław, Białystok and the other api6 feeds),
+- **Warszawa** — `mkuran.pl/gtfs/warsaw/alerts.pb`,
+- **Szczecin** — `gtfs-rt-alerts.pb`,
+- **Łódź** — official `alerts.bin`.
 
-Matching messages are exposed as the `alerts` attribute and rendered above the
-card rows. All current city messages are also exposed as `alerts_city`.
+GTFS-RT alerts are matched by informed route id, informed stop id or general
+operator scope. Feeds without an alert endpoint (for example PLK or ZKM Gdynia)
+simply expose no alerts.
 
 - `alerts_scope: matching` (default) shows only messages for this stop/line,
-- `alerts_scope: city` shows every current Gdańsk alert on the card,
+- `alerts_scope: city` shows every current alert on the card,
 - `show_alerts: false` hides the banner entirely.
+
+The source is cached for two minutes and the `alerts` / `alerts_city` attributes
+are excluded from recorder history.
 
 `refresh_gtfs` service forces a GTFS cache refresh:
 

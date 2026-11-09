@@ -89,12 +89,14 @@ GTFSRT_CITIES = {
     "gtfsrt_szczecin": {
         "gtfs_url": "https://www.zditm.szczecin.pl/storage/gtfs/gtfs.zip",
         "rt_url": "https://www.zditm.szczecin.pl/storage/gtfs/gtfs-rt-trips.pb",
+        "alerts_url": "https://www.zditm.szczecin.pl/storage/gtfs/gtfs-rt-alerts.pb",
         "positions_url": "https://www.zditm.szczecin.pl/api/v2/vehicles?format=json",
         "label": "ZDiTM Szczecin",
     },
     "gtfsrt_warszawa": {
         "gtfs_url": "https://mkuran.pl/gtfs/warsaw.zip",
         "rt_url": "https://mkuran.pl/gtfs/warsaw/vehicles.pb",
+        "alerts_url": "https://mkuran.pl/gtfs/warsaw/alerts.pb",
         "positions_url": "https://mkuran.pl/gtfs/warsaw/positions.json",
         "label": "ZTM Warszawa",
     },
@@ -302,6 +304,7 @@ GTFSRT_CITIES = {
     "mpk_lodz": {
         "gtfs_url": "https://otwarte.miasto.lodz.pl/wp-content/uploads/2025/06/GTFS.zip",
         "rt_url": "https://otwarte.miasto.lodz.pl/wp-content/uploads/2025/06/trip_updates.bin",
+        "alerts_url": "https://otwarte.miasto.lodz.pl/wp-content/uploads/2025/06/alerts.bin",
         "positions_url": "https://otwarte.miasto.lodz.pl/wp-content/uploads/2025/06/vehicle_positions.bin",
         "label": "MPK \u0141\u00f3d\u017a",
     },

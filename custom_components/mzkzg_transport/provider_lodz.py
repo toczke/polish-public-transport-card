@@ -15,11 +15,13 @@ from homeassistant.util import dt as dt_util
 
 from .const import CONF_FALLBACK_MIN, DEFAULT_FALLBACK_MIN, DOMAIN
 from .http_utils import fetch_with_retry
+from .gtfsrt_alerts import alerts_for_stop, async_get_alerts
 
 _LOGGER = logging.getLogger(__name__)
 LODZ_URL = "http://rozklady.lodz.pl/Home/GetTimetableReal"
 LODZ_TRIP_UPDATES = "https://otwarte.miasto.lodz.pl/wp-content/uploads/2025/06/trip_updates.bin"
 LODZ_VEHICLE_POSITIONS = "https://otwarte.miasto.lodz.pl/wp-content/uploads/2025/06/vehicle_positions.bin"
+LODZ_ALERTS = "https://otwarte.miasto.lodz.pl/wp-content/uploads/2025/06/alerts.bin"
 LODZ_GTFS_URL = "https://cdn.zbiorkom.live/gtfs/lodz.zip"
 MAX_STOP_NR = 20
 _GTFS_MAX_HOURS = 3
@@ -147,11 +149,26 @@ async def fetch(coord: "PolishTransportCoordinator") -> dict:
     all_departures.sort(key=lambda x: x.get("estimated_time") or "")
     return_count = len(all_departures[:30])
     _LOGGER.debug("Łódź returning %d departures (capped from %d)", return_count, len(all_departures))
+
+    alerts = []
+    alerts_city = []
+    try:
+        alerts_city = await async_get_alerts(coord, session, LODZ_ALERTS)
+        alerts = alerts_for_stop(
+            alerts_city,
+            coord.stop_id,
+            {d.get("route") for d in all_departures if d.get("route")},
+        )
+    except Exception as err:  # noqa: BLE001 - alerts must not break departures
+        _LOGGER.debug("Łódź alerts failed: %s", err)
+
     return {
         "stop_id": coord.stop_id,
         "stop_name": coord.stop_name,
         "provider": coord.provider,
         "departures": all_departures[:30],
+        "alerts": alerts,
+        "alerts_city": alerts_city,
         "last_update": now.isoformat(),
     }
 

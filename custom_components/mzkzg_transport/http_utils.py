@@ -16,8 +16,9 @@ async def fetch_with_retry(
     url: str,
     timeout: float = 15,
     as_text: bool = False,
+    as_bytes: bool = False,
     ssl: bool | None = None,
-) -> dict | str:
+) -> dict | str | bytes:
     """Fetch URL with retry on connection errors."""
     last_err = None
     for attempt in range(MAX_RETRIES):
@@ -28,6 +29,8 @@ async def fetch_with_retry(
                 ssl=ssl,
             ) as resp:
                 resp.raise_for_status()
+                if as_bytes:
+                    return await resp.read()
                 return await resp.text() if as_text else await resp.json()
         except (aiohttp.ClientConnectorError, aiohttp.ServerDisconnectedError, aiohttp.ClientResponseError, asyncio.TimeoutError) as err:
             last_err = err

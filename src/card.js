@@ -1,6 +1,6 @@
 import { LitElement, html, svg, nothing } from 'lit';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
-import { t, minutesUntil, formatTime, formatMins, routeColor, parseVehiclePosition, normalizeList, normalizeEntityEntry, normalizeActionConfig, fireHassEvent, providerLabel, PROVIDER_HEADER_COLORS } from "./utils.js";
+import { t, minutesUntil, formatTime, formatMins, routeColor, contrastTextColor, parseVehiclePosition, normalizeList, normalizeEntityEntry, normalizeActionConfig, fireHassEvent, providerLabel, PROVIDER_HEADER_COLORS } from "./utils.js";
 import { styles } from "./styles.js";
 import { VehicleMap } from "./map.js";
 
@@ -640,6 +640,7 @@ export class PolishTransportCard extends LitElement {
       const delayMin = Math.round((d.delay_seconds || 0) / 60);
       const showDelay = c.show_delays && d.realtime && Math.abs(delayMin) >= 1;
       const cancelled = d.cancelled === true;
+      const badgeColor = routeColor(d.route, d._provider || d.provider, d.route_color);
 
       let timeHTML;
       if (cancelled) {
@@ -724,7 +725,7 @@ export class PolishTransportCard extends LitElement {
              @dblclick=${(e) => this._onRowDblClick(e, d)}
              @contextmenu=${(e) => this._onRowContext(e, d)}
              @keydown=${(e) => { if(e.key==="Enter" || e.key===" ") { e.preventDefault(); this._onRowClick(e, d); }}}>
-          <span class="badge" style="background:${routeColor(d.route, d._provider || d.provider, d.route_color)}">${d.route}</span>
+          <span class="badge" style="--badge-bg:${badgeColor};--badge-fg:${contrastTextColor(badgeColor)}">${d.route}</span>
           <span class="headsign">
             <span class="head-main"><span class="headsign-text" title=${d.headsign}>${d.headsign}</span>${vehicleChip}</span>
             ${metaRow}

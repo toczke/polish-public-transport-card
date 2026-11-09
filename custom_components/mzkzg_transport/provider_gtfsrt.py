@@ -16,6 +16,7 @@ from .const import CONF_STOP_ID, CONF_STOPS, DOMAIN, MAX_DEPARTURES
 _LOGGER = logging.getLogger(__name__)
 
 from .gtfsrt_cities import GTFSRT_CITIES
+from .gtfsrt_alerts import alerts_for_stop, async_get_alerts, derive_alerts_url
 from .gtfsrt_parser import _parse_gtfs_zip, _parse_stop_times_for, _parse_stop_times_from_raw, _parse_gtfsrt_positions, _parse_rt_feed, _get_tomorrow_departures, _release_gtfs_raw, resolve_stop_id
 from .gtfsrt_gzm import _get_gzm_gtfs_url
 
@@ -229,11 +230,27 @@ async def fetch(coord: "PolishTransportCoordinator") -> dict:
                 if len(unique) >= MAX_DEPARTURES:
                     break
 
+    alerts_url = derive_alerts_url(city_cfg)
+    alerts = []
+    alerts_city = []
+    if alerts_url:
+        try:
+            alerts_city = await async_get_alerts(coord, session, alerts_url)
+            alerts = alerts_for_stop(
+                alerts_city,
+                stop_id,
+                {d.get("route") for d in unique if d.get("route")},
+            )
+        except Exception as exc:  # noqa: BLE001 - alerts must not break departures
+            _LOGGER.debug("GTFS-RT alerts failed for %s: %s", coord.provider, exc)
+
     return {
         "stop_id": coord.stop_id,
         "stop_name": coord.stop_name,
         "provider": coord.provider,
         "departures": unique[:MAX_DEPARTURES],
+        "alerts": alerts,
+        "alerts_city": alerts_city,
         "last_update": now.isoformat(),
         **({"resolved_stop_id": stop_id} if stop_id != str(coord.stop_id) else {}),
     }

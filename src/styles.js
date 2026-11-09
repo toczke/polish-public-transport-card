@@ -130,7 +130,8 @@ ha-card.e-ink .dep-row { transition: none; }
 .badge {
   display: inline-flex; align-items: center; justify-content: center;
   padding: 3px 7px; border-radius: 6px; font-size: 13px; font-weight: 700;
-  color: #fff; min-width: 40px; flex-shrink: 0;
+  color: var(--badge-fg, #fff); background: var(--badge-bg, #005eb8);
+  min-width: 40px; flex-shrink: 0;
 }
 .headsign {
   font-size: 13px; font-weight: 500; color: var(--ptc-text);
@@ -145,7 +146,7 @@ ha-card.e-ink .dep-row { transition: none; }
   display: inline-flex; align-items: center; flex-shrink: 0;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 10px; font-weight: 600; letter-spacing: 0;
-  color: var(--ptc-muted); background: var(--ptc-chip-bg);
+  color: var(--ptc-text); background: var(--ptc-chip-bg);
   border-radius: 4px; padding: 0 4px; white-space: nowrap;
 }
 .meta-row { display: flex; align-items: center; justify-content: flex-start; gap: 2px 6px; flex-wrap: wrap; width: 100%; margin-top: 2px; }

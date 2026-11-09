@@ -216,6 +216,17 @@ export function routeColor(route, provider, gtfsColor = null) {
   return "#005eb8";
 }
 
+export function contrastTextColor(background) {
+  const value = String(background || "").replace("#", "").trim();
+  if (!/^[0-9a-f]{3}([0-9a-f]{3})?$/i.test(value)) return "#fff";
+  const hex = value.length === 3 ? value.split("").map((ch) => ch + ch).join("") : value;
+  const r = parseInt(hex.slice(0, 2), 16);
+  const g = parseInt(hex.slice(2, 4), 16);
+  const b = parseInt(hex.slice(4, 6), 16);
+  const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  return luminance > 150 ? "#111827" : "#ffffff";
+}
+
 export function normalizeText(t) {
   return (t || "").replace(/\s/g, "").toLowerCase().replace(/\d+$/, "");
 }

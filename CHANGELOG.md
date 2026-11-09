@@ -3,11 +3,13 @@
 ## [Unreleased]
 
 ### Added
-- **ZTM Gdańsk alerts** - current-situation messages from `bsk_rss.xml` are
-  exposed as the `alerts` and `alerts_city` sensor attributes and shown above the
-  card rows. `alerts_scope: matching` filters by line/stop, `alerts_scope: city`
-  shows all current Gdańsk messages, and `show_alerts: false` hides the banner.
-  The feed is cached for two minutes.
+- **Service alerts** - ZTM Gdańsk current-situation messages from `bsk_rss.xml`
+  and GTFS-Realtime `serviceAlerts` where the provider exposes them (api6-open
+  cities, Warszawa, Szczecin, Łódź) are shown above the card rows. `alerts_scope:
+  matching` filters by line/stop, `alerts_scope: city` shows all current messages,
+  and `show_alerts: false` hides the banner. Alerts are cached for two minutes.
+- **Badge contrast** - route badges now choose white or dark text from the badge
+  background, and vehicle-number chips use the normal text colour in dark mode.
 
 ## [2.0.1] - 2026-11-08
 

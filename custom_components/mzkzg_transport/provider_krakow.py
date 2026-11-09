@@ -12,10 +12,12 @@ from homeassistant.util import dt as dt_util
 
 from .const import CONF_STOP_ID, CONF_STOPS, DOMAIN
 from .http_utils import fetch_with_retry
+from .gtfsrt_alerts import alerts_for_stop, async_get_alerts
 
 _LOGGER = logging.getLogger(__name__)
 
 ZBIORKOM_API = "https://api.zbiorkom.live/api6-open/krakow"
+ZBIORKOM_ALERTS_URL = f"{ZBIORKOM_API}/gtfsRealtime/default/serviceAlerts"
 # City-wide box (lon/lat) used until the stop list is loaded; afterwards it is derived from
 # the stop coordinates. One shared snapshot serves every stop
 DEFAULT_BBOX = "19.55,49.88,20.38,50.27"
@@ -113,11 +115,25 @@ async def fetch(coord: "PolishTransportCoordinator") -> dict:
         for key in ("_brigade", "_scheduled_ms", "_estimated_ms"):
             d.pop(key, None)
 
+    alerts = []
+    alerts_city = []
+    try:
+        alerts_city = await async_get_alerts(coord, session, ZBIORKOM_ALERTS_URL)
+        alerts = alerts_for_stop(
+            alerts_city,
+            stop_id,
+            {d.get("route") for d in departures if d.get("route")},
+        )
+    except Exception as err:  # noqa: BLE001 - alerts must not break departures
+        _LOGGER.debug("Kraków alerts fetch failed: %s", err)
+
     return {
         "stop_id": coord.stop_id,
         "stop_name": coord.stop_name or f"Przystanek {coord.stop_id}",
         "provider": coord.provider,
         "departures": departures[:20],
+        "alerts": alerts,
+        "alerts_city": alerts_city,
         "last_update": now.isoformat(),
     }
 

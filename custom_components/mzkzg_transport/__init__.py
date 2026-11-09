@@ -172,7 +172,8 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             for key in ("_plk_cache", "_plk_lock", "_ztm_fleet", "_ztm_gtfs_cache",
                         "_ztm_gps", "_ztm_alerts", "_ztm_alerts_lock",
                         "_gtfsrt_cache", "_gtfsrt_locks", "_gtfsrt_vehicles",
-                        "_gtfsrt_positions", "_lodz_gtfs_data", "_krakow_meta",
+                        "_gtfsrt_positions", "_gtfsrt_alerts", "_gtfsrt_alert_locks",
+                        "_lodz_gtfs_data", "_krakow_meta",
                         "_krakow_vehicles"):
                 hass.data[DOMAIN].pop(key, None)
             # Shared entity guards must be dropped with the entries that own them,
