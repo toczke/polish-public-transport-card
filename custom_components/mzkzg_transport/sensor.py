@@ -55,7 +55,7 @@ class PolishTransportSensor(CoordinatorEntity, SensorEntity):
     """Sensor representing departures from a single stop."""
 
     _attr_has_entity_name = True
-    _unrecorded_attributes = frozenset({"departures", "last_update", "timetable"})
+    _unrecorded_attributes = frozenset({"departures", "last_update", "timetable", "alerts"})
 
     def __init__(self, coordinator: PolishTransportCoordinator, entry: ConfigEntry) -> None:
         """Initialize the sensor."""
@@ -111,6 +111,8 @@ class PolishTransportSensor(CoordinatorEntity, SensorEntity):
             attrs["resolved_stop_id"] = data["resolved_stop_id"]
         if data.get("timetable"):
             attrs["timetable"] = data["timetable"]
+        if data.get("alerts"):
+            attrs["alerts"] = data["alerts"]
         if "walking_distance_m" in data:
             attrs["walking_distance_m"] = data["walking_distance_m"]
             attrs["walking_time_min"] = data["walking_time_min"]
@@ -126,7 +128,7 @@ class PolishAggregatedSensor(SensorEntity):
     """Sensor that merges departures from multiple stops (węzeł przesiadkowy)."""
 
     _attr_has_entity_name = True
-    _unrecorded_attributes = frozenset({"departures", "last_update"})
+    _unrecorded_attributes = frozenset({"departures", "last_update", "alerts"})
 
     def __init__(self, coordinators: list, entry: ConfigEntry) -> None:
         self._coordinators = coordinators
@@ -169,6 +171,17 @@ class PolishAggregatedSensor(SensorEntity):
         if min_dist is not None:
             attrs["walking_distance_m"] = min_dist
             attrs["walking_time_min"] = min((c.data.get("walking_time_min") for c in self._coordinators if c.data and "walking_time_min" in c.data), default=0)
+
+        alerts = []
+        seen_alerts = set()
+        for coordinator in self._coordinators:
+            for alert in (coordinator.data or {}).get("alerts", []):
+                alert_id = alert.get("id") or f"{alert.get('title')}|{alert.get('content')}"
+                if alert_id not in seen_alerts:
+                    seen_alerts.add(alert_id)
+                    alerts.append(alert)
+        if alerts:
+            attrs["alerts"] = alerts
 
         attrs["departures"] = deps
         return attrs

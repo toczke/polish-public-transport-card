@@ -74,6 +74,7 @@ export class PolishTransportCard extends LitElement {
       show_vehicle: config.show_vehicle !== false,
       show_platform: config.show_platform !== false,
       show_accessibility: config.show_accessibility !== false,
+      show_alerts: config.show_alerts !== false,
       show_bike: config.show_bike !== false,
       show_wheelchair: config.show_wheelchair !== false,
       show_ac: config.show_ac !== false,
@@ -271,6 +272,45 @@ export class PolishTransportCard extends LitElement {
     const result = all.slice(0, c.max_departures);
     this._depCache = { key: cacheKey, value: result };
     return result;
+  }
+
+  _getAlerts() {
+    if (!this.hass || !this._config.entities?.length) return [];
+    const alerts = [];
+    const seen = new Set();
+    for (const entityId of this._getEntityIds()) {
+      const list = this.hass.states[entityId]?.attributes?.alerts;
+      if (!Array.isArray(list)) continue;
+      for (const alert of list) {
+        const alertId = alert?.id || `${alert?.title || ""}|${alert?.content || ""}`;
+        if (seen.has(alertId)) continue;
+        seen.add(alertId);
+        alerts.push(alert);
+      }
+    }
+    return alerts;
+  }
+
+  _renderAlerts() {
+    if (!this._config.show_alerts) return nothing;
+    const alerts = this._getAlerts();
+    if (!alerts.length) return nothing;
+    return html`
+      <div class="alerts" role="status">
+        ${alerts.map((alert) => html`
+          <div class="alert-item">
+            <ha-icon icon="mdi:alert-circle-outline"></ha-icon>
+            <div class="alert-content">
+              <div class="alert-title">
+                ${alert.lines?.length ? html`<span class="alert-lines">${alert.lines.join(", ")}</span> ` : nothing}
+                ${alert.title || t("alert")}
+              </div>
+              ${alert.content ? html`<div class="alert-text">${alert.content}</div>` : nothing}
+            </div>
+          </div>
+        `)}
+      </div>
+    `;
   }
 
   _headsignsCompatible(first, second) {
@@ -757,6 +797,7 @@ export class PolishTransportCard extends LitElement {
           </div>
         ` : nothing}
         ${this._renderTabs()}
+        ${this._renderAlerts()}
         <div class="dep-list ${c.columns > 1 ? `columns-${c.columns}` : ""}" aria-live="polite" aria-atomic="true">
           ${this._renderDeps()}
         </div>

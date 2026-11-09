@@ -527,6 +527,7 @@ var Ee = "2.0.1", H = {
 		wheelchair: "Wózek",
 		ac: "Klimatyzacja",
 		ticket_machine: "Biletomat",
+		alert: "Komunikat",
 		platform: "peron",
 		last_update: "Odświeżono",
 		refresh: "Odśwież",
@@ -564,6 +565,7 @@ var Ee = "2.0.1", H = {
 		wheelchair: "Wheelchair",
 		ac: "A/C",
 		ticket_machine: "Ticket machine",
+		alert: "Alert",
 		platform: "platform",
 		last_update: "Updated",
 		refresh: "Refresh",
@@ -1038,6 +1040,10 @@ var X = (e) => ({ select: { options: e } }), Fe = (e) => ({ select: {
 			},
 			{
 				name: "show_accessibility",
+				selector: { boolean: {} }
+			},
+			{
+				name: "show_alerts",
 				selector: { boolean: {} }
 			},
 			{
@@ -1547,6 +1553,7 @@ var X = (e) => ({ select: { options: e } }), Fe = (e) => ({ select: {
 			show_vehicle: "Pokaż numer pojazdu",
 			show_platform: "Pokaż peron / stanowisko",
 			show_accessibility: "Pokaż ikony dostępności",
+			show_alerts: "Pokaż komunikaty ZTM",
 			show_stop_name: "Pokaż nazwę przystanku",
 			show_footer: "Pokaż stopkę",
 			show_last_update: "Pokaż czas aktualizacji",
@@ -1622,6 +1629,7 @@ var X = (e) => ({ select: { options: e } }), Fe = (e) => ({ select: {
 			show_vehicle: "Show vehicle number",
 			show_platform: "Show platform / stand",
 			show_accessibility: "Show accessibility icons",
+			show_alerts: "Show ZTM alerts",
 			show_stop_name: "Show stop name",
 			show_footer: "Show footer",
 			show_last_update: "Show last update",
@@ -1798,6 +1806,40 @@ ha-card {
 .dep-list.columns-3 > .dep-row:nth-child(3n) { border-right: none; }
 .provider-header.line-header { text-transform: none; letter-spacing: 0; font-size: 12px; font-weight: 600; }
 .dep-list { list-style: none; }
+.alerts {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--ptc-divider);
+  background: rgba(255, 152, 0, 0.08);
+}
+.alert-item { display: flex; align-items: flex-start; gap: 8px; }
+.alert-item ha-icon {
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: var(--warning-color, #ff9800);
+  --mdc-icon-size: 18px;
+}
+.alert-content { min-width: 0; }
+.alert-title { font-size: 12px; font-weight: 600; color: var(--ptc-text); }
+.alert-lines {
+  display: inline-block;
+  margin-right: 2px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(255, 152, 0, 0.18);
+  color: #b45309;
+  font-size: 10px;
+  font-weight: 700;
+}
+.alert-text {
+  margin-top: 2px;
+  color: var(--ptc-muted);
+  font-size: 11px;
+  line-height: 1.35;
+  white-space: pre-line;
+}
 .dep-row { transition: opacity 0.4s, max-height 0.4s, padding 0.4s; max-height: 120px; overflow: hidden; }
 .dep-row.departing { opacity: 0; max-height: 0; padding-top: 0; padding-bottom: 0; }
 ha-card.e-ink .dep-row { transition: none; }
@@ -2319,6 +2361,7 @@ var Q = null, qe = null, Je = class {
 			show_vehicle: e.show_vehicle !== !1,
 			show_platform: e.show_platform !== !1,
 			show_accessibility: e.show_accessibility !== !1,
+			show_alerts: e.show_alerts !== !1,
 			show_bike: e.show_bike !== !1,
 			show_wheelchair: e.show_wheelchair !== !1,
 			show_ac: e.show_ac !== !1,
@@ -2465,6 +2508,38 @@ var Q = null, qe = null, Je = class {
 			key: e,
 			value: s
 		}, s;
+	}
+	_getAlerts() {
+		if (!this.hass || !this._config.entities?.length) return [];
+		let e = [], t = /* @__PURE__ */ new Set();
+		for (let n of this._getEntityIds()) {
+			let r = this.hass.states[n]?.attributes?.alerts;
+			if (Array.isArray(r)) for (let n of r) {
+				let r = n?.id || `${n?.title || ""}|${n?.content || ""}`;
+				t.has(r) || (t.add(r), e.push(n));
+			}
+		}
+		return e;
+	}
+	_renderAlerts() {
+		if (!this._config.show_alerts) return P;
+		let e = this._getAlerts();
+		return e.length ? j`
+      <div class="alerts" role="status">
+        ${e.map((e) => j`
+          <div class="alert-item">
+            <ha-icon icon="mdi:alert-circle-outline"></ha-icon>
+            <div class="alert-content">
+              <div class="alert-title">
+                ${e.lines?.length ? j`<span class="alert-lines">${e.lines.join(", ")}</span> ` : P}
+                ${e.title || U("alert")}
+              </div>
+              ${e.content ? j`<div class="alert-text">${e.content}</div>` : P}
+            </div>
+          </div>
+        `)}
+      </div>
+    ` : P;
 	}
 	_headsignsCompatible(e, t) {
 		let n = String(e || "").trim().toLowerCase(), r = String(t || "").trim().toLowerCase();
@@ -2795,6 +2870,7 @@ var Q = null, qe = null, Je = class {
           </div>
         ` : P}
         ${this._renderTabs()}
+        ${this._renderAlerts()}
         <div class="dep-list ${e.columns > 1 ? `columns-${e.columns}` : ""}" aria-live="polite" aria-atomic="true">
           ${this._renderDeps()}
         </div>

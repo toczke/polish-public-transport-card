@@ -69,6 +69,7 @@ HACS does not publish per-repository install counts. The badge above uses **GitH
 - Live countdown, delay indicators, vehicle chips, platform/track chips and accessibility icons.
 - Tap / hold / double-tap actions editable in the GUI.
 - Per-sensor overrides in the visual editor.
+- ZTM Gdańsk alerts above the departures, filtered by line and stop.
 - Offline Leaflet bundle loaded only when the vehicle map opens.
 - Optional header clock, refresh button and last-update footer.
 
@@ -78,7 +79,7 @@ HACS does not publish per-repository install counts. The badge above uses **GitH
 - Schedule fallback when realtime coverage is incomplete, including tomorrow's first departures.
 - Live GPS vehicle map with positions matched by `vehicle_code`, `trip_id`, then a bounded `route_id` fallback.
 - PLK delay binary sensor and a shared PLK API usage sensor with rate limiting.
-- Recorder-friendly: large `departures`, `last_update` and `timetable` attributes are marked as unrecorded.
+- Recorder-friendly: large `departures`, `last_update`, `timetable` and `alerts` attributes are marked as unrecorded.
 
 ---
 
@@ -165,6 +166,7 @@ Common sensor attributes:
 - `departures` — list of departure objects for the card,
 - `stop_id`, `stop_name`, `provider`, `last_update`,
 - `resolved_stop_id` when an old GTFS stop ID was mapped to a new one,
+- `alerts` for ZTM Gdańsk stops (current `bsk_rss.xml` messages matching the stop's lines or name),
 - `walking_distance_m` / `walking_time_min` when Home Assistant has a home location and the stop has coordinates,
 - `timetable` for kiedyPrzyjedzie providers when configured.
 
@@ -200,6 +202,7 @@ The card registers itself automatically. In Lovelace: **Add Card → Polish Tran
 | `show_vehicle` | bool | `true` | Show vehicle number chips |
 | `show_platform` | bool | `true` | Show platform/stand/track |
 | `show_accessibility` | bool | `true` | Show accessibility icons |
+| `show_alerts` | bool | `true` | Show ZTM Gdańsk alerts above the rows |
 | `show_bike` | bool | `true` | Show the bike icon when allowed |
 | `show_wheelchair` | bool | `true` | Show the wheelchair icon |
 | `show_ac` | bool | `true` | Show the air-conditioning icon |
@@ -316,7 +319,19 @@ Caching and memory behaviour:
 - GTFS-RT archives are cached on disk as `polish_transport_gtfs_<provider>.zip` in the Home Assistant config directory; Wejherowo uses `.gtfs_cache/wejherowo.zip`, Łódź uses `<config>/mzkzg_transport/lodz_gtfs.zip`.
 - Vehicle positions are cached for 30 seconds; vehicle dictionaries for one hour; ZTM Gdańsk fleet data for one week.
 - `kiedyPrzyjedzie` timetables are cached for one hour and capped at 500 entries.
-- `departures`, `last_update` and `timetable` are excluded from recorder history.
+- `departures`, `last_update`, `timetable` and `alerts` are excluded from recorder history.
+
+### ZTM Gdańsk alerts
+
+For Gdańsk stops the integration fetches the current-situation RSS feed
+`https://www.gdansk.pl/subpages/rss/bsk_rss.xml` (cached for two minutes). Each
+message is matched to the stop by:
+
+- its affected line list (`lineNumbers` from the RSS JSON), or
+- the stop name/base name mentioned in the message.
+
+Matching messages are exposed as the `alerts` attribute and rendered above the
+card rows. Set `show_alerts: false` to hide the banner.
 
 `refresh_gtfs` service forces a GTFS cache refresh:
 

@@ -9,6 +9,7 @@ from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN, PROVIDER_ZTM, ZTM_GDANSK_DEPARTURES_URL
 from .http_utils import fetch_with_retry
+from .ztm_alerts import alerts_for_stop, async_get_alerts
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -72,11 +73,22 @@ async def fetch(coord: "PolishTransportCoordinator") -> dict:
 
     unique.sort(key=lambda x: x.get("estimated_time") or "")
 
+    alerts = []
+    try:
+        alerts = alerts_for_stop(
+            await async_get_alerts(coord, session),
+            coord.stop_name or "",
+            {d.get("route") for d in unique if d.get("route")},
+        )
+    except Exception as exc:  # noqa: BLE001 - alerts must not break departures
+        _LOGGER.debug("ZTM alerts failed for stop %s: %s", coord.stop_id, exc)
+
     return {
         "stop_id": coord.stop_id,
         "stop_name": coord.stop_name,
         "provider": PROVIDER_ZTM,
         "departures": unique,
+        "alerts": alerts,
         "last_update": now.isoformat(),
     }
 

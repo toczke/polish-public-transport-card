@@ -7,7 +7,7 @@ import pytest
 from mzkzg_transport.sensor import PolishAggregatedSensor
 
 
-def _coordinator(stop_id, departures, provider="ztm_gdansk", walking=None):
+def _coordinator(stop_id, departures, provider="ztm_gdansk", walking=None, alerts=None):
     data = {
         "stop_id": stop_id,
         "stop_name": f"Stop {stop_id}",
@@ -17,6 +17,8 @@ def _coordinator(stop_id, departures, provider="ztm_gdansk", walking=None):
     }
     if walking is not None:
         data.update(walking)
+    if alerts is not None:
+        data["alerts"] = alerts
     return SimpleNamespace(
         stop_id=stop_id,
         provider=provider,
@@ -106,6 +108,26 @@ def test_attributes_use_first_stop_and_minimum_walking_distance():
     assert attrs["walking_distance_m"] == 120
     assert attrs["walking_time_min"] == 2
     assert len(attrs["departures"]) == 2
+
+
+def test_attributes_include_deduplicated_alerts():
+    alert = {
+        "id": "11936",
+        "title": "Awaryjna zmiana trasy linii 195",
+        "content": "Objazd",
+        "lines": ["195"],
+    }
+    sensor = _sensor(
+        [
+            _coordinator("1", [], alerts=[alert]),
+            _coordinator("2", [], alerts=[dict(alert)]),
+            _coordinator("3", [], alerts=[{**alert, "id": "other", "title": "Inny"}]),
+        ]
+    )
+
+    attrs = sensor.extra_state_attributes
+
+    assert [item["id"] for item in attrs["alerts"]] == ["11936", "other"]
 
 
 def test_native_value_is_first_departure_time():
