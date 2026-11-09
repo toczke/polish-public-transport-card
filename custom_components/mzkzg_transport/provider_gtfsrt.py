@@ -121,8 +121,6 @@ async def fetch(coord: "PolishTransportCoordinator") -> dict:
         # Parse departure time
         h, m, s = st["departure_time"]
         dep_dt = day_start + timedelta(hours=h, minutes=m, seconds=s)
-        if dep_dt < now - timedelta(minutes=1):
-            continue
 
         # Apply RT delay only when this exact trip has its own update. A
         # route-level fallback used to copy one vehicle/delay to every later
@@ -148,6 +146,9 @@ async def fetch(coord: "PolishTransportCoordinator") -> dict:
             delay_sec = 0
 
         estimated_dt = dep_dt + timedelta(seconds=delay_sec)
+        # Check the estimated time: a late vehicle is still to come after its scheduled time.
+        if estimated_dt < now - timedelta(minutes=1):
+            continue
 
         trip_data = gtfs["trips"].get(trip_id, {})
         departures.append({

@@ -695,6 +695,56 @@ class TestFetchDeduplication:
         assert dep["estimated_time"] == fake_now.replace(minute=58).isoformat()
 
     @pytest.mark.asyncio
+    async def test_late_departure_stays_after_its_scheduled_time(self):
+        """A departure scheduled 2 minutes ago that is 4 minutes late is still listed."""
+        calendar = f"{CALENDAR_HEADER}\n{_calendar_line('SVC1', True)}"
+        stops = "stop_id,stop_name\nS1,Stop\nS2,End"
+        routes = "route_id,route_short_name,route_type\nR1,5,0"
+        trips = "trip_id,route_id,service_id,trip_headsign\nT1,R1,SVC1,End\nT2,R1,SVC1,End"
+        st = (
+            "trip_id,stop_id,departure_time,stop_sequence,stop_headsign\n"
+            "T1,S1,23:48:00,1,End\n"
+            "T1,S2,23:58:00,2,\n"
+            "T2,S1,23:48:30,1,End\n"
+            "T2,S2,23:58:30,2,"
+        )
+
+        data = _make_gtfs_zip(calendar=calendar, stops=stops, routes=routes, trips=trips, stop_times=st)
+
+        coord = MagicMock()
+        coord.provider = "gtfsrt_poznan"
+        coord.stop_id = "S1"
+        coord.stop_name = "Stop"
+        coord.hass.data = {"mzkzg_transport": {}}
+        coord.hass.async_add_executor_job = AsyncMock(side_effect=lambda func, *args: func(*args))
+
+        mock_resp = AsyncMock()
+        mock_resp.status = 200
+        mock_resp.read = AsyncMock(return_value=data)
+        mock_resp.__aenter__ = AsyncMock(return_value=mock_resp)
+        mock_resp.__aexit__ = AsyncMock(return_value=False)
+
+        mock_session = MagicMock()
+        mock_session.get = MagicMock(return_value=mock_resp)
+        coord._get_session = AsyncMock(return_value=mock_session)
+
+        today = date.today()
+        fake_now = datetime(today.year, today.month, today.day, 23, 50, 0, tzinfo=timezone(timedelta(hours=1)))
+
+        with (
+            patch("mzkzg_transport.provider_gtfsrt._get_rt_delays", new_callable=AsyncMock, return_value={"T1_S1": (240, "V1")}),
+            patch("mzkzg_transport.provider_gtfsrt._get_vehicle_dict", new_callable=AsyncMock, return_value={}),
+            patch("mzkzg_transport.provider_gtfsrt._enrich_with_gps_positions", new_callable=AsyncMock),
+            patch("mzkzg_transport.provider_gtfsrt.dt_util") as mock_dt,
+        ):
+            mock_dt.now.return_value = fake_now
+            result = await fetch(coord)
+
+        today_deps = [d for d in result["departures"] if d.get("provider") != "schedule"]
+        assert [d["trip_id"] for d in today_deps] == ["T1"]  # T2 has no RT data and is gone
+        assert today_deps[0]["estimated_time"] == fake_now.replace(minute=52).isoformat()
+
+    @pytest.mark.asyncio
     async def test_tomorrows_run_does_not_bring_back_this_mornings_departure(self):
         """A vehicle's next trip can be tomorrow's run of a trip id that already ran today."""
         calendar = f"{CALENDAR_HEADER}\n{_calendar_line('SVC1', True)}"
