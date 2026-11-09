@@ -4,7 +4,6 @@
 [![Version](https://img.shields.io/badge/version-2.0.1-blue.svg)](https://github.com/toczke/polish-public-transport-card/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![GitHub stars](https://img.shields.io/github/stars/toczke/polish-public-transport-card?style=social)](https://github.com/toczke/polish-public-transport-card/stargazers)
-[![Total downloads](https://img.shields.io/github/downloads/toczke/polish-public-transport-card/total?label=total%20downloads)](https://github.com/toczke/polish-public-transport-card/releases)
 
 Home Assistant integration + Lovelace card for real-time public transport departures in Poland. The integration groups all stops of one operator into a single hub, exposes per-stop and merged hub sensors, and ships its own Leaflet bundle for the live vehicle map.
 
