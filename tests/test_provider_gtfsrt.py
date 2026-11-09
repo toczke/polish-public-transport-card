@@ -484,6 +484,22 @@ class TestGetRtDelays:
 
         assert result["T1"] == (45, "3:689")
 
+    def test_another_days_run_with_explicit_delay_is_skipped(self):
+        """Explicit delay must not leak from another service day."""
+        day_start = datetime(2026, 11, 9, tzinfo=timezone.utc)
+        tomorrow = {
+            "trip_id": "T1",
+            "stop_sequence": 1,
+            "start_date": "20261110",
+            "delay": 600,
+            "when": day_start + timedelta(days=1, hours=14),
+        }
+        entries = {"T1": _entry([(1, 50400)])}
+
+        assert _parse_rt_feed(
+            _trip_update_feed(tomorrow), entries, "S1", day_start
+        ) == {}
+
 
 @pytest.mark.gtfsrt
 class TestFetchDeduplication:
