@@ -3,6 +3,30 @@ import * as path from 'path';
 
 const SCRIPT = path.resolve('custom_components/mzkzg_transport/www/polish-transport-card.js');
 
+test('alert button is hidden when there are no alerts', async ({ page }) => {
+  await page.goto('about:blank');
+  await page.addScriptTag({ path: SCRIPT });
+  const result = await page.evaluate(async () => {
+    await customElements.whenDefined('polish-transport-card');
+    const card: any = document.createElement('polish-transport-card');
+    card.setConfig({ type: 'custom:polish-transport-card', entities: ['sensor.x'], alerts_scope: 'city' });
+    card.hass = {
+      states: { 'sensor.x': { attributes: { departures: [], alerts: [], alerts_city: [] } } },
+      callWS: async () => ({ token: null }),
+      auth: { data: {} },
+    };
+    document.body.appendChild(card);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    return {
+      button: Boolean(card.shadowRoot?.querySelector('.header-alert')),
+      popup: Boolean(card.shadowRoot?.querySelector('.alerts-popup')),
+    };
+  });
+
+  expect(result.button).toBe(false);
+  expect(result.popup).toBe(false);
+});
+
 test('card renders matching and city-wide ZTM alerts', async ({ page }) => {
   await page.goto('about:blank');
   await page.addScriptTag({ path: SCRIPT });
