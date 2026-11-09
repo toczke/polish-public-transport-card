@@ -3,6 +3,9 @@
 from mzkzg_transport.config_flow import PROVIDER_OPTIONS
 from mzkzg_transport.const import (
     GTFSRT_PROVIDERS,
+    KIEDYPRZYJEDZIE_PROVIDERS,
+    PROVIDER_COLORS,
+    PROVIDER_CZERNICA,
     PROVIDER_DEBICA,
     PROVIDER_LABELS,
     PROVIDER_SANOK,
@@ -39,3 +42,21 @@ def test_every_city_and_provider_has_a_label():
     ]
     assert not missing_cities, f"cities without label: {missing_cities}"
     assert not missing_providers, f"providers without label: {missing_providers}"
+
+
+def test_every_kiedyprzyjedzie_provider_is_selectable_and_styled():
+    missing_options = sorted(
+        provider for provider in KIEDYPRZYJEDZIE_PROVIDERS if provider not in PROVIDER_OPTIONS
+    )
+    missing_labels = sorted(
+        provider for provider in KIEDYPRZYJEDZIE_PROVIDERS if not PROVIDER_LABELS.get(provider)
+    )
+    missing_colors = sorted(
+        provider for provider in KIEDYPRZYJEDZIE_PROVIDERS if not PROVIDER_COLORS.get(provider)
+    )
+    assert not missing_options, f"carriers missing from config flow: {missing_options}"
+    assert not missing_labels, f"carriers without label: {missing_labels}"
+    assert not missing_colors, f"carriers without header colour: {missing_colors}"
+    assert PROVIDER_OPTIONS[PROVIDER_CZERNICA] == "Gmina Czernica"
+    assert PROVIDER_LABELS[PROVIDER_CZERNICA] == "Gmina Czernica"
+    assert PROVIDER_COLORS[PROVIDER_CZERNICA] == "#1e3a8a"

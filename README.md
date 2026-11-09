@@ -73,7 +73,7 @@ From 2.0.0 onward development is driven by **GitHub issues and pull requests onl
 
 ### Data and map
 
-- GTFS and GTFS-RT parsing for 38 realtime providers, 3 static GTFS providers, 11 `kiedyPrzyjedzie` carriers, 2 Time4BUS operators and 6 dedicated city/rail integrations.
+- GTFS and GTFS-RT parsing for 38 realtime providers, 3 static GTFS providers, 12 `kiedyPrzyjedzie` carriers, 2 Time4BUS operators and 6 dedicated city/rail integrations.
 - Schedule fallback when realtime coverage is incomplete, including tomorrow's first departures.
 - Live GPS vehicle map with positions matched by `vehicle_code`, `trip_id`, then a bounded `route_id` fallback.
 - PLK delay binary sensor and a shared PLK API usage sensor with rate limiting.
@@ -289,9 +289,9 @@ ZTM Poznań, ZTM Lublin, MPK Kielce, MZDiK Radom, MPK Częstochowa, ZKM Elbląg,
 
 ZDMiKP Bydgoszcz, KM Kołobrzeg, MZK Ostrołęka.
 
-### kiedyPrzyjedzie (11)
+### kiedyPrzyjedzie (12)
 
-PKS Gdańsk, Albatros, Przewozy Autobusowe GRYF, Nord Express, PKS Gdynia, Miejski Zakład Komunikacji w Malborku, PKS Słupsk, MZK Starogard Gdański, PKS Starogard Gdański, MZK Bielsko-Biała, Powiat Człuchowski.
+PKS Gdańsk, Albatros, Przewozy Autobusowe GRYF, Nord Express, PKS Gdynia, Miejski Zakład Komunikacji w Malborku, PKS Słupsk, MZK Starogard Gdański, PKS Starogard Gdański, MZK Bielsko-Biała, Powiat Człuchowski, Gmina Czernica.
 
 ### Time4BUS (2)
 
@@ -308,7 +308,7 @@ Realtime delays, vehicle positions and map availability depend on the upstream f
 | Official city APIs / GTFS-RT | Gdańsk, Gdynia, Łódź, Poznań, GZM, Szczecin, Warszawa, Ełk, WKD, Kraków |
 | `api.zbiorkom.live` api6-open | Lublin, Kielce, Radom, Częstochowa, Elbląg, Gorzów, Suwałki, Przemyśl, Rybnik, Kutno, Legnica, Białystok, Olsztyn, Opole, Rzeszów, Toruń, Wrocław, Mielec, Oświęcim, Radomsko, Leszno, Świnoujście, Wałbrzych, Tarnów, Starachowice, Siedlce, Płock, Piła, Krosno, Koszalin, Konin, Kalisz |
 | `mkuran.pl` | Warszawa, Ełk, WKD, Bydgoszcz |
-| `kiedyPrzyjedzie.pl` | 11 regional carriers |
+| `kiedyPrzyjedzie.pl` | 12 regional carriers |
 | Time4BUS | Bytów, Tczew |
 | PLK OpenData | PKP / SKM / PolRegio / IC |
 | Static GTFS | Wejherowo, Bydgoszcz, Kołobrzeg, Ostrołęka |

@@ -13,6 +13,7 @@ from mzkzg_transport.const import (
     KIEDYPRZYJEDZIE_BIELSKO_URL,
     TIME4BUS_BASE_URLS,
     KIEDYPRZYJEDZIE_CZLUCHOW_URL,
+    KIEDYPRZYJEDZIE_CZERNICA_URL,
     KIEDYPRZYJEDZIE_GRYF_URL,
     KIEDYPRZYJEDZIE_MZK_MALBORK_URL,
     KIEDYPRZYJEDZIE_MZK_STAROGARD_URL,
@@ -23,6 +24,7 @@ from mzkzg_transport.const import (
     PROVIDER_BIELSKO,
     PROVIDER_BYTOW,
     PROVIDER_CZLUCHOW,
+    PROVIDER_CZERNICA,
     PROVIDER_GRYF,
     PROVIDER_MZK_MALBORK,
     PROVIDER_MZK_STAROGARD,
@@ -131,6 +133,35 @@ def mock_hass():
                 (0, "headsign", "Tczew"),
                 (0, "realtime", False),
                 (0, "delay_seconds", 0),
+            ],
+        },
+        {
+            "id": "czernica-live",
+            "provider": PROVIDER_CZERNICA,
+            "base_url": KIEDYPRZYJEDZIE_CZERNICA_URL,
+            "stop_id": "1020:2020",
+            "response": {
+                "timestamp": "now",
+                "rows": [
+                    {
+                        "time": "4 min",
+                        "static_time": "6 min",
+                        "time_diff": 2,
+                        "is_estimated": True,
+                        "direction_id": 1,
+                        "line_name": "D1",
+                        "vehicle_attributes": ["low_floor"],
+                    }
+                ],
+                "directions": {"1": "Czernica"},
+                "station_name": "Czernica, Rynek",
+            },
+            "expected_departures": 1,
+            "checks": [
+                (0, "route", "D1"),
+                (0, "headsign", "Czernica"),
+                (0, "realtime", True),
+                (0, "wheelchair_accessible", True),
             ],
         },
         {
@@ -244,6 +275,7 @@ def test_kiedyprzyjedzie_extra_urls():
         KIEDYPRZYJEDZIE_PKS_STAROGARD_URL: "pksstarogard.kiedyprzyjedzie.pl",
         KIEDYPRZYJEDZIE_BIELSKO_URL: "bielsko.kiedyprzyjedzie.pl",
         KIEDYPRZYJEDZIE_CZLUCHOW_URL: "czluchow.kiedyprzyjedzie.pl",
+        KIEDYPRZYJEDZIE_CZERNICA_URL: "czernica.kiedyprzyjedzie.pl",
     }
     for url, host in expected_hosts.items():
         assert url.endswith(host)
@@ -252,3 +284,4 @@ def test_kiedyprzyjedzie_extra_urls():
     assert PROVIDER_BYTOW in TIME4BUS_BASE_URLS
     assert PROVIDER_BYTOW not in KIEDYPRZYJEDZIE_BASE_URLS
     assert KIEDYPRZYJEDZIE_BASE_URLS[PROVIDER_BIELSKO] == "https://bielsko.kiedyprzyjedzie.pl"
+    assert KIEDYPRZYJEDZIE_BASE_URLS[PROVIDER_CZERNICA] == "https://czernica.kiedyprzyjedzie.pl"

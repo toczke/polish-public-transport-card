@@ -34,6 +34,47 @@ test('native preset is reflected in the card DOM', async ({ page }) => {
   expect(result.classes).toContain('native');
 });
 
+test('Gmina Czernica uses the catalog label and colours', async ({ page }) => {
+  await page.goto('about:blank');
+  await page.addScriptTag({ path: SCRIPT });
+  const now = new Date(Date.now() + 600000).toISOString();
+  const result = await page.evaluate(async ({ now }) => {
+    const card: any = document.createElement('polish-transport-card');
+    card.setConfig({ entities: ['sensor.czernica'] });
+    document.body.appendChild(card);
+    card.hass = {
+      locale: { language: 'pl', time_format: '24' },
+      states: {
+        'sensor.czernica': {
+          attributes: {
+            provider: 'kiedyprzyjedzie_czernica',
+            stop_name: 'Czernica, Rynek',
+            departures: [
+              { route: 'D1', headsign: 'Czernica', estimated_time: now, theoretical_time: now, realtime: true },
+            ],
+          },
+        },
+      },
+    };
+    await card.updateComplete;
+    const header = card.shadowRoot.querySelector('.header') as HTMLElement;
+    const badge = card.shadowRoot.querySelector('.badge') as HTMLElement;
+    return {
+      subtitle: card.shadowRoot.querySelector('.header-sub')?.textContent?.trim(),
+      headerBackground: getComputedStyle(header).backgroundColor,
+      badgeText: badge?.textContent?.trim(),
+      badgeBackground: getComputedStyle(badge).backgroundColor,
+      badgeColor: getComputedStyle(badge).color,
+    };
+  }, { now });
+
+  expect(result.subtitle).toBe('Gmina Czernica');
+  expect(result.headerBackground).toBe('rgb(30, 58, 138)');
+  expect(result.badgeText).toBe('D1');
+  expect(result.badgeBackground).toBe('rgb(59, 130, 246)');
+  expect(result.badgeColor).toBe('rgb(255, 255, 255)');
+});
+
 test('global and per-sensor filters are applied', async ({ page }) => {
   await page.goto('about:blank');
   await page.addScriptTag({ path: SCRIPT });

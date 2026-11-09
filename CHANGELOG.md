@@ -3,6 +3,9 @@
 ## [Unreleased]
 
 ### Added
+- **Gmina Czernica** - new `kiedyPrzyjedzie` carrier
+  (`czernica.kiedyprzyjedzie.pl`) with config-flow entry, catalog label, header
+  colour and badge colour.
 - **Service alerts** - ZTM Gdańsk current-situation messages from `bsk_rss.xml`
   and GTFS-Realtime `serviceAlerts` where the provider exposes them (api6-open
   cities, Warszawa, Szczecin, Łódź) are shown above the card rows. `alerts_scope:
