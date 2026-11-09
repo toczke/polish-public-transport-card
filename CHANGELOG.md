@@ -9,7 +9,8 @@
   matching` filters by line/stop, `alerts_scope: city` shows all current messages,
   and `show_alerts: false` hides the banner. Alerts are cached for two minutes.
 - **Badge contrast** - route badges now choose white or dark text from the badge
-  background, and vehicle-number chips use the normal text colour in dark mode.
+  background, and vehicle/platform chips take their background and text from the
+  active Home Assistant theme surface and text colours.
 
 ## [2.0.1] - 2026-11-08
 
