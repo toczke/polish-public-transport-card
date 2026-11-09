@@ -8,8 +8,8 @@ export const styles = css`
   --ptc-muted: var(--secondary-text-color, #888);
   --ptc-divider: var(--divider-color, #e5e5e5);
   --ptc-focus: var(--primary-color, #3b82f6);
-  --ptc-chip-bg: var(--chip-background, #e5e7eb);
-  --ptc-chip-text: var(--chip-color, #374151);
+  --ptc-chip-bg: var(--secondary-background-color, #e5e7eb);
+  --ptc-chip-text: var(--primary-text-color, #374151);
   --ptc-header-text: #fff;
   --ptc-header-muted: rgba(255, 255, 255, 0.72);
   --ptc-live-dot: #10b981;
@@ -146,7 +146,7 @@ ha-card.e-ink .dep-row { transition: none; }
   display: inline-flex; align-items: center; flex-shrink: 0;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 10px; font-weight: 600; letter-spacing: 0;
-  color: var(--ptc-text); background: var(--ptc-chip-bg);
+  color: var(--ptc-chip-text); background: var(--ptc-chip-bg);
   border-radius: 4px; padding: 0 4px; white-space: nowrap;
 }
 .meta-row { display: flex; align-items: center; justify-content: flex-start; gap: 2px 6px; flex-wrap: wrap; width: 100%; margin-top: 2px; }
