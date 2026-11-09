@@ -275,7 +275,7 @@ hold_action:
 
 ## Supported operators
 
-The provider picker is generated from code; the current list contains **60 entries**:
+The provider picker is generated from code; the current list contains **61 entries**:
 
 ### Dedicated city / rail integrations (6)
 
