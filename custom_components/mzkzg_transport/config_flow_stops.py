@@ -67,9 +67,6 @@ async def _load_stops(self, provider: str) -> list[dict]:
 
             return await _load_kiedyprzyjedzie_stops(self, provider)
 
-        if provider in GTFSRT_PROVIDERS:
-            return await _load_gtfsrt_stops(self, provider)
-
         if provider == PROVIDER_KRAKOW:
             return await _load_krakow_stops(self)
 
@@ -78,6 +75,9 @@ async def _load_stops(self, provider: str) -> list[dict]:
                 "https://cdn.zbiorkom.live/gtfs/lodz.zip",
                 id_column="stop_code",
             )
+
+        if provider in GTFSRT_PROVIDERS:
+            return await _load_gtfsrt_stops(self, provider)
 
     except Exception as err:
 

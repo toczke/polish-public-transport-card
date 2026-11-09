@@ -4,7 +4,7 @@
  * Reads data from the Polish Transport HA integration sensors.
  */
 
-export const CARD_VERSION = "2.0.1";
+export const CARD_VERSION = "2.0.2";
 
 export const LOCALE = {
   pl: {

@@ -1,16 +1,17 @@
 # Changelog
 
-## [Unreleased]
+## [2.0.2] - 2026-11-09
 
 ### Added
 - **Gmina Czernica** - new `kiedyPrzyjedzie` carrier
   (`czernica.kiedyprzyjedzie.pl`) with config-flow entry, catalog label, header
   colour and badge colour.
-- **Service alerts** - ZTM Gdańsk current-situation messages from `bsk_rss.xml`
-  and GTFS-Realtime `serviceAlerts` where the provider exposes them (api6-open
-  cities, Warszawa, Szczecin, Łódź) are shown above the card rows. `alerts_scope:
-  matching` filters by line/stop, `alerts_scope: city` shows all current messages,
-  and `show_alerts: false` hides the banner. Alerts are cached for two minutes.
+- **Service alerts** - ZTM Gdańsk current-situation messages from the
+  announcement ticker and `bsk_rss.xml`, plus GTFS-Realtime `serviceAlerts` where
+  the provider exposes them (api6-open cities, Warszawa, Szczecin, Łódź).
+  `alerts_scope: matching` filters by line/stop, `alerts_scope: city` shows all
+  current messages, and `show_alerts: false` hides the alert UI. Alerts are
+  cached for two minutes.
 - **Badge contrast** - route badges now choose white or dark text from the badge
   background, and vehicle/platform chips take their background and text from the
   active Home Assistant theme surface and text colours.
@@ -24,6 +25,10 @@
   emergency messages are exposed even when the RSS feed lags behind.
 - The alert banner was replaced by a header warning triangle with a count and a
   popup; the icon is only rendered when alerts exist.
+
+### Fixed
+- **Łódź stop search** - the dedicated Łódź loader now runs before the generic
+  GTFS-RT branch, so the picker uses `stop_code` from the current GTFS archive.
 
 ## [2.0.1] - 2026-11-08
 

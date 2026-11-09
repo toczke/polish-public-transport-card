@@ -161,6 +161,12 @@ async def test_load_stops_dispatches_provider_specific_loaders(monkeypatch):
     monkeypatch.setattr(config_flow_stops, "_load_kiedyprzyjedzie_stops", fake_loader)
     monkeypatch.setattr(config_flow_stops, "_load_gtfsrt_stops", fake_loader)
 
+    async def fake_gtfs_loader(self, url, id_column="stop_id"):
+        called.append((self, url))
+        return []
+
+    monkeypatch.setattr(config_flow_stops, "_load_gtfs_stops", fake_gtfs_loader)
+
     ctx = SimpleNamespace(hass=SimpleNamespace())
     time4bus = next(iter(TIME4BUS_PROVIDERS))
     kiedy = next(iter(KIEDYPRZYJEDZIE_BASE_URLS))
@@ -172,7 +178,7 @@ async def test_load_stops_dispatches_provider_specific_loaders(monkeypatch):
 
     assert (ctx, time4bus) in called
     assert (ctx, kiedy) in called
-    assert (ctx, PROVIDER_LODZ) in called
+    assert (ctx, "https://cdn.zbiorkom.live/gtfs/lodz.zip") in called
 
 
 @pytest.mark.asyncio
