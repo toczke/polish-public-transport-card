@@ -50,6 +50,7 @@ from .const import (
     CONF_SLEEP_START,
     CONF_STOP_ID,
     CONF_STOPS,
+    CONF_OFFLINE_ONLY,
     CONFIG_ENTRY_VERSION,
     DEFAULT_FALLBACK_MIN,
     DEFAULT_SLEEP_END,
@@ -218,6 +219,12 @@ def _match_stops(stops: list[dict], query: str, limit: int = MAX_STOP_RESULTS) -
     return matches
 
 
+async def _has_offline_snapshot(hass, provider: str, stop_id: str) -> bool:
+    """Return True when a stop has a persisted offline schedule."""
+    from .offline import async_has_snapshot
+
+    return await async_has_snapshot(hass, provider, stop_id)
+
 
 PROVIDER_OPTIONS = {
     PROVIDER_ZTM: "ZTM Gda\u0144sk",
@@ -316,6 +323,19 @@ class PolishTransportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
 
         self._plk_tier: str = "basic"
+        self._offline_only: bool = False
+
+    def _hub_entry(self):
+        """Return the existing 2.0 hub for the selected provider, if any."""
+        return next(
+            (
+                entry
+                for entry in self.hass.config_entries.async_entries(DOMAIN)
+                if entry.data.get(CONF_PROVIDER) == self._provider
+                and entry.version >= CONFIG_ENTRY_VERSION
+            ),
+            None,
+        )
 
 
     async def async_step_user(self, user_input=None):
@@ -604,6 +624,12 @@ class PolishTransportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors = {}
 
 
+        hub = self._hub_entry()
+
+
+        offline_default = bool(hub.options.get(CONF_OFFLINE_ONLY, False)) if hub else self._offline_only
+
+
         large_list = len(self._stops) > MAX_STOP_OPTIONS
 
 
@@ -620,6 +646,12 @@ class PolishTransportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
 
             name = str(user_input.get(CONF_NAME, "") or "").strip()
+
+
+            offline_only = bool(user_input.get(CONF_OFFLINE_ONLY, offline_default))
+
+
+            self._offline_only = offline_only
 
 
             # Large providers are not rendered as one huge dropdown. The first
@@ -645,6 +677,11 @@ class PolishTransportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     self._stop_query = query
 
 
+            elif offline_only and not await _has_offline_snapshot(
+                self.hass, self._provider, stop_id
+            ):
+                errors[CONF_OFFLINE_ONLY] = "offline_cache_missing"
+
             else:
 
 
@@ -668,17 +705,6 @@ class PolishTransportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
                 title = PROVIDER_OPTIONS.get(self._provider, self._provider)
 
-
-                hub = next(
-                    (
-                        entry
-                        for entry in self.hass.config_entries.async_entries(DOMAIN)
-                        if entry.data.get(CONF_PROVIDER) == self._provider
-                        and entry.version >= CONFIG_ENTRY_VERSION
-                    ),
-                    None,
-                )
-
                 if hub is not None:
                     stops = list(hub.data.get(CONF_STOPS) or [])
                     if any(str(stop.get("stop_id")) == stop_id for stop in stops):
@@ -689,7 +715,11 @@ class PolishTransportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     if self._api_key:
                         data[CONF_API_KEY] = self._api_key
                         data[CONF_PLK_TIER] = self._plk_tier
-                    self.hass.config_entries.async_update_entry(hub, data=data)
+                    options = dict(hub.options)
+                    options[CONF_OFFLINE_ONLY] = offline_only
+                    self.hass.config_entries.async_update_entry(
+                        hub, data=data, options=options
+                    )
                     await self.hass.config_entries.async_reload(hub.entry_id)
                     return self.async_abort(reason="stop_added")
 
@@ -717,13 +747,19 @@ class PolishTransportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     data[CONF_PLK_TIER] = self._plk_tier
 
 
+                data[CONF_OFFLINE_ONLY] = offline_only
+
+
                 await self.async_set_unique_id(f"{ENTITY_UNIQUE_PREFIX}_{self._provider}")
 
 
                 self._abort_if_unique_id_configured()
 
 
-                return self.async_create_entry(title=title, data=data)
+                return self.async_create_entry(
+                    title=title,
+                    data=data,
+                )
 
 
         # Build stop options as dict for selector
@@ -751,6 +787,7 @@ class PolishTransportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         )
                     ),
                     vol.Optional(CONF_NAME, default=""): str,
+                    vol.Optional(CONF_OFFLINE_ONLY, default=offline_default): bool,
                 }
             )
         elif large_list:
@@ -782,12 +819,14 @@ class PolishTransportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 if self._stop_query:
                     errors[STOP_QUERY] = "no_stops_found"
             fields[vol.Optional(CONF_NAME, default="")] = str
+            fields[vol.Optional(CONF_OFFLINE_ONLY, default=offline_default)] = bool
             schema = vol.Schema(fields)
         else:
             schema = vol.Schema(
                 {
                     vol.Required(CONF_STOP_ID): str,
                     vol.Optional(CONF_NAME, default=""): str,
+                    vol.Optional(CONF_OFFLINE_ONLY, default=offline_default): bool,
                 }
             )
 
@@ -873,6 +912,10 @@ class PolishTransportOptionsFlow(config_entries.OptionsFlow):
                 default=current_opts.get(CONF_SLEEP_ENABLED, True),
             ): bool,
             vol.Optional(
+                CONF_OFFLINE_ONLY,
+                default=bool(_opt(CONF_OFFLINE_ONLY, False)),
+            ): bool,
+            vol.Optional(
                 CONF_SLEEP_START,
                 default=current_opts.get(CONF_SLEEP_START, DEFAULT_SLEEP_START),
             ): str,
@@ -908,6 +951,9 @@ class PolishTransportOptionsFlow(config_entries.OptionsFlow):
         provider = self.config_entry.data.get(CONF_PROVIDER, "")
         stops = entry_stops(self.config_entry)
         errors = {}
+        offline_default = bool(
+            self.config_entry.options.get(CONF_OFFLINE_ONLY, False)
+        )
 
         if self._stops is None:
             self._api_key = self.config_entry.data.get(CONF_API_KEY, "")
@@ -922,6 +968,7 @@ class PolishTransportOptionsFlow(config_entries.OptionsFlow):
             query = str(user_input.get(STOP_QUERY, "") or "").strip()
             stop_id = str(user_input.get(CONF_STOP_ID, "") or "").strip()
             name = str(user_input.get(CONF_NAME, "") or "").strip()
+            offline_only = bool(user_input.get(CONF_OFFLINE_ONLY, offline_default))
             # Large providers are not rendered as one huge dropdown. The first
             # submit narrows the list by name/ID, then the user picks a match.
             if large_list and query and not stop_id:
@@ -931,12 +978,20 @@ class PolishTransportOptionsFlow(config_entries.OptionsFlow):
                 errors[CONF_STOP_ID] = "invalid_stop_id"
             elif any(stop["stop_id"] == stop_id for stop in stops):
                 errors["base"] = "already_configured"
+            elif offline_only and not await _has_offline_snapshot(
+                self.hass, provider, stop_id
+            ):
+                errors[CONF_OFFLINE_ONLY] = "offline_cache_missing"
             else:
                 data = dict(self.config_entry.data)
                 data[CONF_STOPS] = stops + [{"stop_id": stop_id, "name": name}]
-                self.hass.config_entries.async_update_entry(self.config_entry, data=data)
+                options = dict(self.config_entry.options)
+                options[CONF_OFFLINE_ONLY] = offline_only
+                self.hass.config_entries.async_update_entry(
+                    self.config_entry, data=data, options=options
+                )
                 await self.hass.config_entries.async_reload(self.config_entry.entry_id)
-                return self.async_create_entry(title="", data=self.config_entry.options)
+                return self.async_create_entry(title="", data=options)
 
         if large_list:
             from homeassistant.helpers.selector import (
@@ -967,6 +1022,7 @@ class PolishTransportOptionsFlow(config_entries.OptionsFlow):
             elif self._stop_query:
                 errors[STOP_QUERY] = "no_stops_found"
             fields[vol.Optional(CONF_NAME, default="")] = str
+            fields[vol.Optional(CONF_OFFLINE_ONLY, default=offline_default)] = bool
             schema = vol.Schema(fields)
         elif self._stops:
             from homeassistant.helpers.selector import (
@@ -993,6 +1049,7 @@ class PolishTransportOptionsFlow(config_entries.OptionsFlow):
                         )
                     ),
                     vol.Optional(CONF_NAME, default=""): str,
+                    vol.Optional(CONF_OFFLINE_ONLY, default=offline_default): bool,
                 }
             )
         else:
@@ -1000,6 +1057,7 @@ class PolishTransportOptionsFlow(config_entries.OptionsFlow):
                 {
                     vol.Required(CONF_STOP_ID): str,
                     vol.Optional(CONF_NAME, default=""): str,
+                    vol.Optional(CONF_OFFLINE_ONLY, default=offline_default): bool,
                 }
             )
 

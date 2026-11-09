@@ -3,6 +3,7 @@
 from datetime import timedelta
 import logging
 import re
+import time
 
 import aiohttp
 
@@ -16,6 +17,7 @@ def _get_tz():
     return getattr(dt_util, "get_default_time_zone", lambda: dt_util.DEFAULT_TIME_ZONE)()
 
 from .const import (
+    CONF_OFFLINE_ONLY,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
     GTFSRT_PROVIDERS,
@@ -28,6 +30,7 @@ from .const import (
     STOP_ID_PATTERN,
     TIME4BUS_PROVIDERS,
 )
+from .offline import async_load_snapshot, async_save_snapshot, replay_snapshot
 
 _LOGGER = logging.getLogger(__name__)
 _STOP_ID_RE = re.compile(STOP_ID_PATTERN)
@@ -78,6 +81,7 @@ class PolishTransportCoordinator(DataUpdateCoordinator):
         self._options: dict = {}
         self._routes_map: dict[str, str] = {}
         self._routes_load_failed_at: float = 0
+        self._last_offline_save: float = 0
 
     async def _get_session(self) -> aiohttp.ClientSession:
         return async_get_clientsession(self.hass)
@@ -225,6 +229,9 @@ class PolishTransportCoordinator(DataUpdateCoordinator):
                 "sleep_mode": True,
             }
 
+        if self._options.get(CONF_OFFLINE_ONLY, False):
+            return await self._async_offline_data(now)
+
         try:
             if self.provider == PROVIDER_ZTM:
                 from . import provider_ztm
@@ -254,6 +261,7 @@ class PolishTransportCoordinator(DataUpdateCoordinator):
                 from . import provider_zkm
                 data = await provider_zkm.fetch(self)
             data["departures"] = self._deduplicate_prefer_rt(data.get("departures", []))
+            await self._async_save_offline_snapshot(data, now)
 
             # P2.5 — Enrich with stop coordinates and walking distance from HA home
             # Try to get stop coordinates from GTFS cache (GTFS-RT providers only)
@@ -281,5 +289,64 @@ class PolishTransportCoordinator(DataUpdateCoordinator):
 
             return data
         except Exception as err:
+            offline = await self._async_offline_data(now, log_missing=False)
+            if offline and offline.get("departures"):
+                _LOGGER.warning(
+                    "Fetch failed for %s (%s); serving the last offline schedule: %s",
+                    self.stop_id,
+                    self.provider,
+                    err,
+                )
+                return offline
             _LOGGER.debug("Fetch error for %s (%s): %s", self.stop_id, self.provider, err, exc_info=True)
             raise UpdateFailed(f"Error fetching data: {err}") from err
+
+    async def _async_save_offline_snapshot(self, data: dict, now) -> None:
+        """Persist the last successful timetable for offline fallback."""
+        if not data.get("departures"):
+            return
+        if self._last_offline_save and time.monotonic() - self._last_offline_save < 900:
+            return
+        try:
+            saved = await async_save_snapshot(
+                self.hass,
+                self.provider,
+                self.stop_id,
+                data.get("stop_name") or self.stop_name,
+                data["departures"],
+                now=now,
+            )
+            if saved:
+                self._last_offline_save = time.monotonic()
+        except Exception as err:  # noqa: BLE001 - snapshots must not break updates
+            _LOGGER.debug("Offline snapshot save failed for %s: %s", self.stop_id, err)
+
+    async def _async_offline_data(self, now, log_missing: bool = True) -> dict:
+        """Return the replay of the last saved schedule, if one exists."""
+        try:
+            snapshot = await async_load_snapshot(self.hass, self.provider, self.stop_id)
+        except Exception as err:  # noqa: BLE001 - offline cache must not crash
+            _LOGGER.debug("Offline snapshot read failed for %s: %s", self.stop_id, err)
+            snapshot = None
+        if snapshot:
+            data = replay_snapshot(snapshot, now)
+            data["stop_id"] = self.stop_id
+            data["provider"] = self.provider
+            if self.stop_name:
+                data["stop_name"] = self.stop_name
+            return data
+        if log_missing:
+            _LOGGER.warning(
+                "Offline mode is enabled for %s (%s), but no saved schedule exists yet",
+                self.stop_id,
+                self.provider,
+            )
+        return {
+            "stop_id": self.stop_id,
+            "stop_name": self.stop_name or f"Przystanek {self.stop_id}",
+            "provider": self.provider,
+            "departures": [],
+            "last_update": now.isoformat(),
+            "offline": True,
+            "offline_missing": True,
+        }

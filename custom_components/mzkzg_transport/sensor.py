@@ -55,7 +55,7 @@ class PolishTransportSensor(CoordinatorEntity, SensorEntity):
     """Sensor representing departures from a single stop."""
 
     _attr_has_entity_name = True
-    _unrecorded_attributes = frozenset({"departures", "last_update", "timetable", "alerts", "alerts_city"})
+    _unrecorded_attributes = frozenset({"departures", "last_update", "timetable", "alerts", "alerts_city", "offline", "offline_saved_at", "offline_missing"})
 
     def __init__(self, coordinator: PolishTransportCoordinator, entry: ConfigEntry) -> None:
         """Initialize the sensor."""
@@ -107,6 +107,11 @@ class PolishTransportSensor(CoordinatorEntity, SensorEntity):
             "provider": data.get("provider"),
             "last_update": data.get("last_update"),
         }
+        if data.get("offline"):
+            attrs["offline"] = True
+            attrs["offline_saved_at"] = data.get("offline_saved_at")
+            if data.get("offline_missing"):
+                attrs["offline_missing"] = True
         if data.get("resolved_stop_id"):
             attrs["resolved_stop_id"] = data["resolved_stop_id"]
         if data.get("timetable"):
@@ -130,7 +135,7 @@ class PolishAggregatedSensor(SensorEntity):
     """Sensor that merges departures from multiple stops (węzeł przesiadkowy)."""
 
     _attr_has_entity_name = True
-    _unrecorded_attributes = frozenset({"departures", "last_update", "alerts", "alerts_city"})
+    _unrecorded_attributes = frozenset({"departures", "last_update", "alerts", "alerts_city", "offline", "offline_saved_at", "offline_missing"})
 
     def __init__(self, coordinators: list, entry: ConfigEntry) -> None:
         self._coordinators = coordinators

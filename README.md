@@ -1,7 +1,7 @@
 # Polish Public Transport Card
 
 [![HACS](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
-[![Version](https://img.shields.io/badge/version-2.0.2-blue.svg)](https://github.com/toczke/polish-public-transport-card/releases)
+[![Version](https://img.shields.io/badge/version-2.0.3-blue.svg)](https://github.com/toczke/polish-public-transport-card/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![GitHub stars](https://img.shields.io/github/stars/toczke/polish-public-transport-card?style=social)](https://github.com/toczke/polish-public-transport-card/stargazers)
 
@@ -56,7 +56,7 @@ From 2.0.0 onward development is driven by **GitHub issues and pull requests onl
 - **Hub options** — change settings, add a stop (searchable for large providers) or remove a stop together with its device and entities.
 - **Automatic stop-ID resolution** — when an operator replaces GTFS stop IDs, entries resolve the new ID by stop name/platform and expose `resolved_stop_id`.
 - **Sleep mode** — pause polling at night, configurable per hub.
-- **Offline schedule fallback** — where a disk cache exists, the last successful GTFS archive is used when the source is unreachable.
+- **Offline schedules** - every successful refresh saves a compact schedule per stop. If the provider is unreachable, the last timetable is replayed instead of losing all departures. A hub can also be switched to **100% offline** mode and never call the network.
 
 ### Card
 
@@ -85,7 +85,7 @@ From 2.0.0 onward development is driven by **GitHub issues and pull requests onl
 
 - Home Assistant **2025.1.0** or newer (see `hacs.json`).
 - HACS only to install updates; manual installation works too.
-- Internet access to the selected operator feeds. Map tiles require network / Home Assistant `map_tiles`; only the Leaflet library is bundled offline.
+- Internet access to the selected operator feeds for online mode. Once a stop has been refreshed, its schedule can be replayed offline; map tiles still require network / Home Assistant `map_tiles` (only the Leaflet library is bundled).
 
 ---
 
@@ -130,9 +130,18 @@ A hub is created per provider, globally. A second ZTM Gdańsk stop joins the exi
 
 Open the hub entry → **Configure**. The menu contains:
 
-- **Settings** — destination/route filters, highlight mode, hide-terminus, realtime-only, sleep mode, Łódź fallback minimum and kiedyPrzyjedzie timetable lines where applicable.
+- **Settings** — destination/route filters, highlight mode, hide-terminus, realtime-only, sleep mode, 100% offline mode, Łódź fallback minimum and kiedyPrzyjedzie timetable lines where applicable.
 - **Add stop** — searchable stop picker; for providers above 50 stops the form searches first and then shows a select.
 - **Remove stop** — removes the stop, its device and its entities. The last stop of a hub cannot be removed.
+
+### 100% offline mode
+
+The stop form and the hub settings include a **100% offline** toggle. Once a stop has been refreshed online at least once, its schedule is stored under `.storage/mzkzg_transport/offline/`; after that the coordinator can replay it without any network call.
+
+- The first successful refresh saves the snapshot automatically.
+- Enable the toggle only after that first refresh; the form refuses to enable offline mode when no snapshot exists yet.
+- Offline departures are shifted to today, marked `realtime: false`, and expose `offline: true` plus `offline_saved_at` on the sensor.
+- If the saved schedule is missing, the sensor stays at `brak` with `offline_missing: true` instead of failing the integration.
 
 ### Changed stop IDs
 

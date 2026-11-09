@@ -1,7 +1,7 @@
 """Coverage for coordinator update, sleep mode and provider dispatch."""
 
 from datetime import datetime
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from homeassistant.helpers.update_coordinator import UpdateFailed
@@ -18,6 +18,7 @@ from mzkzg_transport import (
     provider_ztm,
 )
 from mzkzg_transport.const import (
+    CONF_OFFLINE_ONLY,
     CONF_SLEEP_ENABLED,
     CONF_SLEEP_END,
     CONF_SLEEP_START,
@@ -207,3 +208,103 @@ async def test_provider_error_is_wrapped_in_update_failed(monkeypatch):
 
     with pytest.raises(UpdateFailed, match="feed down"):
         await coord._async_update_data()
+
+
+@pytest.mark.asyncio
+async def test_offline_only_uses_snapshot_without_calling_provider(monkeypatch):
+    fetch = AsyncMock()
+    monkeypatch.setattr(provider_ztm, "fetch", fetch)
+    monkeypatch.setattr("homeassistant.util.dt.now", lambda: FIXED_NOW)
+    monkeypatch.setattr(
+        "mzkzg_transport.coordinator.async_load_snapshot",
+        AsyncMock(
+            return_value={
+                "provider": PROVIDER_ZTM,
+                "stop_id": "2230",
+                "stop_name": "Płocka 01",
+                "saved_at": "2026-11-08T12:00:00",
+                "departures": [
+                    {"time": "2026-11-08T12:30:00", "route": "6", "headsign": "Jelitkowo"}
+                ],
+            }
+        ),
+    )
+    coord = _coordinator(
+        PROVIDER_ZTM,
+        {CONF_SLEEP_ENABLED: False, CONF_OFFLINE_ONLY: True},
+    )
+
+    result = await coord._async_update_data()
+
+    fetch.assert_not_awaited()
+    assert result["offline"] is True
+    assert result["departures"][0]["route"] == "6"
+    assert result["departures"][0]["realtime"] is False
+
+
+@pytest.mark.asyncio
+async def test_offline_only_without_snapshot_returns_marker(monkeypatch):
+    fetch = AsyncMock()
+    monkeypatch.setattr(provider_ztm, "fetch", fetch)
+    monkeypatch.setattr("homeassistant.util.dt.now", lambda: FIXED_NOW)
+    monkeypatch.setattr(
+        "mzkzg_transport.coordinator.async_load_snapshot", AsyncMock(return_value=None)
+    )
+    coord = _coordinator(
+        PROVIDER_ZTM,
+        {CONF_SLEEP_ENABLED: False, CONF_OFFLINE_ONLY: True},
+    )
+
+    result = await coord._async_update_data()
+
+    fetch.assert_not_awaited()
+    assert result["offline"] is True
+    assert result["offline_missing"] is True
+    assert result["departures"] == []
+
+
+@pytest.mark.asyncio
+async def test_fetch_failure_uses_offline_snapshot(monkeypatch):
+    async def failing_fetch(coord):
+        raise RuntimeError("offline")
+
+    monkeypatch.setattr(provider_ztm, "fetch", failing_fetch)
+    monkeypatch.setattr("homeassistant.util.dt.now", lambda: FIXED_NOW)
+    monkeypatch.setattr(
+        "mzkzg_transport.coordinator.async_load_snapshot",
+        AsyncMock(
+            return_value={
+                "provider": PROVIDER_ZTM,
+                "stop_id": "2230",
+                "stop_name": "Płocka 01",
+                "saved_at": "2026-11-08T12:00:00",
+                "departures": [
+                    {"time": "2026-11-08T13:00:00", "route": "3", "headsign": "Nowy Port"}
+                ],
+            }
+        ),
+    )
+    coord = _coordinator(PROVIDER_ZTM, {CONF_SLEEP_ENABLED: False})
+
+    result = await coord._async_update_data()
+
+    assert result["offline"] is True
+    assert result["departures"][0]["route"] == "3"
+
+
+@pytest.mark.asyncio
+async def test_successful_fetch_saves_offline_snapshot(monkeypatch):
+    async def fake_fetch(coord):
+        return _departures()
+
+    save = AsyncMock(return_value=True)
+    monkeypatch.setattr(provider_ztm, "fetch", fake_fetch)
+    monkeypatch.setattr("homeassistant.util.dt.now", lambda: FIXED_NOW)
+    monkeypatch.setattr("mzkzg_transport.coordinator.async_save_snapshot", save)
+    coord = _coordinator(PROVIDER_ZTM, {CONF_SLEEP_ENABLED: False})
+
+    await coord._async_update_data()
+
+    save.assert_awaited_once()
+    assert save.await_args.args[1] == PROVIDER_ZTM
+    assert save.await_args.args[2] == "2230"

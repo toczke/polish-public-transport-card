@@ -7,8 +7,15 @@ import pytest
 
 from mzkzg_transport import config_flow
 from mzkzg_transport.config_flow import PolishTransportConfigFlow
-from mzkzg_transport.const import CONF_API_KEY, CONF_PLK_TIER, DOMAIN, PROVIDER_LODZ, PROVIDER_PLK, PROVIDER_ZTM
-
+from mzkzg_transport.const import (
+    CONF_API_KEY,
+    CONF_OFFLINE_ONLY,
+    CONF_PLK_TIER,
+    DOMAIN,
+    PROVIDER_LODZ,
+    PROVIDER_PLK,
+    PROVIDER_ZTM,
+)
 
 def _flow(provider=None, lodz_stops=None, mock_steps=True):
     flow = PolishTransportConfigFlow()
@@ -210,6 +217,53 @@ async def test_lodz_group_rejects_unknown_and_empty():
         "type": "abort",
         "reason": "lodz_groups_failed",
     }
+
+
+@pytest.mark.asyncio
+async def test_stop_step_exposes_offline_toggle():
+    flow = _flow(mock_steps=False)
+    flow._provider = PROVIDER_ZTM
+    flow._stops = [{"id": "123", "name": "Test"}]
+
+    result = await flow.async_step_stop()
+
+    keys = {str(key) for key in result["data_schema"].schema}
+    assert any("offline_only" in key for key in keys)
+
+
+@pytest.mark.asyncio
+async def test_stop_step_saves_offline_option_on_new_entry(monkeypatch):
+    flow = _flow(mock_steps=False)
+    flow._provider = PROVIDER_ZTM
+    flow._stops = [{"id": "123", "name": "Test"}]
+    monkeypatch.setattr(
+        "mzkzg_transport.offline.async_has_snapshot", AsyncMock(return_value=True)
+    )
+
+    result = await flow.async_step_stop(
+        {"stop_id": "123", "name": "Test", "offline_only": True}
+    )
+
+    assert result["type"] == "create_entry"
+    assert result["data"][CONF_OFFLINE_ONLY] is True
+    assert result["data"]["stops"] == [{"stop_id": "123", "name": "Test"}]
+
+
+@pytest.mark.asyncio
+async def test_stop_step_rejects_offline_mode_without_snapshot(monkeypatch):
+    flow = _flow(mock_steps=False)
+    flow._provider = PROVIDER_ZTM
+    flow._stops = [{"id": "123", "name": "Test"}]
+    monkeypatch.setattr(
+        "mzkzg_transport.offline.async_has_snapshot", AsyncMock(return_value=False)
+    )
+
+    result = await flow.async_step_stop(
+        {"stop_id": "123", "name": "Test", "offline_only": True}
+    )
+
+    assert result["type"] == "form"
+    assert result["errors"][CONF_OFFLINE_ONLY] == "offline_cache_missing"
 
 
 class _GroupResponse:

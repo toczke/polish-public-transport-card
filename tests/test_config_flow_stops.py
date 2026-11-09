@@ -1,5 +1,7 @@
 """Tests for large stop-list search in the config flow."""
 
+from types import SimpleNamespace
+
 import pytest
 
 from mzkzg_transport.config_flow import (
@@ -49,6 +51,9 @@ def _form_keys(result: dict) -> list[str]:
 
 def _large_flow() -> PolishTransportConfigFlow:
     flow = PolishTransportConfigFlow()
+    flow.hass = SimpleNamespace(
+        config_entries=SimpleNamespace(async_entries=lambda domain: [])
+    )
     flow._provider = "zbiorkom_krakow"
     flow._stops = [
         {"id": "XYZ", "name": "Kraków Unikat"},

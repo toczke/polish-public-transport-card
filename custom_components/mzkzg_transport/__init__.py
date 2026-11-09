@@ -95,7 +95,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             entry.data.get(CONF_API_KEY, ""),
             entry.data.get(CONF_PLK_TIER, "basic"),
         )
-        coordinator._options = dict(entry.options)
+        coordinator._options = {**entry.data, **entry.options}
         coordinator.config_entry = entry
         try:
             await coordinator.async_config_entry_first_refresh()
@@ -150,7 +150,7 @@ async def _async_update_options(hass: HomeAssistant, entry: ConfigEntry) -> None
     """Handle options update."""
     coordinators = hass.data[DOMAIN]["_coordinators"].get(entry.entry_id, [])
     for coordinator in coordinators:
-        coordinator._options = dict(entry.options)
+        coordinator._options = {**entry.data, **entry.options}
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:

@@ -1,6 +1,7 @@
 """Tests for the hub options flow."""
 
 from types import SimpleNamespace
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -16,6 +17,8 @@ class FakeConfigEntries:
         self.updated.append((entry, kwargs))
         if "data" in kwargs:
             entry.data = kwargs["data"]
+        if "options" in kwargs:
+            entry.options = kwargs["options"]
 
     async def async_reload(self, entry_id):
         self.reloaded.append(entry_id)
@@ -74,6 +77,39 @@ async def test_settings_form_includes_provider_specific_fields():
     result = await flow.async_step_settings()
     keys = {str(key) for key in result["data_schema"].schema}
     assert any("fallback_min" in key for key in keys)
+    assert any("offline_only" in key for key in keys)
+
+
+@pytest.mark.asyncio
+async def test_settings_persists_offline_only():
+    flow = _flow(_entry(options={"sleep_enabled": True}))
+
+    result = await flow.async_step_settings({"offline_only": True})
+
+    assert result["type"] == "create_entry"
+    assert result["data"]["offline_only"] is True
+
+
+@pytest.mark.asyncio
+async def test_add_stop_form_includes_offline_toggle_and_persists_it(monkeypatch):
+    entry = _entry()
+    flow = _flow(entry)
+    flow._stops = []
+    monkeypatch.setattr(
+        "mzkzg_transport.offline.async_has_snapshot", AsyncMock(return_value=True)
+    )
+
+    form = await flow.async_step_add_stop()
+    keys = {str(key) for key in form["data_schema"].schema}
+    assert any("offline_only" in key for key in keys)
+
+    result = await flow.async_step_add_stop(
+        {"stop_id": "999", "name": "Nowy", "offline_only": True}
+    )
+
+    assert result["type"] == "create_entry"
+    assert entry.options["offline_only"] is True
+    assert result["data"]["offline_only"] is True
 
 
 @pytest.mark.asyncio

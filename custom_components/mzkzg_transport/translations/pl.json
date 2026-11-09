@@ -22,7 +22,8 @@
         "data": {
           "stop_id": "Przystanek",
           "stop_query": "Szukaj przystanku (nazwa lub ID)",
-          "name": "Własna nazwa (opcjonalnie)"
+          "name": "Własna nazwa (opcjonalnie)",
+          "offline_only": "100% offline (tylko zapisany rozkład)"
         }
       },
       "lodz_mode": {
@@ -44,7 +45,8 @@
       "invalid_stop_id": "Wprowadź poprawny identyfikator przystanku",
       "no_stops_found": "Brak przystanków pasujących do wyszukiwania — spróbuj innej nazwy lub ID",
       "api_key_required": "Klucz API PLK jest wymagany",
-      "invalid_group": "Wybrano nieprawidłową grupę przystanków"
+      "invalid_group": "Wybrano nieprawidłową grupę przystanków",
+      "offline_cache_missing": "Dla tego przystanku nie ma jeszcze zapisanego rozkładu. Dodaj go najpierw online, a potem włącz tryb 100% offline."
     },
     "abort": {
       "already_configured": "Ten przystanek jest już skonfigurowany",
@@ -69,6 +71,7 @@
           "sleep_enabled": "Włącz tryb uśpienia",
           "sleep_start": "Początek uśpienia (GG:MM)",
           "sleep_end": "Koniec uśpienia (GG:MM)",
+          "offline_only": "100% offline (tylko zapisany rozkład)",
           "fallback_min": "Minimalna liczba odjazdów do uzupełnienia rozkładem (Łódź)",
           "timetable_lines": "Linie do pe?nego rozk?adu (oddzielone przecinkami)",
           "destination_filter": "Filtr kierunku",
@@ -84,7 +87,8 @@
         "data": {
           "stop_id": "Przystanek",
           "name": "Własna nazwa (opcjonalnie)",
-          "stop_query": "Szukaj przystanku (nazwa lub ID)"
+          "stop_query": "Szukaj przystanku (nazwa lub ID)",
+          "offline_only": "100% offline (tylko zapisany rozkład)"
         }
       },
       "remove_stop": {

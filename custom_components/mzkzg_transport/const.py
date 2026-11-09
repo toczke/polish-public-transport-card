@@ -3,7 +3,7 @@
 DOMAIN = "mzkzg_transport"  # Technical legacy domain, kept so 2.0 can auto-migrate old entries.
 ENTITY_UNIQUE_PREFIX = "polish_transport"
 CONFIG_ENTRY_VERSION = 2
-INTEGRATION_VERSION = "2.0.2"
+INTEGRATION_VERSION = "2.0.3"
 DEVICE_MANUFACTURER = "Polish Transport"
 
 
@@ -304,6 +304,7 @@ CONF_SLEEP_END = "sleep_end"
 CONF_SLEEP_ENABLED = "sleep_enabled"
 CONF_FALLBACK_MIN = "fallback_min"
 CONF_TIMETABLE_LINES = "timetable_lines"
+CONF_OFFLINE_ONLY = "offline_only"
 
 DEFAULT_SCAN_INTERVAL = 30
 DEFAULT_SLEEP_START = "00:00"

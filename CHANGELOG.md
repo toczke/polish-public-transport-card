@@ -1,5 +1,24 @@
 # Changelog
 
+## [2.0.3] - 2026-11-09
+
+### Added
+- **Offline schedules for every provider** - each successful refresh now stores a
+  compact per-stop schedule under `.storage/mzkzg_transport/offline/`. When a
+  provider is unreachable, the saved timetable is replayed instead of losing all
+  departures. This works through the coordinator, so it covers GTFS-RT cities,
+  dedicated integrations, `kiedyPrzyjedzie`, Time4BUS and PLK alike.
+- **100% offline mode** - a new hub toggle in the stop form, add-stop form and
+  hub settings. When enabled, the coordinator makes no network requests and only
+  replays the stored schedule. The form refuses to enable it before a snapshot
+  exists.
+- **Offline sensor attributes** - `offline`, `offline_saved_at` and
+  `offline_missing` make it clear when a sensor is serving a cached timetable.
+
+### Changed
+- Offline departures are shifted to today, marked `realtime: false`, and keep
+  route/headsign/vehicle-amenity data while dropping stale GPS and delays.
+
 ## [2.0.2] - 2026-11-09
 
 ### Added

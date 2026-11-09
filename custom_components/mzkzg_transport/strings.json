@@ -22,7 +22,8 @@
         "data": {
           "stop_id": "Stop",
           "stop_query": "Search stops (name or ID)",
-          "name": "Custom name (optional)"
+          "name": "Custom name (optional)",
+          "offline_only": "100% offline (use only the saved schedule)"
         }
       },
       "lodz_mode": {
@@ -44,7 +45,8 @@
       "invalid_stop_id": "Enter a valid stop ID",
       "no_stops_found": "No stops match your search - try another name or ID",
       "api_key_required": "PLK API key is required",
-      "invalid_group": "Invalid bus stop group selected"
+      "invalid_group": "Invalid bus stop group selected",
+      "offline_cache_missing": "No saved schedule exists for this stop yet. Add it online first, then enable 100% offline mode."
     },
     "abort": {
       "already_configured": "This stop is already configured",
@@ -69,6 +71,7 @@
           "sleep_enabled": "Enable sleep mode",
           "sleep_start": "Sleep start (HH:MM)",
           "sleep_end": "Sleep end (HH:MM)",
+          "offline_only": "100% offline (use only the saved schedule)",
           "fallback_min": "Minimum scheduled departures for Łódź fallback",
           "timetable_lines": "Timetable lines (comma-separated)",
           "destination_filter": "Destination filter",
@@ -84,7 +87,8 @@
         "data": {
           "stop_id": "Stop",
           "name": "Custom name (optional)",
-          "stop_query": "Search stop (name or ID)"
+          "stop_query": "Search stop (name or ID)",
+          "offline_only": "100% offline (use only the saved schedule)"
         }
       },
       "remove_stop": {
