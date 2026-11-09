@@ -304,28 +304,28 @@ Realtime delays, vehicle positions and map availability depend on the upstream f
 Legend: **RT** realtime departures · **GPS** live vehicle positions/map · **Alerts** provider service alerts · **Wheelchair/Bike/AC** vehicle amenities. ✅ available · — not exposed · `✅*` depends on the upstream feed data.
 
 <!-- provider-capabilities:start -->
-| Provider | RT | GPS | Alerts | Wheelchair | Bike | AC |
+| Provider | Alerts | RT | GPS | Wheelchair | Bike | AC |
 |---|:--:|:--:|:--:|:--:|:--:|:--:|
 | ZTM Gdańsk | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| ZKM Gdynia | ✅ | — | — | ✅ | ✅ | ✅ |
+| ZKM Gdynia | — | ✅ | — | ✅ | ✅ | ✅ |
 | MZK Wejherowo | — | — | — | — | — | — |
-| Polskie Linie Kolejowe (PKP, SKM, PR, IC) | ✅ | — | — | — | — | — |
-| PKS Gdańsk Sp. z o.o. | ✅ | — | — | ✅* | ✅* | ✅* |
-| Albatros | ✅ | — | — | ✅* | ✅* | ✅* |
-| Przewozy Autobusowe GRYF | ✅ | — | — | ✅* | ✅* | ✅* |
-| Nord Express | ✅ | — | — | ✅* | ✅* | ✅* |
-| PKS Gdynia S.A. | ✅ | — | — | ✅* | ✅* | ✅* |
-| Miejski Zakład Komunikacji w Malborku | ✅ | — | — | ✅* | ✅* | ✅* |
-| PKS Słupsk S.A. | ✅ | — | — | ✅* | ✅* | ✅* |
-| MZK Starogard Gdański | ✅ | — | — | ✅* | ✅* | ✅* |
-| PKS Starogard Gdański S.A. | ✅ | — | — | ✅* | ✅* | ✅* |
-| MZK Bielsko-Biała | ✅ | — | — | ✅* | ✅* | ✅* |
-| Bytów | ✅ | — | — | ✅* | — | ✅* |
-| Powiat Człuchowski | ✅ | — | — | ✅* | ✅* | ✅* |
-| Gmina Czernica | ✅ | — | — | ✅* | ✅* | ✅* |
-| Tczew (Time4BUS) | ✅ | — | — | ✅* | — | ✅* |
+| Polskie Linie Kolejowe (PKP, SKM, PR, IC) | — | ✅ | — | — | — | — |
+| PKS Gdańsk Sp. z o.o. | — | ✅ | — | ✅* | ✅* | ✅* |
+| Albatros | — | ✅ | — | ✅* | ✅* | ✅* |
+| Przewozy Autobusowe GRYF | — | ✅ | — | ✅* | ✅* | ✅* |
+| Nord Express | — | ✅ | — | ✅* | ✅* | ✅* |
+| PKS Gdynia S.A. | — | ✅ | — | ✅* | ✅* | ✅* |
+| Miejski Zakład Komunikacji w Malborku | — | ✅ | — | ✅* | ✅* | ✅* |
+| PKS Słupsk S.A. | — | ✅ | — | ✅* | ✅* | ✅* |
+| MZK Starogard Gdański | — | ✅ | — | ✅* | ✅* | ✅* |
+| PKS Starogard Gdański S.A. | — | ✅ | — | ✅* | ✅* | ✅* |
+| MZK Bielsko-Biała | — | ✅ | — | ✅* | ✅* | ✅* |
+| Bytów | — | ✅ | — | ✅* | — | ✅* |
+| Powiat Człuchowski | — | ✅ | — | ✅* | ✅* | ✅* |
+| Gmina Czernica | — | ✅ | — | ✅* | ✅* | ✅* |
+| Tczew (Time4BUS) | — | ✅ | — | ✅* | — | ✅* |
 | MPK Łódź | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| ZTM Poznań | ✅ | ✅ | — | ✅* | ✅* | ✅* |
+| ZTM Poznań | — | ✅ | ✅ | ✅* | ✅* | ✅* |
 | ZTM Lublin | ✅ | ✅ | ✅ | ✅* | ✅* | — |
 | MPK Kielce | ✅ | ✅ | ✅ | ✅* | ✅* | — |
 | MZDiK Radom | ✅ | ✅ | ✅ | ✅* | ✅* | — |
@@ -337,12 +337,12 @@ Legend: **RT** realtime departures · **GPS** live vehicle positions/map · **Al
 | ZTZ Rybnik | ✅ | ✅ | ✅ | ✅* | ✅* | — |
 | MZK Kutno | ✅ | ✅ | ✅ | ✅* | ✅* | — |
 | MPK Legnica | ✅ | ✅ | ✅ | ✅* | ✅* | — |
-| ZTM GZM (Katowice) | ✅ | ✅ | — | ✅* | ✅* | — |
+| ZTM GZM (Katowice) | — | ✅ | ✅ | ✅* | ✅* | — |
 | ZTP Kraków | ✅ | ✅ | ✅ | — | — | — |
 | ZDiTM Szczecin | ✅ | ✅ | ✅ | ✅* | ✅* | — |
 | ZTM Warszawa | ✅ | ✅ | ✅ | ✅* | ✅* | — |
-| MZK Ełk | ✅ | ✅ | — | ✅* | ✅* | — |
-| WKD | ✅ | — | — | ✅* | ✅* | — |
+| MZK Ełk | — | ✅ | ✅ | ✅* | ✅* | — |
+| WKD | — | ✅ | — | ✅* | ✅* | — |
 | BKM Białystok | ✅ | ✅ | ✅ | ✅* | ✅* | — |
 | ZDZiT Olsztyn | ✅ | ✅ | ✅ | ✅* | ✅* | — |
 | MZK Opole | ✅ | ✅ | ✅ | ✅* | ✅* | — |

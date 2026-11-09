@@ -79,7 +79,7 @@ def _cell(value: bool | str) -> str:
 def render_markdown() -> str:
     """Render the Markdown table used in README.md."""
     lines = [
-        "| Provider | RT | GPS | Alerts | Wheelchair | Bike | AC |",
+        "| Provider | Alerts | RT | GPS | Wheelchair | Bike | AC |",
         "|---|:--:|:--:|:--:|:--:|:--:|:--:|",
     ]
     for provider, label in PROVIDER_OPTIONS.items():
@@ -88,9 +88,9 @@ def render_markdown() -> str:
             continue
         dependent = provider not in DEDICATED
         cells = [
+            _cell(caps[2]),
             _cell(caps[0]),
             _cell(caps[1]),
-            _cell(caps[2]),
             _cell(DEPENDENT if caps[3] and dependent else caps[3]),
             _cell(DEPENDENT if caps[4] and dependent else caps[4]),
             _cell(DEPENDENT if caps[5] and dependent else caps[5]),
