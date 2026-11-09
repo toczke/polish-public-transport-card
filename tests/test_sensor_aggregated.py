@@ -7,7 +7,7 @@ import pytest
 from mzkzg_transport.sensor import PolishAggregatedSensor
 
 
-def _coordinator(stop_id, departures, provider="ztm_gdansk", walking=None, alerts=None):
+def _coordinator(stop_id, departures, provider="ztm_gdansk", walking=None, alerts=None, alerts_city=None):
     data = {
         "stop_id": stop_id,
         "stop_name": f"Stop {stop_id}",
@@ -19,6 +19,8 @@ def _coordinator(stop_id, departures, provider="ztm_gdansk", walking=None, alert
         data.update(walking)
     if alerts is not None:
         data["alerts"] = alerts
+    if alerts_city is not None:
+        data["alerts_city"] = alerts_city
     return SimpleNamespace(
         stop_id=stop_id,
         provider=provider,
@@ -128,6 +130,27 @@ def test_attributes_include_deduplicated_alerts():
     attrs = sensor.extra_state_attributes
 
     assert [item["id"] for item in attrs["alerts"]] == ["11936", "other"]
+
+
+def test_attributes_include_deduplicated_city_alerts():
+    matching = {
+        "id": "11936",
+        "title": "Awaryjna zmiana trasy linii 195",
+        "content": "Objazd",
+        "lines": ["195"],
+    }
+    other = {"id": "other", "title": "Inny komunikat", "content": "X", "lines": ["199"]}
+    sensor = _sensor(
+        [
+            _coordinator("1", [], alerts=[matching], alerts_city=[matching, other]),
+            _coordinator("2", [], alerts=[], alerts_city=[dict(other)]),
+        ]
+    )
+
+    attrs = sensor.extra_state_attributes
+
+    assert [item["id"] for item in attrs["alerts"]] == ["11936"]
+    assert [item["id"] for item in attrs["alerts_city"]] == ["11936", "other"]
 
 
 def test_native_value_is_first_departure_time():

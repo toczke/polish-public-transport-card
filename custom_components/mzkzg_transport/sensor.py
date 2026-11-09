@@ -55,7 +55,7 @@ class PolishTransportSensor(CoordinatorEntity, SensorEntity):
     """Sensor representing departures from a single stop."""
 
     _attr_has_entity_name = True
-    _unrecorded_attributes = frozenset({"departures", "last_update", "timetable", "alerts"})
+    _unrecorded_attributes = frozenset({"departures", "last_update", "timetable", "alerts", "alerts_city"})
 
     def __init__(self, coordinator: PolishTransportCoordinator, entry: ConfigEntry) -> None:
         """Initialize the sensor."""
@@ -113,6 +113,8 @@ class PolishTransportSensor(CoordinatorEntity, SensorEntity):
             attrs["timetable"] = data["timetable"]
         if data.get("alerts"):
             attrs["alerts"] = data["alerts"]
+        if data.get("alerts_city"):
+            attrs["alerts_city"] = data["alerts_city"]
         if "walking_distance_m" in data:
             attrs["walking_distance_m"] = data["walking_distance_m"]
             attrs["walking_time_min"] = data["walking_time_min"]
@@ -128,7 +130,7 @@ class PolishAggregatedSensor(SensorEntity):
     """Sensor that merges departures from multiple stops (węzeł przesiadkowy)."""
 
     _attr_has_entity_name = True
-    _unrecorded_attributes = frozenset({"departures", "last_update", "alerts"})
+    _unrecorded_attributes = frozenset({"departures", "last_update", "alerts", "alerts_city"})
 
     def __init__(self, coordinators: list, entry: ConfigEntry) -> None:
         self._coordinators = coordinators
@@ -182,6 +184,17 @@ class PolishAggregatedSensor(SensorEntity):
                     alerts.append(alert)
         if alerts:
             attrs["alerts"] = alerts
+
+        alerts_city = []
+        seen_city = set()
+        for coordinator in self._coordinators:
+            for alert in (coordinator.data or {}).get("alerts_city", []):
+                alert_id = alert.get("id") or f"{alert.get('title')}|{alert.get('content')}"
+                if alert_id not in seen_city:
+                    seen_city.add(alert_id)
+                    alerts_city.append(alert)
+        if alerts_city:
+            attrs["alerts_city"] = alerts_city
 
         attrs["departures"] = deps
         return attrs

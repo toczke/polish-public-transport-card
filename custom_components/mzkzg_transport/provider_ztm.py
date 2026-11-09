@@ -74,9 +74,11 @@ async def fetch(coord: "PolishTransportCoordinator") -> dict:
     unique.sort(key=lambda x: x.get("estimated_time") or "")
 
     alerts = []
+    alerts_city = []
     try:
+        alerts_city = await async_get_alerts(coord, session)
         alerts = alerts_for_stop(
-            await async_get_alerts(coord, session),
+            alerts_city,
             coord.stop_name or "",
             {d.get("route") for d in unique if d.get("route")},
         )
@@ -89,6 +91,7 @@ async def fetch(coord: "PolishTransportCoordinator") -> dict:
         "provider": PROVIDER_ZTM,
         "departures": unique,
         "alerts": alerts,
+        "alerts_city": alerts_city,
         "last_update": now.isoformat(),
     }
 

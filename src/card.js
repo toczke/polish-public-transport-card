@@ -75,6 +75,7 @@ export class PolishTransportCard extends LitElement {
       show_platform: config.show_platform !== false,
       show_accessibility: config.show_accessibility !== false,
       show_alerts: config.show_alerts !== false,
+      alerts_scope: ["matching", "city"].includes(config.alerts_scope) ? config.alerts_scope : "matching",
       show_bike: config.show_bike !== false,
       show_wheelchair: config.show_wheelchair !== false,
       show_ac: config.show_ac !== false,
@@ -278,8 +279,11 @@ export class PolishTransportCard extends LitElement {
     if (!this.hass || !this._config.entities?.length) return [];
     const alerts = [];
     const seen = new Set();
+    const city = this._config.alerts_scope === "city";
     for (const entityId of this._getEntityIds()) {
-      const list = this.hass.states[entityId]?.attributes?.alerts;
+      const attributes = this.hass.states[entityId]?.attributes || {};
+      let list = city ? attributes.alerts_city : attributes.alerts;
+      if (city && !Array.isArray(list)) list = attributes.alerts;
       if (!Array.isArray(list)) continue;
       for (const alert of list) {
         const alertId = alert?.id || `${alert?.title || ""}|${alert?.content || ""}`;

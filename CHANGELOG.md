@@ -4,9 +4,10 @@
 
 ### Added
 - **ZTM Gdańsk alerts** - current-situation messages from `bsk_rss.xml` are
-  exposed as the `alerts` sensor attribute and shown above the card rows. Alerts
-  are matched to a stop by affected line and by stop name, with a two-minute
-  cache and `show_alerts: false` to disable the banner.
+  exposed as the `alerts` and `alerts_city` sensor attributes and shown above the
+  card rows. `alerts_scope: matching` filters by line/stop, `alerts_scope: city`
+  shows all current Gdańsk messages, and `show_alerts: false` hides the banner.
+  The feed is cached for two minutes.
 
 ## [2.0.1] - 2026-11-08
 

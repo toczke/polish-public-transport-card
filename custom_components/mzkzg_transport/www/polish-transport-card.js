@@ -1047,6 +1047,16 @@ var X = (e) => ({ select: { options: e } }), Fe = (e) => ({ select: {
 				selector: { boolean: {} }
 			},
 			{
+				name: "alerts_scope",
+				selector: X([{
+					value: "matching",
+					label: "alerts_matching"
+				}, {
+					value: "city",
+					label: "alerts_city"
+				}])
+			},
+			{
 				name: "show_stop_name",
 				selector: { boolean: {} }
 			},
@@ -1554,6 +1564,9 @@ var X = (e) => ({ select: { options: e } }), Fe = (e) => ({ select: {
 			show_platform: "Pokaż peron / stanowisko",
 			show_accessibility: "Pokaż ikony dostępności",
 			show_alerts: "Pokaż komunikaty ZTM",
+			alerts_scope: "Zakres komunikatów",
+			alerts_matching: "Tylko dla linii/przystanku",
+			alerts_city: "Wszystkie komunikaty Gdańska",
 			show_stop_name: "Pokaż nazwę przystanku",
 			show_footer: "Pokaż stopkę",
 			show_last_update: "Pokaż czas aktualizacji",
@@ -1630,6 +1643,9 @@ var X = (e) => ({ select: { options: e } }), Fe = (e) => ({ select: {
 			show_platform: "Show platform / stand",
 			show_accessibility: "Show accessibility icons",
 			show_alerts: "Show ZTM alerts",
+			alerts_scope: "Alert scope",
+			alerts_matching: "Only this line/stop",
+			alerts_city: "All Gdańsk alerts",
 			show_stop_name: "Show stop name",
 			show_footer: "Show footer",
 			show_last_update: "Show last update",
@@ -2362,6 +2378,7 @@ var Q = null, qe = null, Je = class {
 			show_platform: e.show_platform !== !1,
 			show_accessibility: e.show_accessibility !== !1,
 			show_alerts: e.show_alerts !== !1,
+			alerts_scope: ["matching", "city"].includes(e.alerts_scope) ? e.alerts_scope : "matching",
 			show_bike: e.show_bike !== !1,
 			show_wheelchair: e.show_wheelchair !== !1,
 			show_ac: e.show_ac !== !1,
@@ -2511,10 +2528,10 @@ var Q = null, qe = null, Je = class {
 	}
 	_getAlerts() {
 		if (!this.hass || !this._config.entities?.length) return [];
-		let e = [], t = /* @__PURE__ */ new Set();
-		for (let n of this._getEntityIds()) {
-			let r = this.hass.states[n]?.attributes?.alerts;
-			if (Array.isArray(r)) for (let n of r) {
+		let e = [], t = /* @__PURE__ */ new Set(), n = this._config.alerts_scope === "city";
+		for (let r of this._getEntityIds()) {
+			let i = this.hass.states[r]?.attributes || {}, a = n ? i.alerts_city : i.alerts;
+			if (n && !Array.isArray(a) && (a = i.alerts), Array.isArray(a)) for (let n of a) {
 				let r = n?.id || `${n?.title || ""}|${n?.content || ""}`;
 				t.has(r) || (t.add(r), e.push(n));
 			}

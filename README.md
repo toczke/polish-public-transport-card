@@ -69,7 +69,8 @@ HACS does not publish per-repository install counts. The badge above uses **GitH
 - Live countdown, delay indicators, vehicle chips, platform/track chips and accessibility icons.
 - Tap / hold / double-tap actions editable in the GUI.
 - Per-sensor overrides in the visual editor.
-- ZTM Gdańsk alerts above the departures, filtered by line and stop.
+- ZTM Gdańsk alerts above the departures, filtered by line/stop or city-wide
+  (`alerts_scope: matching|city`).
 - Offline Leaflet bundle loaded only when the vehicle map opens.
 - Optional header clock, refresh button and last-update footer.
 
@@ -166,7 +167,8 @@ Common sensor attributes:
 - `departures` — list of departure objects for the card,
 - `stop_id`, `stop_name`, `provider`, `last_update`,
 - `resolved_stop_id` when an old GTFS stop ID was mapped to a new one,
-- `alerts` for ZTM Gdańsk stops (current `bsk_rss.xml` messages matching the stop's lines or name),
+- `alerts` for ZTM Gdańsk stops (messages matching the stop's lines or name),
+- `alerts_city` for ZTM Gdańsk stops (all current city alerts),
 - `walking_distance_m` / `walking_time_min` when Home Assistant has a home location and the stop has coordinates,
 - `timetable` for kiedyPrzyjedzie providers when configured.
 
@@ -203,6 +205,7 @@ The card registers itself automatically. In Lovelace: **Add Card → Polish Tran
 | `show_platform` | bool | `true` | Show platform/stand/track |
 | `show_accessibility` | bool | `true` | Show accessibility icons |
 | `show_alerts` | bool | `true` | Show ZTM Gdańsk alerts above the rows |
+| `alerts_scope` | string | `matching` | `matching` (line/stop) or `city` (all Gdańsk alerts) |
 | `show_bike` | bool | `true` | Show the bike icon when allowed |
 | `show_wheelchair` | bool | `true` | Show the wheelchair icon |
 | `show_ac` | bool | `true` | Show the air-conditioning icon |
@@ -331,7 +334,11 @@ message is matched to the stop by:
 - the stop name/base name mentioned in the message.
 
 Matching messages are exposed as the `alerts` attribute and rendered above the
-card rows. Set `show_alerts: false` to hide the banner.
+card rows. All current city messages are also exposed as `alerts_city`.
+
+- `alerts_scope: matching` (default) shows only messages for this stop/line,
+- `alerts_scope: city` shows every current Gdańsk alert on the card,
+- `show_alerts: false` hides the banner entirely.
 
 `refresh_gtfs` service forces a GTFS cache refresh:
 
