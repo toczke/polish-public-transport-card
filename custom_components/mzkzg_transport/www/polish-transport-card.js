@@ -2131,7 +2131,7 @@ var Q = null, Je = null, Ye = class {
 	}
 	buildPopupContent(e) {
 		let t = Math.round((e.delay_seconds || 0) / 60), n = t > 0 ? `+${t} min` : t < 0 ? `${t} min` : H("on_time"), r = t > 0 ? "zm-popup-delay" : t < 0 ? "zm-popup-delay early" : "zm-popup-delay ontime";
-		return `<div class="zm-popup"><div class="zm-popup-route">${U(e.route)}</div>${e.headsign ? `<div class="zm-popup-headsign">→ ${U(e.headsign)}</div>` : ""}${e.vehicle_code ? `<div class="zm-popup-meta">#${U(e.vehicle_code)}</div>` : ""}<div class="zm-popup-delay-row"><span class="${r}">${U(n)}</span></div></div>`;
+		return `<div class="zm-popup"><div class="zm-popup-route">${U(e.route)}</div>${e.headsign ? `<div class="zm-popup-headsign">→ ${U(e.headsign)}</div>` : ""}${e.vehicle_code ? `<div class="zm-popup-meta">${U(e.vehicle_code)}</div>` : ""}<div class="zm-popup-delay-row"><span class="${r}">${U(n)}</span></div></div>`;
 	}
 	showVehicleMap(e, t, n) {
 		this.mapCtx && this.mapCtx.destroy();
@@ -2822,7 +2822,7 @@ var Q = null, Je = null, Ye = class {
 			}
 			let f = [];
 			e.show_accessibility && (e.show_bike && t.bike_allowed === !0 && f.push(j`<span title=${H("bike")}>${Z($e)}</span>`), e.show_wheelchair && t.wheelchair_accessible === !0 && f.push(j`<span title=${H("wheelchair")}>${Z(et)}</span>`), e.show_ac && t.air_conditioning === !0 && f.push(j`<span title=${H("ac")}>${Z(tt)}</span>`), e.show_ticket_machine && t.ticket_machine === !0 && f.push(j`<span title=${H("ticket_machine")}>${Z(nt)}</span>`));
-			let ee = e.show_vehicle && t._provider !== "plk_rail" && t.vehicle_code && t.realtime ? j`<span class="vehicle-no" title=${H("show_vehicle")}>#${t.vehicle_code}</span>` : N, p = e.show_platform && t.platform && t._provider !== "plk_rail" ? j`<span class="platform" title=${H("platform")}>${t.platform}</span>` : N, m = W(t.vehicle_lat, t.vehicle_lng) !== null, h = [];
+			let ee = e.show_vehicle && t._provider !== "plk_rail" && t.vehicle_code && t.realtime ? j`<span class="vehicle-no" title=${H("show_vehicle")}>${t.vehicle_code}</span>` : N, p = e.show_platform && t.platform && t._provider !== "plk_rail" ? j`<span class="platform" title=${H("platform")}>${t.platform}</span>` : N, m = W(t.vehicle_lat, t.vehicle_lng) !== null, h = [];
 			u.length && h.push(j`<span class="meta-pill">${u.join(" · ")}</span>`), p !== N && h.push(p);
 			let g = d.length ? j`<span class="train-info">${d.join(" · ")}</span>` : N, te = f.length > 0 || h.length > 0 || g !== N ? j`<span class="meta-row">
             ${f.length ? j`<span class="icons">${f}</span>` : N}

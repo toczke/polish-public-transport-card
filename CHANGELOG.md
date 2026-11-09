@@ -12,6 +12,10 @@
   background, and vehicle/platform chips take their background and text from the
   active Home Assistant theme surface and text colours.
 
+### Changed
+- Vehicle chips and map popups show the vehicle number without a leading `#`
+  (e.g. `1026` instead of `#1026`).
+
 ## [2.0.1] - 2026-11-08
 
 ### Fixed

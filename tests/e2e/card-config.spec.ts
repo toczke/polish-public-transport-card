@@ -100,7 +100,7 @@ test('countdown, vehicle number and consolidated meta chips', async ({ page }) =
   }, { soon, later });
   expect(result.ztmCountdown).toContain('za');
   expect(result.ztmCountdown).toContain('min');
-  expect(result.ztmVehicle).toBe('#100');
+  expect(result.ztmVehicle).toBe('100');
   expect(result.ztmPlatform).toBe('5');
   expect(result.ztmStopTitle).toBe('Płocka');
   expect(result.ztmIcons).toBe(1);

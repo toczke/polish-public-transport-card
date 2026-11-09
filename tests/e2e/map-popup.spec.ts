@@ -86,7 +86,7 @@ test('map marker uses one compact popup and no tooltip', async ({ page }) => {
   expect(result.afterClick.popupOpen).toBe(true);
   expect(result.afterClick.popupContent).toContain('6');
   expect(result.afterClick.popupContent).toContain('Jelitkowo');
-  expect(result.afterClick.popupContent).toContain('#100');
+  expect(result.afterClick.popupContent).toContain('100');
   expect(result.afterClick.popupContent).not.toMatch(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u);
   expect(result.afterClick.icon.iconSize).toEqual([50, 50]);
   expect(result.afterClick.icon.iconAnchor).toEqual([25, 25]);

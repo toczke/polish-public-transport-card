@@ -687,7 +687,7 @@ export class PolishTransportCard extends LitElement {
       }
 
       const vehicleChip = (c.show_vehicle && d._provider !== "plk_rail" && d.vehicle_code && d.realtime)
-        ? html`<span class="vehicle-no" title=${t("show_vehicle")}>#${d.vehicle_code}</span>`
+        ? html`<span class="vehicle-no" title=${t("show_vehicle")}>${d.vehicle_code}</span>`
         : nothing;
       const platformText = (c.show_platform && d.platform && d._provider !== "plk_rail")
         ? html`<span class="platform" title=${t("platform")}>${d.platform}</span>`

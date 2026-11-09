@@ -48,5 +48,5 @@ test('route badge text contrast follows the badge background', async ({ page }) 
   expect(light?.color).toBe('rgb(17, 24, 39)');
   expect(dark?.background).toBe('rgb(218, 33, 40)');
   expect(dark?.color).toBe('rgb(255, 255, 255)');
-  expect(result.chips[0]).toEqual({ text: '#1026', color: 'rgb(244, 241, 233)', background: 'rgb(41, 40, 36)' });
+  expect(result.chips[0]).toEqual({ text: '1026', color: 'rgb(244, 241, 233)', background: 'rgb(41, 40, 36)' });
 });
