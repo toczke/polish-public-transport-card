@@ -1,6 +1,7 @@
 """Tests for provider_gtfsrt.py."""
 
 import zipfile
+from array import array
 from io import BytesIO
 from datetime import date, datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -19,6 +20,7 @@ from mzkzg_transport.gtfsrt_gzm import (
 from mzkzg_transport.gtfsrt_parser import (
     _parse_gtfs_zip,
     _parse_stop_times_for,
+    _parse_stop_times_from_raw,
     _read_csv,
     _parse_rt_feed,
     _parse_gtfsrt_positions,
@@ -88,6 +90,39 @@ def _calendar_line(service_id, active_today=True):
 
 
 CALENDAR_HEADER = "service_id,monday,tuesday,wednesday,thursday,friday,saturday,sunday,start_date,end_date"
+
+
+def _trip_update_feed(*updates):
+    """FeedMessage with one trip update per dict, each with one StopTimeUpdate at an absolute time.
+
+    Keys: trip_id, when, and optionally stop_sequence, stop_id, delay, start_date.
+    api6-open feeds send stop_sequence + time; mkuran's WKD feed sends stop_id + time.
+    """
+    from google.transit import gtfs_realtime_pb2
+
+    feed = gtfs_realtime_pb2.FeedMessage()
+    feed.header.gtfs_realtime_version = "2.0"
+    for index, update in enumerate(updates):
+        trip_update = feed.entity.add(id=str(index)).trip_update
+        trip_update.trip.trip_id = update["trip_id"]
+        if update.get("start_date"):
+            trip_update.trip.start_date = update["start_date"]
+        trip_update.vehicle.id = "3:689"
+        stu = trip_update.stop_time_update.add()
+        if update.get("stop_sequence") is not None:
+            stu.stop_sequence = update["stop_sequence"]
+        if update.get("stop_id"):
+            stu.stop_id = update["stop_id"]
+        for event in (stu.arrival, stu.departure):
+            event.time = int(update["when"].timestamp())
+            if update.get("delay") is not None:
+                event.delay = update["delay"]
+    return feed
+
+
+def _entry(trip_times, departure_time=(14, 5, 0)):
+    """A stop_times entry of this stop, as the parser builds it, from (stop_sequence, seconds) pairs."""
+    return {"departure_time": departure_time, "trip_times": array("i", [v for pair in trip_times for v in pair])}
 
 
 def test_parse_gtfsrt_vehicle_positions_without_pb_url():
@@ -285,6 +320,23 @@ class TestParseStopTimesFor:
         assert len(gtfs["stop_times"]["S1"]) == 1
         assert gtfs["stop_times"]["S1"][0]["trip_id"] == "T1"
 
+    def test_keeps_scheduled_times_up_to_the_stop(self):
+        """Each entry keeps its trip's stop_sequences and scheduled seconds, up to this stop."""
+        st = "trip_id,stop_id,departure_time,stop_sequence,stop_headsign\nT1,S1,08:30:00,1,\nT1,S2,08:35:00,2,\nT1,S3,08:40:00,3,"
+        gtfs = self._build_gtfs(st)
+        _parse_stop_times_for(gtfs, "S2")
+
+        assert gtfs["stop_times"]["S2"][0]["trip_times"] == array("i", [1, 30600, 2, 30900])
+
+    def test_secondary_zip_keeps_scheduled_times(self):
+        """Stop times from the secondary (tram) archive keep the same scheduled times."""
+        header = "trip_id,stop_id,departure_time,stop_sequence,stop_headsign"
+        gtfs = self._build_gtfs(header)
+        tram_zip = _make_gtfs_zip(stop_times=f"{header}\nT1,S1,08:30:00,1,\nT1,S2,08:35:00,2,\nT1,S3,08:40:00,3,")
+        _parse_stop_times_from_raw(gtfs, "S2", tram_zip)
+
+        assert gtfs["stop_times"]["S2"][0]["trip_times"] == array("i", [1, 30600, 2, 30900])
+
 
 @pytest.mark.gtfsrt
 class TestGetRtDelays:
@@ -366,6 +418,87 @@ class TestGetRtDelays:
         result = _parse_rt_feed(mock_feed)
 
         assert result["TRIP2_S2"] == (60, "BUS99")
+
+    def test_absolute_time_becomes_delay(self):
+        """A time-only update is compared with the schedule at its stop_sequence (api6-open)."""
+        day_start = datetime(2026, 11, 9, tzinfo=timezone.utc)
+        feed = _trip_update_feed(
+            {"trip_id": "T1", "stop_sequence": 20, "when": day_start + timedelta(hours=14, minutes=8, seconds=39)}
+        )
+
+        result = _parse_rt_feed(feed, {"T1": _entry([(19, 50400), (20, 50700)])}, "S1", day_start)
+
+        assert result["T1"] == (219, "3:689")
+        assert result["T1_seq20"] == (219, "3:689")
+
+    def test_absolute_time_at_this_stop_by_stop_id(self):
+        """An update with stop_id and no stop_sequence (WKD) is compared at this stop only."""
+        day_start = datetime(2026, 11, 9, tzinfo=timezone.utc)
+        when = day_start + timedelta(hours=14, minutes=5, seconds=40)
+        feed = _trip_update_feed(
+            {"trip_id": "T1", "stop_id": "S1", "when": when},
+            {"trip_id": "T2", "stop_id": "S9", "when": when},
+        )
+        entries = {"T1": _entry([(1, 50700)]), "T2": _entry([(1, 50700)])}
+
+        result = _parse_rt_feed(feed, entries, "S1", day_start)
+
+        assert result == {"T1_S1": (40, "3:689"), "T1": (40, "3:689")}
+
+    def test_absolute_time_without_schedule_is_skipped(self):
+        """Without a schedule a time-only update is unknown, not on time."""
+        day_start = datetime(2026, 11, 9, tzinfo=timezone.utc)
+        feed = _trip_update_feed(
+            {"trip_id": "T1", "stop_sequence": 20, "when": day_start + timedelta(hours=14, minutes=8)}
+        )
+
+        assert _parse_rt_feed(feed) == {}
+        assert _parse_rt_feed(feed, {"T1": _entry([(21, 50400)])}, "S1", day_start) == {}
+
+    def test_another_days_run_is_skipped(self):
+        """Trip ids repeat every day: tomorrow's run must not move today's departure."""
+        day_start = datetime(2026, 11, 9, tzinfo=timezone.utc)
+        today = {
+            "trip_id": "T1", "stop_sequence": 1, "start_date": "20261109",
+            "when": day_start + timedelta(hours=14, minutes=3),
+        }
+        tomorrow = {
+            "trip_id": "T1", "stop_sequence": 1, "start_date": "20261110",
+            "when": day_start + timedelta(days=1, hours=14),
+        }
+        entries = {"T1": _entry([(1, 50400)])}
+
+        for updates in ((today, tomorrow), (tomorrow, today)):
+            result = _parse_rt_feed(_trip_update_feed(*updates), entries, "S1", day_start)
+            assert result["T1"] == (180, "3:689")
+        assert _parse_rt_feed(_trip_update_feed(tomorrow), entries, "S1", day_start) == {}
+
+    def test_delay_field_wins_over_time(self):
+        """When a feed sends both, the delay field is used as before."""
+        day_start = datetime(2026, 11, 9, tzinfo=timezone.utc)
+        feed = _trip_update_feed(
+            {"trip_id": "T1", "stop_sequence": 20, "when": day_start + timedelta(hours=14, minutes=8), "delay": 45}
+        )
+
+        result = _parse_rt_feed(feed, {"T1": _entry([(20, 50400)])}, "S1", day_start)
+
+        assert result["T1"] == (45, "3:689")
+
+    def test_another_days_run_with_explicit_delay_is_skipped(self):
+        """Explicit delay must not leak from another service day."""
+        day_start = datetime(2026, 11, 9, tzinfo=timezone.utc)
+        tomorrow = {
+            "trip_id": "T1",
+            "stop_sequence": 1,
+            "start_date": "20261110",
+            "delay": 600,
+            "when": day_start + timedelta(days=1, hours=14),
+        }
+        entries = {"T1": _entry([(1, 50400)])}
+
+        assert _parse_rt_feed(
+            _trip_update_feed(tomorrow), entries, "S1", day_start
+        ) == {}
 
 
 @pytest.mark.gtfsrt
@@ -520,6 +653,162 @@ class TestFetchDeduplication:
         assert 60 in deps   # T1 matched by stop_id
         assert 90 in deps   # T2 matched by stop_sequence
         assert 120 in deps  # T3 matched by trip_id fallback
+
+    @pytest.mark.asyncio
+    async def test_time_only_feed_delay_at_an_earlier_stop(self):
+        """api6-open sends the time at the vehicle's current stop; the delay carries over."""
+        calendar = f"{CALENDAR_HEADER}\n{_calendar_line('SVC1', True)}"
+        stops = "stop_id,stop_name\nS0,Before\nS1,Stop\nS2,End"
+        routes = "route_id,route_short_name,route_type\nR1,5,0"
+        trips = "trip_id,route_id,service_id,trip_headsign\nT1,R1,SVC1,End"
+        st = (
+            "trip_id,stop_id,departure_time,stop_sequence,stop_headsign\n"
+            "T1,S0,23:40:00,1,End\n"
+            "T1,S1,23:55:00,2,End\n"
+            "T1,S2,23:59:00,3,"
+        )
+
+        data = _make_gtfs_zip(calendar=calendar, stops=stops, routes=routes, trips=trips, stop_times=st)
+
+        coord = MagicMock()
+        coord.provider = "gtfsrt_torun"
+        coord.stop_id = "S1"
+        coord.stop_name = "Stop"
+        coord.hass.data = {"mzkzg_transport": {}}
+        coord.hass.async_add_executor_job = AsyncMock(side_effect=lambda func, *args: func(*args))
+
+        mock_resp = AsyncMock()
+        mock_resp.status = 200
+        mock_resp.read = AsyncMock(return_value=data)
+        mock_resp.__aenter__ = AsyncMock(return_value=mock_resp)
+        mock_resp.__aexit__ = AsyncMock(return_value=False)
+
+        mock_session = MagicMock()
+        mock_session.get = MagicMock(return_value=mock_resp)
+        coord._get_session = AsyncMock(return_value=mock_session)
+
+        today = date.today()
+        fake_now = datetime(today.year, today.month, today.day, 23, 50, 0, tzinfo=timezone(timedelta(hours=1)))
+        # The tram left S0 three minutes late.
+        feed = _trip_update_feed({"trip_id": "T1", "stop_sequence": 1, "when": fake_now.replace(minute=43)})
+
+        async def fake_rt(session, url, trip_entries=None, stop_id=None, day_start=None):
+            return _parse_rt_feed(feed, trip_entries, stop_id, day_start)
+
+        with (
+            patch("mzkzg_transport.provider_gtfsrt._get_rt_delays", side_effect=fake_rt),
+            patch("mzkzg_transport.provider_gtfsrt._enrich_with_gps_positions", new_callable=AsyncMock),
+            patch("mzkzg_transport.provider_gtfsrt.async_get_alerts", new_callable=AsyncMock, return_value=[]),
+            patch("mzkzg_transport.provider_gtfsrt.dt_util") as mock_dt,
+        ):
+            mock_dt.now.return_value = fake_now
+            result = await fetch(coord)
+
+        dep = result["departures"][0]
+        assert dep["realtime"] is True
+        assert dep["delay_seconds"] == 180
+        assert dep["theoretical_time"] == fake_now.replace(minute=55).isoformat()
+        assert dep["estimated_time"] == fake_now.replace(minute=58).isoformat()
+
+    @pytest.mark.asyncio
+    async def test_late_departure_stays_after_its_scheduled_time(self):
+        """A departure scheduled 2 minutes ago that is 4 minutes late is still listed."""
+        calendar = f"{CALENDAR_HEADER}\n{_calendar_line('SVC1', True)}"
+        stops = "stop_id,stop_name\nS1,Stop\nS2,End"
+        routes = "route_id,route_short_name,route_type\nR1,5,0"
+        trips = "trip_id,route_id,service_id,trip_headsign\nT1,R1,SVC1,End\nT2,R1,SVC1,End"
+        st = (
+            "trip_id,stop_id,departure_time,stop_sequence,stop_headsign\n"
+            "T1,S1,23:48:00,1,End\n"
+            "T1,S2,23:58:00,2,\n"
+            "T2,S1,23:48:30,1,End\n"
+            "T2,S2,23:58:30,2,"
+        )
+
+        data = _make_gtfs_zip(calendar=calendar, stops=stops, routes=routes, trips=trips, stop_times=st)
+
+        coord = MagicMock()
+        coord.provider = "gtfsrt_poznan"
+        coord.stop_id = "S1"
+        coord.stop_name = "Stop"
+        coord.hass.data = {"mzkzg_transport": {}}
+        coord.hass.async_add_executor_job = AsyncMock(side_effect=lambda func, *args: func(*args))
+
+        mock_resp = AsyncMock()
+        mock_resp.status = 200
+        mock_resp.read = AsyncMock(return_value=data)
+        mock_resp.__aenter__ = AsyncMock(return_value=mock_resp)
+        mock_resp.__aexit__ = AsyncMock(return_value=False)
+
+        mock_session = MagicMock()
+        mock_session.get = MagicMock(return_value=mock_resp)
+        coord._get_session = AsyncMock(return_value=mock_session)
+
+        today = date.today()
+        fake_now = datetime(today.year, today.month, today.day, 23, 50, 0, tzinfo=timezone(timedelta(hours=1)))
+
+        with (
+            patch("mzkzg_transport.provider_gtfsrt._get_rt_delays", new_callable=AsyncMock, return_value={"T1_S1": (240, "V1")}),
+            patch("mzkzg_transport.provider_gtfsrt._get_vehicle_dict", new_callable=AsyncMock, return_value={}),
+            patch("mzkzg_transport.provider_gtfsrt._enrich_with_gps_positions", new_callable=AsyncMock),
+            patch("mzkzg_transport.provider_gtfsrt.dt_util") as mock_dt,
+        ):
+            mock_dt.now.return_value = fake_now
+            result = await fetch(coord)
+
+        today_deps = [d for d in result["departures"] if d.get("provider") != "schedule"]
+        assert [d["trip_id"] for d in today_deps] == ["T1"]  # T2 has no RT data and is gone
+        assert today_deps[0]["estimated_time"] == fake_now.replace(minute=52).isoformat()
+
+    @pytest.mark.asyncio
+    async def test_tomorrows_run_does_not_bring_back_this_mornings_departure(self):
+        """A vehicle's next trip can be tomorrow's run of a trip id that already ran today."""
+        calendar = f"{CALENDAR_HEADER}\n{_calendar_line('SVC1', True)}"
+        stops = "stop_id,stop_name\nS1,Stop\nS2,End"
+        routes = "route_id,route_short_name,route_type\nR1,5,0"
+        trips = "trip_id,route_id,service_id,trip_headsign\nT1,R1,SVC1,End"
+        st = "trip_id,stop_id,departure_time,stop_sequence,stop_headsign\nT1,S1,05:00:00,1,End\nT1,S2,05:10:00,2,"
+
+        data = _make_gtfs_zip(calendar=calendar, stops=stops, routes=routes, trips=trips, stop_times=st)
+
+        coord = MagicMock()
+        coord.provider = "gtfsrt_torun"
+        coord.stop_id = "S1"
+        coord.stop_name = "Stop"
+        coord.hass.data = {"mzkzg_transport": {}}
+        coord.hass.async_add_executor_job = AsyncMock(side_effect=lambda func, *args: func(*args))
+
+        mock_resp = AsyncMock()
+        mock_resp.status = 200
+        mock_resp.read = AsyncMock(return_value=data)
+        mock_resp.__aenter__ = AsyncMock(return_value=mock_resp)
+        mock_resp.__aexit__ = AsyncMock(return_value=False)
+
+        mock_session = MagicMock()
+        mock_session.get = MagicMock(return_value=mock_resp)
+        coord._get_session = AsyncMock(return_value=mock_session)
+
+        today = date.today()
+        fake_now = datetime(today.year, today.month, today.day, 14, 7, 0, tzinfo=timezone(timedelta(hours=1)))
+        tomorrow_run = fake_now.replace(hour=5, minute=0) + timedelta(days=1)
+        feed = _trip_update_feed(
+            {"trip_id": "T1", "stop_sequence": 1, "start_date": f"{tomorrow_run:%Y%m%d}", "when": tomorrow_run}
+        )
+
+        async def fake_rt(session, url, trip_entries=None, stop_id=None, day_start=None):
+            return _parse_rt_feed(feed, trip_entries, stop_id, day_start)
+
+        with (
+            patch("mzkzg_transport.provider_gtfsrt._get_rt_delays", side_effect=fake_rt),
+            patch("mzkzg_transport.provider_gtfsrt._enrich_with_gps_positions", new_callable=AsyncMock),
+            patch("mzkzg_transport.provider_gtfsrt.async_get_alerts", new_callable=AsyncMock, return_value=[]),
+            patch("mzkzg_transport.provider_gtfsrt.dt_util") as mock_dt,
+        ):
+            mock_dt.now.return_value = fake_now
+            result = await fetch(coord)
+
+        assert not any(d.get("realtime") for d in result["departures"])
+        assert not any(d.get("delay_seconds") for d in result["departures"])
 
 
     @pytest.mark.asyncio
