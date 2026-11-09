@@ -1,5 +1,6 @@
 import csv
 import codecs
+from array import array
 import re
 import unicodedata
 import zipfile
@@ -229,6 +230,28 @@ def _parse_gtfs_zip(data: bytes) -> dict:
     return {"stops": stops, "routes": routes, "trips": trips, "stop_times": stop_times, "_raw": raw_zip}
 
 
+def _gtfs_seconds(value: str) -> int | None:
+    """Return a GTFS time ("25:10:00" is allowed) in seconds from the service day start."""
+    try:
+        h, m, s = (int(x) for x in value.split(":"))
+    except ValueError:
+        return None
+    return h * 3600 + m * 60 + s
+
+
+def _trip_times(seqs, times):
+    """A trip's stops as one compact array of pairs: stop_sequence, seconds, stop_sequence, ...
+
+    Stops without a time are left out. One array per scheduled row keeps the cost low.
+    """
+    values = []
+    for seq, text in zip(seqs, times):
+        secs = _gtfs_seconds(text)
+        if secs is not None:
+            values += (seq, secs)
+    return array("i", values)
+
+
 def _parse_stop_times_for(gtfs, stop_id):
     """Parse stop_times from cached raw zip for a specific stop."""
     raw = gtfs.get("_raw")
@@ -250,6 +273,10 @@ def _parse_stop_times_for(gtfs, stop_id):
         our_entries = []
         last_seq_per_trip = {}  # trip_id -> (max_seq, stop_id)
         need_headsign = set()
+        # The current trip's stops so far. A realtime feed may send only an absolute time
+        # at the stop the vehicle is at; the delay is that time minus the schedule there.
+        # Rows of a trip are expected together, in order. Times are parsed only when kept.
+        run_trip, run_seqs, run_times = None, [], []
 
         for parts in reader:
             if len(parts) <= max(tid_idx, sid_idx, dep_idx):
@@ -259,6 +286,10 @@ def _parse_stop_times_for(gtfs, stop_id):
                 continue
             sid = parts[sid_idx]
             seq = int(parts[seq_idx]) if seq_idx >= 0 and len(parts) > seq_idx and parts[seq_idx].isdigit() else 0
+            if tid != run_trip:
+                run_trip, run_seqs, run_times = tid, [], []
+            run_seqs.append(seq)
+            run_times.append(parts[dep_idx])
 
             if sid == stop_id:
                 dep_str = parts[dep_idx]
@@ -270,7 +301,7 @@ def _parse_stop_times_for(gtfs, stop_id):
                 if hs_idx >= 0 and len(parts) > hs_idx:
                     hs = parts[hs_idx]
                 hs = hs or trips[tid].get("headsign", "")
-                our_entries.append({"trip_id": tid, "route_id": trips[tid].get("route_id", ""), "departure_time": (h, m, s), "headsign": hs, "stop_sequence": str(seq)})
+                our_entries.append({"trip_id": tid, "route_id": trips[tid].get("route_id", ""), "departure_time": (h, m, s), "headsign": hs, "stop_sequence": str(seq), "trip_times": _trip_times(run_seqs, run_times)})
                 if not hs:
                     need_headsign.add(tid)
 
@@ -311,6 +342,10 @@ def _parse_stop_times_from_raw(gtfs, stop_id, raw_data):
         our_entries = []
         last_seq_per_trip = {}
         need_headsign = set()
+        # The current trip's stops so far. A realtime feed may send only an absolute time
+        # at the stop the vehicle is at; the delay is that time minus the schedule there.
+        # Rows of a trip are expected together, in order. Times are parsed only when kept.
+        run_trip, run_seqs, run_times = None, [], []
 
         for parts in reader:
             if len(parts) <= max(tid_idx, sid_idx, dep_idx):
@@ -320,6 +355,10 @@ def _parse_stop_times_from_raw(gtfs, stop_id, raw_data):
                 continue
             sid = parts[sid_idx]
             seq = int(parts[seq_idx]) if seq_idx >= 0 and len(parts) > seq_idx and parts[seq_idx].isdigit() else 0
+            if tid != run_trip:
+                run_trip, run_seqs, run_times = tid, [], []
+            run_seqs.append(seq)
+            run_times.append(parts[dep_idx])
 
             if sid == stop_id:
                 dep_str = parts[dep_idx]
@@ -331,7 +370,7 @@ def _parse_stop_times_from_raw(gtfs, stop_id, raw_data):
                 if hs_idx >= 0 and len(parts) > hs_idx:
                     hs = parts[hs_idx]
                 hs = hs or trips[tid].get("headsign", "")
-                our_entries.append({"trip_id": tid, "route_id": trips[tid].get("route_id", ""), "departure_time": (h, m, s), "headsign": hs, "stop_sequence": str(seq)})
+                our_entries.append({"trip_id": tid, "route_id": trips[tid].get("route_id", ""), "departure_time": (h, m, s), "headsign": hs, "stop_sequence": str(seq), "trip_times": _trip_times(run_seqs, run_times)})
                 if not hs:
                     need_headsign.add(tid)
 
@@ -382,25 +421,74 @@ def _parse_gtfsrt_positions(raw):
     return positions
 
 
-def _parse_rt_feed(feed) -> dict:
+def _scheduled_seconds(stu, entry, stop_id):
+    """Scheduled seconds from the service day start at the update's stop, or None.
+
+    ``entry`` is this stop's stop_times entry for the update's trip.
+    """
+    if stu.HasField("stop_sequence"):
+        times = entry.get("trip_times", ())
+        seqs = times[0::2]
+        if stu.stop_sequence in seqs:
+            return times[2 * seqs.index(stu.stop_sequence) + 1]
+        return None
+    if stu.stop_id and stu.stop_id == stop_id:
+        h, m, s = entry["departure_time"]
+        return h * 3600 + m * 60 + s
+    return None
+
+
+def _stop_time_delay(stu, entry, stop_id, day_start):
+    """Return the delay of a StopTimeUpdate in seconds, or None when it is unknown."""
+    if stu.HasField("departure"):
+        event = stu.departure
+    elif stu.HasField("arrival"):
+        event = stu.arrival
+    else:
+        return 0
+    if event.HasField("delay"):
+        return event.delay
+    if entry is None or day_start is None or not event.HasField("time"):
+        return None
+    scheduled = _scheduled_seconds(stu, entry, stop_id)
+    if scheduled is None:
+        return None
+    return int(event.time - (day_start + timedelta(seconds=scheduled)).timestamp())
+
+
+def _parse_rt_feed(feed, trip_entries=None, stop_id=None, day_start=None) -> dict:
     """Parse a GTFS-RT FeedMessage into {key: (delay, vehicle_label)}.
 
     Only trip-specific keys are emitted. A route-level fallback would copy one
     trip's delay and vehicle to every other trip on the same route, which is
     especially visible in Poznań where many later trips share one bus.
+
+    Some feeds (api6-open on zbiorkom.live, mkuran.pl) send only an absolute
+    ``time``, no ``delay``. It is compared with the schedule of this stop's
+    stop_times entries (``trip_entries``: trip_id -> entry, times counted from
+    ``day_start``): at the update's stop_sequence, or at this stop when the update
+    has only ``stop_id``. An update without a delay that cannot be compared, or
+    that is for another day's run, is skipped instead of shown as on time.
     """
+    trip_entries = trip_entries or {}
+    today = f"{day_start:%Y%m%d}" if day_start else ""
     delays = {}
     for entity in feed.entity:
         if not entity.HasField("trip_update"):
             continue
-        trip_id = entity.trip_update.trip.trip_id
+        trip = entity.trip_update.trip
+        trip_id = trip.trip_id
+        # Trip ids repeat every day, and a vehicle's next trips can be tomorrow's runs.
+        entry = None if trip.start_date and trip.start_date != today else trip_entries.get(trip_id)
         vehicle_label = ""
         if entity.trip_update.HasField("vehicle"):
             v = entity.trip_update.vehicle
             vid = v.id or v.label or ""
             vehicle_label = vid.split("/")[-1] if "/" in vid else vid
         for stu in entity.trip_update.stop_time_update:
-            delay = stu.departure.delay if stu.HasField("departure") else (stu.arrival.delay if stu.HasField("arrival") else 0)
+            delay = _stop_time_delay(stu, entry, stop_id, day_start)
+            if delay is None:
+                continue
             if stu.stop_id:
                 delays[f"{trip_id}_{stu.stop_id}"] = (delay, vehicle_label)
             if stu.stop_sequence:

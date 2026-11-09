@@ -32,6 +32,25 @@ For a real provider, the official Poznań GTFS archive is about **11 MB**. Relea
 (plus a separate tram archive where configured). Tomorrow's small fallback lists are
 precomputed before the release so the first-departures behaviour is preserved.
 
+## Python: scheduled times for absolute-time realtime feeds
+
+Feeds that send only an absolute `time` (api6-open, Ełk, WKD) need the schedule at
+the stop the vehicle is at. Each stop_times entry therefore keeps `trip_times`: one
+`array("i")` of `stop_sequence, seconds` pairs for its trip, up to this stop.
+Measured on 2026-11-09 on Linux with Python 3.12 (tracemalloc, entries kept after
+the extraction):
+
+```text
+                              entries   base       with trip_times   per entry
+Toruń, busiest stop               633   223 KiB    375 KiB           +247 B
+Toruń, 5 busiest stops          2,679   934 KiB    1,603 KiB         +256 B
+Wrocław, busiest stop             829   291 KiB    523 KiB           +287 B
+Wrocław, 5 busiest stops        4,028   1,404 KiB  2,497 KiB         +278 B
+```
+
+One stop_times pass over the Wrocław archive took 0.46 s before and 0.47 s after;
+times are parsed only for the rows that are kept.
+
 ## Python: timetable cache
 
 `kiedyPrzyjeżdża` timetables are cached for one hour. The cache is pruned on every

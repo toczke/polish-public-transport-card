@@ -101,12 +101,14 @@ async def fetch(coord: "PolishTransportCoordinator") -> dict:
         stop_id,
     )
 
-    # Load RT delays
+    # Load RT delays. This stop's schedule turns feeds that send only absolute times into delays.
+    day_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    trip_entries = {st["trip_id"]: st for st in stop_times}
     delays = {}
     if city_cfg.get("rt_url"):
-        delays = await _get_rt_delays(session, city_cfg["rt_url"])
+        delays = await _get_rt_delays(session, city_cfg["rt_url"], trip_entries, stop_id, day_start)
     if city_cfg.get("rt_url_tram"):
-            tram_delays = await _get_rt_delays(session, city_cfg["rt_url_tram"])
+            tram_delays = await _get_rt_delays(session, city_cfg["rt_url_tram"], trip_entries, stop_id, day_start)
             delays.update(tram_delays)
 
     departures = []
@@ -118,7 +120,7 @@ async def fetch(coord: "PolishTransportCoordinator") -> dict:
 
         # Parse departure time
         h, m, s = st["departure_time"]
-        dep_dt = now.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(hours=h, minutes=m, seconds=s)
+        dep_dt = day_start + timedelta(hours=h, minutes=m, seconds=s)
         if dep_dt < now - timedelta(minutes=1):
             continue
 
@@ -572,7 +574,7 @@ def _apply_positions(departures, positions):
                 used.add(vid)
 
 
-async def _get_rt_delays(session, rt_url: str) -> dict:
+async def _get_rt_delays(session, rt_url: str, trip_entries=None, stop_id=None, day_start=None) -> dict:
     """Fetch GTFS-RT TripUpdates and return {trip_id_stop_id: delay_seconds}."""
     from google.transit import gtfs_realtime_pb2
     
@@ -586,7 +588,7 @@ async def _get_rt_delays(session, rt_url: str) -> dict:
 
             feed = gtfs_realtime_pb2.FeedMessage()
             feed.ParseFromString(data)
-            return _parse_rt_feed(feed)
+            return _parse_rt_feed(feed, trip_entries, stop_id, day_start)
         except (aiohttp.ClientConnectorError, aiohttp.ServerDisconnectedError, asyncio.TimeoutError) as e:
             last_err = e
             if attempt < 2:
