@@ -299,6 +299,76 @@ Bytów, Tczew.
 
 Realtime delays, vehicle positions and map availability depend on the upstream feed. A row without a position simply has no map action.
 
+### Provider capabilities
+
+Legend: **RT** realtime departures · **GPS** live vehicle positions/map · **Alerts** provider service alerts · **Wheelchair/Bike/AC** vehicle amenities. ✅ available · — not exposed · `✅*` depends on the upstream feed data.
+
+<!-- provider-capabilities:start -->
+| Provider | RT | GPS | Alerts | Wheelchair | Bike | AC |
+|---|:--:|:--:|:--:|:--:|:--:|:--:|
+| ZTM Gdańsk | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| ZKM Gdynia | ✅ | — | — | ✅ | ✅ | ✅ |
+| MZK Wejherowo | — | — | — | — | — | — |
+| Polskie Linie Kolejowe (PKP, SKM, PR, IC) | ✅ | — | — | — | — | — |
+| PKS Gdańsk Sp. z o.o. | ✅ | — | — | ✅* | ✅* | ✅* |
+| Albatros | ✅ | — | — | ✅* | ✅* | ✅* |
+| Przewozy Autobusowe GRYF | ✅ | — | — | ✅* | ✅* | ✅* |
+| Nord Express | ✅ | — | — | ✅* | ✅* | ✅* |
+| PKS Gdynia S.A. | ✅ | — | — | ✅* | ✅* | ✅* |
+| Miejski Zakład Komunikacji w Malborku | ✅ | — | — | ✅* | ✅* | ✅* |
+| PKS Słupsk S.A. | ✅ | — | — | ✅* | ✅* | ✅* |
+| MZK Starogard Gdański | ✅ | — | — | ✅* | ✅* | ✅* |
+| PKS Starogard Gdański S.A. | ✅ | — | — | ✅* | ✅* | ✅* |
+| MZK Bielsko-Biała | ✅ | — | — | ✅* | ✅* | ✅* |
+| Bytów | ✅ | — | — | ✅* | — | ✅* |
+| Powiat Człuchowski | ✅ | — | — | ✅* | ✅* | ✅* |
+| Gmina Czernica | ✅ | — | — | ✅* | ✅* | ✅* |
+| Tczew (Time4BUS) | ✅ | — | — | ✅* | — | ✅* |
+| MPK Łódź | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| ZTM Poznań | ✅ | ✅ | — | ✅* | ✅* | ✅* |
+| ZTM Lublin | ✅ | ✅ | ✅ | ✅* | ✅* | — |
+| MPK Kielce | ✅ | ✅ | ✅ | ✅* | ✅* | — |
+| MZDiK Radom | ✅ | ✅ | ✅ | ✅* | ✅* | — |
+| MPK Częstochowa | ✅ | ✅ | ✅ | ✅* | ✅* | — |
+| ZKM Elbląg | ✅ | ✅ | ✅ | ✅* | ✅* | — |
+| MZK Gorzów Wlkp. | ✅ | ✅ | ✅ | ✅* | ✅* | — |
+| PGK Suwałki | ✅ | ✅ | ✅ | ✅* | ✅* | — |
+| MZK Przemyśl | ✅ | ✅ | ✅ | ✅* | ✅* | — |
+| ZTZ Rybnik | ✅ | ✅ | ✅ | ✅* | ✅* | — |
+| MZK Kutno | ✅ | ✅ | ✅ | ✅* | ✅* | — |
+| MPK Legnica | ✅ | ✅ | ✅ | ✅* | ✅* | — |
+| ZTM GZM (Katowice) | ✅ | ✅ | — | ✅* | ✅* | — |
+| ZTP Kraków | ✅ | ✅ | ✅ | — | — | — |
+| ZDiTM Szczecin | ✅ | ✅ | ✅ | ✅* | ✅* | — |
+| ZTM Warszawa | ✅ | ✅ | ✅ | ✅* | ✅* | — |
+| MZK Ełk | ✅ | ✅ | — | ✅* | ✅* | — |
+| WKD | ✅ | — | — | ✅* | ✅* | — |
+| BKM Białystok | ✅ | ✅ | ✅ | ✅* | ✅* | — |
+| ZDZiT Olsztyn | ✅ | ✅ | ✅ | ✅* | ✅* | — |
+| MZK Opole | ✅ | ✅ | ✅ | ✅* | ✅* | — |
+| ZTM Rzeszów | ✅ | ✅ | ✅ | ✅* | ✅* | — |
+| MZK Toruń | ✅ | ✅ | ✅ | ✅* | ✅* | — |
+| MPK Wrocław | ✅ | ✅ | ✅ | ✅* | ✅* | — |
+| ZDMiKP Bydgoszcz | — | — | — | — | — | — |
+| MKS Mielec | ✅ | ✅ | ✅ | ✅* | ✅* | — |
+| MZK Oświęcim | ✅ | ✅ | ✅ | ✅* | ✅* | — |
+| MPK Radomsko | ✅ | ✅ | ✅ | ✅* | ✅* | — |
+| KM Kołobrzeg | — | — | — | — | — | — |
+| MZK Ostrołęka | — | — | — | — | — | — |
+| MZK Leszno | ✅ | ✅ | ✅ | ✅* | ✅* | — |
+| KA Świnoujście | ✅ | ✅ | ✅ | ✅* | ✅* | — |
+| ZKM Wałbrzych | ✅ | ✅ | ✅ | ✅* | ✅* | — |
+| MPK Tarnów | ✅ | ✅ | ✅ | ✅* | ✅* | — |
+| MZK Starachowice | ✅ | ✅ | ✅ | ✅* | ✅* | — |
+| MPK Siedlce | ✅ | ✅ | ✅ | ✅* | ✅* | — |
+| KM Płock | ✅ | ✅ | ✅ | ✅* | ✅* | — |
+| MZK Piła | ✅ | ✅ | ✅ | ✅* | ✅* | — |
+| MKS Krosno | ✅ | ✅ | ✅ | ✅* | ✅* | — |
+| MZK Koszalin | ✅ | ✅ | ✅ | ✅* | ✅* | — |
+| MZK Konin | ✅ | ✅ | ✅ | ✅* | ✅* | — |
+| MZK Kalisz | ✅ | ✅ | ✅ | ✅* | ✅* | — |
+<!-- provider-capabilities:end -->
+
 ---
 
 ## Data sources and caching
@@ -325,7 +395,9 @@ Caching and memory behaviour:
 
 Alerts are fetched from the best source each provider exposes:
 
-- **ZTM Gdańsk** — `bsk_rss.xml` current-situation RSS (line and stop-name matching),
+- **ZTM Gdańsk** — the `ztm.gda.pl/komunikaty` alert ticker plus `bsk_rss.xml`
+  (line and stop-name matching). The ticker is needed because the RSS feed can
+  lag behind fresh emergency messages.
 - **api6-open cities** — GTFS-RT `serviceAlerts` (e.g. Lublin, Poznań, GZM, Kraków, Wrocław, Białystok and the other api6 feeds),
 - **Warszawa** — `mkuran.pl/gtfs/warsaw/alerts.pb`,
 - **Szczecin** — `gtfs-rt-alerts.pb`,
@@ -337,7 +409,11 @@ simply expose no alerts.
 
 - `alerts_scope: matching` (default) shows only messages for this stop/line,
 - `alerts_scope: city` shows every current alert on the card,
-- `show_alerts: false` hides the banner entirely.
+- `show_alerts: false` hides the header alert icon and popup entirely.
+
+When alerts exist, the header shows a warning triangle with the message count.
+Clicking it opens a popup with the full messages; clicking the backdrop or the
+close button dismisses it. No icon is rendered when the list is empty.
 
 The source is cached for two minutes and the `alerts` / `alerts_city` attributes
 are excluded from recorder history.

@@ -32,6 +32,7 @@ export class PolishTransportCard extends LitElement {
     this._config = {};
     this._activeTab = 0;
     this._tickTimer = null;
+    this._alertsOpen = false;
   }
 
   static getStubConfig() {
@@ -295,27 +296,52 @@ export class PolishTransportCard extends LitElement {
     return alerts;
   }
 
-  _renderAlerts() {
-    if (!this._config.show_alerts) return nothing;
-    const alerts = this._getAlerts();
-    if (!alerts.length) return nothing;
+  _renderAlerts(alerts = this._getAlerts()) {
+    if (!this._config.show_alerts || !alerts.length || !this._alertsOpen) return nothing;
     return html`
-      <div class="alerts" role="status">
-        ${alerts.map((alert) => html`
-          <div class="alert-item">
-            <ha-icon icon="mdi:alert-circle-outline"></ha-icon>
-            <div class="alert-content">
-              <div class="alert-title">
-                ${alert.lines?.length ? html`<span class="alert-lines">${alert.lines.join(", ")}</span> ` : nothing}
-                ${alert.title || t("alert")}
-              </div>
-              ${alert.content ? html`<div class="alert-text">${alert.content}</div>` : nothing}
-            </div>
+      <div class="alerts-backdrop" @click=${this._closeAlerts}>
+        <div
+          class="alerts-popup"
+          role="dialog"
+          aria-modal="true"
+          aria-label="${t("alerts")}"
+          @click=${(event) => event.stopPropagation()}>
+          <div class="alerts-popup-head">
+            <span class="alerts-popup-title">${t("alerts")} (${alerts.length})</span>
+            <button class="alerts-close" title=${t("close")} aria-label=${t("close")} @click=${this._closeAlerts}>
+              <ha-icon icon="mdi:close"></ha-icon>
+            </button>
           </div>
-        `)}
+          <div class="alerts-list">
+            ${alerts.map((alert) => html`
+              <div class="alert-item">
+                <ha-icon icon="mdi:alert-circle-outline"></ha-icon>
+                <div class="alert-content">
+                  <div class="alert-title">
+                    ${alert.lines?.length ? html`<span class="alert-lines">${alert.lines.join(", ")}</span> ` : nothing}
+                    ${alert.title || t("alert")}
+                  </div>
+                  ${alert.content ? html`<div class="alert-text">${alert.content}</div>` : nothing}
+                </div>
+              </div>
+            `)}
+          </div>
+        </div>
       </div>
     `;
   }
+
+  _toggleAlerts = (event) => {
+    event?.stopPropagation();
+    this._alertsOpen = !this._alertsOpen;
+    this.requestUpdate();
+  };
+
+  _closeAlerts = () => {
+    if (!this._alertsOpen) return;
+    this._alertsOpen = false;
+    this.requestUpdate();
+  };
 
   _headsignsCompatible(first, second) {
     const a = String(first || "").trim().toLowerCase();
@@ -787,9 +813,20 @@ export class PolishTransportCard extends LitElement {
       : c.display_preset === "compact" ? "compact"
       : c.display_preset === "minimal" ? "minimal"
       : c.display_preset === "native" ? "native" : "";
+    const alerts = c.show_alerts ? this._getAlerts() : [];
 
     return html`
       <ha-card class="${cardClass}" data-theme="${c.theme_mode}" data-header="${c.header_style}">
+        ${!c.show_header && alerts.length ? html`
+          <button
+            class="alerts-fab"
+            title="${t("alerts")} (${alerts.length})"
+            aria-label="${t("alerts")} (${alerts.length})"
+            @click=${this._toggleAlerts}>
+            <ha-icon icon="mdi:alert"></ha-icon>
+            ${alerts.length > 1 ? html`<span class="alert-count">${alerts.length}</span>` : nothing}
+          </button>
+        ` : nothing}
         ${c.show_header ? html`
           <div class="header" style="background:${this._getHeaderColor()}">
             <span class="header-icon">${c.icon ? html`<ha-icon icon="${c.icon}" style="color:var(--ptc-header-text, #fff);--mdc-icon-size:20px"></ha-icon>` : this._getAutoIcon()}</span>
@@ -797,12 +834,23 @@ export class PolishTransportCard extends LitElement {
               <div class="header-title">${this._getTitle()}</div>
               <div class="header-sub">${this._getSubtitle()}</div>
             </div>
+            ${alerts.length ? html`
+              <button
+                class="header-alert"
+                title="${t("alerts")} (${alerts.length})"
+                aria-label="${t("alerts")} (${alerts.length})"
+                aria-expanded=${this._alertsOpen ? "true" : "false"}
+                @click=${this._toggleAlerts}>
+                <ha-icon icon="mdi:alert"></ha-icon>
+                ${alerts.length > 1 ? html`<span class="alert-count">${alerts.length}</span>` : nothing}
+              </button>
+            ` : nothing}
             ${c.show_clock ? html`<div class="header-clock">${this._getClock()}</div>` : nothing}
             ${c.show_refresh ? html`<button class="header-refresh ${this._refreshing ? "spinning" : ""}" title=${t("refresh")} @click=${this._refresh}><ha-icon icon="mdi:refresh"></ha-icon></button>` : nothing}
           </div>
         ` : nothing}
         ${this._renderTabs()}
-        ${this._renderAlerts()}
+        ${this._renderAlerts(alerts)}
         <div class="dep-list ${c.columns > 1 ? `columns-${c.columns}` : ""}" aria-live="polite" aria-atomic="true">
           ${this._renderDeps()}
         </div>

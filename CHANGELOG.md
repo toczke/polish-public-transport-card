@@ -14,10 +14,16 @@
 - **Badge contrast** - route badges now choose white or dark text from the badge
   background, and vehicle/platform chips take their background and text from the
   active Home Assistant theme surface and text colours.
+- **Provider capability matrix** - README now lists every offered provider with
+  realtime, GPS, alert and vehicle-amenity support.
 
 ### Changed
 - Vehicle chips and map popups show the vehicle number without a leading `#`
   (e.g. `1026` instead of `#1026`).
+- Gdańsk alerts merge the announcement-page ticker with `bsk_rss.xml`, so fresh
+  emergency messages are exposed even when the RSS feed lags behind.
+- The alert banner was replaced by a header warning triangle with a count and a
+  popup; the icon is only rendered when alerts exist.
 
 ## [2.0.1] - 2026-11-08
 

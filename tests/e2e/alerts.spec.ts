@@ -38,7 +38,16 @@ test('card renders matching and city-wide ZTM alerts', async ({ page }) => {
       card.hass = hass;
       document.body.appendChild(card);
       await new Promise((resolve) => setTimeout(resolve, 50));
-      return card.shadowRoot?.querySelector('.alerts')?.textContent || '';
+      const button = card.shadowRoot?.querySelector('.header-alert');
+      const before = card.shadowRoot?.querySelector('.alerts-popup')?.textContent || '';
+      button?.click();
+      await new Promise((resolve) => setTimeout(resolve, 30));
+      return {
+        hasButton: Boolean(button),
+        count: card.shadowRoot?.querySelector('.alert-count')?.textContent?.trim() || '',
+        before,
+        popup: card.shadowRoot?.querySelector('.alerts-popup')?.textContent || '',
+      };
     };
 
     return {
@@ -48,9 +57,15 @@ test('card renders matching and city-wide ZTM alerts', async ({ page }) => {
     };
   });
 
-  expect(result.matching).toContain('Awaryjna zmiana trasy linii 195');
-  expect(result.matching).not.toContain('Linie 117');
-  expect(result.city).toContain('Awaryjna zmiana trasy linii 195');
-  expect(result.city).toContain('Linie 117');
-  expect(result.hidden).toBe('');
+  expect(result.matching.hasButton).toBe(true);
+  expect(result.matching.count).toBe('');
+  expect(result.matching.before).toBe('');
+  expect(result.matching.popup).toContain('Awaryjna zmiana trasy linii 195');
+  expect(result.matching.popup).not.toContain('Linie 117');
+  expect(result.city.hasButton).toBe(true);
+  expect(result.city.count).toBe('2');
+  expect(result.city.popup).toContain('Awaryjna zmiana trasy linii 195');
+  expect(result.city.popup).toContain('Linie 117');
+  expect(result.hidden.hasButton).toBe(false);
+  expect(result.hidden.popup).toBe('');
 });

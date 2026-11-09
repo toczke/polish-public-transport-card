@@ -528,6 +528,7 @@ var De = "2.0.1", V = {
 		ac: "Klimatyzacja",
 		ticket_machine: "Biletomat",
 		alert: "Komunikat",
+		alerts: "Alerty",
 		platform: "peron",
 		last_update: "Odświeżono",
 		refresh: "Odśwież",
@@ -566,6 +567,7 @@ var De = "2.0.1", V = {
 		ac: "A/C",
 		ticket_machine: "Ticket machine",
 		alert: "Alert",
+		alerts: "Alerts",
 		platform: "platform",
 		last_update: "Updated",
 		refresh: "Refresh",
@@ -1795,6 +1797,7 @@ ha-card[data-theme="dark"] {
 * { box-sizing: border-box; margin: 0; padding: 0; }
 ha-card {
   display: block;
+  position: relative;
   overflow: hidden;
   font-family: var(--ha-card-header-font-family, inherit);
   background: var(--ptc-bg);
@@ -1831,15 +1834,105 @@ ha-card {
 .dep-list.columns-3 > .dep-row:nth-child(3n) { border-right: none; }
 .provider-header.line-header { text-transform: none; letter-spacing: 0; font-size: 12px; font-weight: 600; }
 .dep-list { list-style: none; }
-.alerts {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--ptc-divider);
-  background: rgba(255, 152, 0, 0.08);
+.header-alert,
+.alerts-fab {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.16);
+  color: var(--ptc-header-text);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.2s;
 }
-.alert-item { display: flex; align-items: flex-start; gap: 8px; }
+.header-alert:hover,
+.alerts-fab:hover { background: rgba(255, 255, 255, 0.28); }
+.header-alert:focus-visible,
+.alerts-fab:focus-visible { outline: 2px solid var(--ptc-focus); outline-offset: 1px; }
+.header-alert ha-icon,
+.alerts-fab ha-icon { --mdc-icon-size: 19px; }
+.alert-count {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 3px;
+  border-radius: 8px;
+  background: #dc2626;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 15px;
+  text-align: center;
+}
+.alerts-fab {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 6;
+  background: #b45309;
+  color: #fff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+.alerts-fab:hover { background: #92400e; }
+.alerts-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 16px;
+  overflow: auto;
+  background: rgba(0, 0, 0, 0.45);
+}
+.alerts-popup {
+  width: min(100%, 440px);
+  max-height: calc(100% - 32px);
+  overflow: auto;
+  background: var(--ptc-bg);
+  color: var(--ptc-text);
+  border: 1px solid var(--ptc-divider);
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+}
+.alerts-popup-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--ptc-bg);
+  border-bottom: 1px solid var(--ptc-divider);
+}
+.alerts-popup-title { font-size: 13px; font-weight: 600; }
+.alerts-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ptc-muted);
+  cursor: pointer;
+}
+.alerts-close:hover { background: var(--ptc-chip-bg); color: var(--ptc-text); }
+.alerts-close ha-icon { --mdc-icon-size: 18px; }
+.alerts-list { display: flex; flex-direction: column; }
+.alert-item { display: flex; align-items: flex-start; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--ptc-divider); }
+.alert-item:last-child { border-bottom: none; }
 .alert-item ha-icon {
   flex-shrink: 0;
   margin-top: 1px;
@@ -2326,7 +2419,7 @@ var Q = null, Je = null, Ye = class {
 	}
 	static styles = Ke;
 	constructor() {
-		super(), this.vehicleMap = new Ye(this), this._config = {}, this._activeTab = 0, this._tickTimer = null;
+		super(), this.vehicleMap = new Ye(this), this._config = {}, this._activeTab = 0, this._tickTimer = null, this._alertsOpen = !1;
 	}
 	static getStubConfig() {
 		return {
@@ -2548,26 +2641,45 @@ var Q = null, Je = null, Ye = class {
 		}
 		return e;
 	}
-	_renderAlerts() {
-		if (!this._config.show_alerts) return N;
-		let e = this._getAlerts();
-		return e.length ? j`
-      <div class="alerts" role="status">
-        ${e.map((e) => j`
-          <div class="alert-item">
-            <ha-icon icon="mdi:alert-circle-outline"></ha-icon>
-            <div class="alert-content">
-              <div class="alert-title">
-                ${e.lines?.length ? j`<span class="alert-lines">${e.lines.join(", ")}</span> ` : N}
-                ${e.title || H("alert")}
-              </div>
-              ${e.content ? j`<div class="alert-text">${e.content}</div>` : N}
-            </div>
+	_renderAlerts(e = this._getAlerts()) {
+		return !this._config.show_alerts || !e.length || !this._alertsOpen ? N : j`
+      <div class="alerts-backdrop" @click=${this._closeAlerts}>
+        <div
+          class="alerts-popup"
+          role="dialog"
+          aria-modal="true"
+          aria-label="${H("alerts")}"
+          @click=${(e) => e.stopPropagation()}>
+          <div class="alerts-popup-head">
+            <span class="alerts-popup-title">${H("alerts")} (${e.length})</span>
+            <button class="alerts-close" title=${H("close")} aria-label=${H("close")} @click=${this._closeAlerts}>
+              <ha-icon icon="mdi:close"></ha-icon>
+            </button>
           </div>
-        `)}
+          <div class="alerts-list">
+            ${e.map((e) => j`
+              <div class="alert-item">
+                <ha-icon icon="mdi:alert-circle-outline"></ha-icon>
+                <div class="alert-content">
+                  <div class="alert-title">
+                    ${e.lines?.length ? j`<span class="alert-lines">${e.lines.join(", ")}</span> ` : N}
+                    ${e.title || H("alert")}
+                  </div>
+                  ${e.content ? j`<div class="alert-text">${e.content}</div>` : N}
+                </div>
+              </div>
+            `)}
+          </div>
+        </div>
       </div>
-    ` : N;
+    `;
 	}
+	_toggleAlerts = (e) => {
+		e?.stopPropagation(), this._alertsOpen = !this._alertsOpen, this.requestUpdate();
+	};
+	_closeAlerts = () => {
+		this._alertsOpen && (this._alertsOpen = !1, this.requestUpdate());
+	};
 	_headsignsCompatible(e, t) {
 		let n = String(e || "").trim().toLowerCase(), r = String(t || "").trim().toLowerCase();
 		return !n || !r || n === r || n.startsWith(r) || r.startsWith(n);
@@ -2882,9 +2994,19 @@ var Q = null, Je = null, Ye = class {
 	}
 	render() {
 		if (!this._config) return N;
-		let e = this._config;
+		let e = this._config, t = e.display_preset === "e_ink" ? "e-ink" : e.display_preset === "compact" ? "compact" : e.display_preset === "minimal" ? "minimal" : e.display_preset === "native" ? "native" : "", n = e.show_alerts ? this._getAlerts() : [];
 		return j`
-      <ha-card class="${e.display_preset === "e_ink" ? "e-ink" : e.display_preset === "compact" ? "compact" : e.display_preset === "minimal" ? "minimal" : e.display_preset === "native" ? "native" : ""}" data-theme="${e.theme_mode}" data-header="${e.header_style}">
+      <ha-card class="${t}" data-theme="${e.theme_mode}" data-header="${e.header_style}">
+        ${!e.show_header && n.length ? j`
+          <button
+            class="alerts-fab"
+            title="${H("alerts")} (${n.length})"
+            aria-label="${H("alerts")} (${n.length})"
+            @click=${this._toggleAlerts}>
+            <ha-icon icon="mdi:alert"></ha-icon>
+            ${n.length > 1 ? j`<span class="alert-count">${n.length}</span>` : N}
+          </button>
+        ` : N}
         ${e.show_header ? j`
           <div class="header" style="background:${this._getHeaderColor()}">
             <span class="header-icon">${e.icon ? j`<ha-icon icon="${e.icon}" style="color:var(--ptc-header-text, #fff);--mdc-icon-size:20px"></ha-icon>` : this._getAutoIcon()}</span>
@@ -2892,12 +3014,23 @@ var Q = null, Je = null, Ye = class {
               <div class="header-title">${this._getTitle()}</div>
               <div class="header-sub">${this._getSubtitle()}</div>
             </div>
+            ${n.length ? j`
+              <button
+                class="header-alert"
+                title="${H("alerts")} (${n.length})"
+                aria-label="${H("alerts")} (${n.length})"
+                aria-expanded=${this._alertsOpen ? "true" : "false"}
+                @click=${this._toggleAlerts}>
+                <ha-icon icon="mdi:alert"></ha-icon>
+                ${n.length > 1 ? j`<span class="alert-count">${n.length}</span>` : N}
+              </button>
+            ` : N}
             ${e.show_clock ? j`<div class="header-clock">${this._getClock()}</div>` : N}
             ${e.show_refresh ? j`<button class="header-refresh ${this._refreshing ? "spinning" : ""}" title=${H("refresh")} @click=${this._refresh}><ha-icon icon="mdi:refresh"></ha-icon></button>` : N}
           </div>
         ` : N}
         ${this._renderTabs()}
-        ${this._renderAlerts()}
+        ${this._renderAlerts(n)}
         <div class="dep-list ${e.columns > 1 ? `columns-${e.columns}` : ""}" aria-live="polite" aria-atomic="true">
           ${this._renderDeps()}
         </div>
