@@ -493,6 +493,8 @@ npx playwright test
 
 The Python suite covers providers, GTFS/GTFS-RT parsing, migration, options flow, sensors, device links, caches and memory bounds. The Playwright suite covers the card, editor, maps and repeated card/map lifecycles.
 
+Pull requests run the full Python/frontend/HACS/E2E CI and additionally build the HACS archive as a downloadable workflow artifact. PR CI never creates a GitHub release; only a pushed `v*` tag publishes one.
+
 Development from 2.0.0 onward is driven by **issues and pull requests**. Please include the provider, stop ID/entity ID and a sample of the raw response when reporting data problems.
 
 ---

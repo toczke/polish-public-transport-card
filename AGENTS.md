@@ -184,7 +184,8 @@ Rules:
 4. Commit as `chore(release): x.y.z`.
 5. Tag `vx.y.z` and push the tag. The release workflow validates the tag against the manifest and publishes `polish-public-transport-card.zip`.
 6. Never tag a commit with a stale card bundle or mismatched version.
-7. A patch release is appropriate for fixes and small features; ask the maintainer before a minor/major jump.
+7. Pull-request CI runs the same checks and builds the HACS archive as an artifact, but never publishes a release; only a pushed `v*` tag does that.
+8. A patch release is appropriate for fixes and small features; ask the maintainer before a minor/major jump.
 
 ## Pull requests
 
