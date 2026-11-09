@@ -479,7 +479,9 @@ def _parse_rt_feed(feed, trip_entries=None, stop_id=None, day_start=None) -> dic
         trip = entity.trip_update.trip
         trip_id = trip.trip_id
         # Trip ids repeat every day, and a vehicle's next trips can be tomorrow's runs.
-        entry = None if trip.start_date and trip.start_date != today else trip_entries.get(trip_id)
+        if trip.start_date and trip.start_date != today:
+            continue
+        entry = trip_entries.get(trip_id)
         vehicle_label = ""
         if entity.trip_update.HasField("vehicle"):
             v = entity.trip_update.vehicle
