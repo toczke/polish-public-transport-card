@@ -4,7 +4,7 @@
 [![Version](https://img.shields.io/badge/version-2.0.1-blue.svg)](https://github.com/toczke/polish-public-transport-card/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![GitHub stars](https://img.shields.io/github/stars/toczke/polish-public-transport-card?style=social)](https://github.com/toczke/polish-public-transport-card/stargazers)
-[![Release downloads](https://img.shields.io/github/downloads/toczke/polish-public-transport-card/total?label=release%20downloads)](https://github.com/toczke/polish-public-transport-card/releases)
+[![Total downloads](https://img.shields.io/github/downloads/toczke/polish-public-transport-card/total?label=total%20downloads)](https://github.com/toczke/polish-public-transport-card/releases)
 
 Home Assistant integration + Lovelace card for real-time public transport departures in Poland. The integration groups all stops of one operator into a single hub, exposes per-stop and merged hub sensors, and ships its own Leaflet bundle for the live vehicle map.
 
@@ -43,8 +43,6 @@ From 2.0.0 onward development is driven by **GitHub issues and pull requests onl
     <img src="https://api.star-history.com/svg?repos=toczke/polish-public-transport-card&type=Date" alt="GitHub star history" width="680">
   </a>
 </p>
-
-HACS does not publish per-repository install counts. The badge above uses **GitHub release asset downloads** as the closest public proxy for HACS/manual installs.
 
 ---
 
