@@ -3,7 +3,7 @@
 DOMAIN = "mzkzg_transport"  # Technical legacy domain, kept so 2.0 can auto-migrate old entries.
 ENTITY_UNIQUE_PREFIX = "polish_transport"
 CONFIG_ENTRY_VERSION = 2
-INTEGRATION_VERSION = "2.0.3"
+INTEGRATION_VERSION = "2.0.4"
 DEVICE_MANUFACTURER = "Polish Transport"
 
 

@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.0.4] - 2026-11-10
+
+### Changed
+- Automated release of changes merged since v2.0.3.
+
 ## [2.0.3] - 2026-11-09
 
 ### Added

@@ -510,7 +510,7 @@ var Ee = z.litElementPolyfillSupport;
 Ee?.({ LitElement: B }), (z.litElementVersions ??= []).push("4.2.2");
 //#endregion
 //#region src/utils.js
-var De = "2.0.3", V = {
+var De = "2.0.4", V = {
 	pl: {
 		no_entities: "Dodaj encje sensorów w konfiguracji",
 		no_departures: "Brak nadchodzących odjazdów",
