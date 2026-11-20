@@ -43,3 +43,50 @@ def test_exact_unique_name_resolves_without_platform():
 
 def test_unknown_stop_is_not_guessed():
     assert resolve_stop_id(STOPS, "8000", "Nieistniejący przystanek") is None
+
+
+# Wrocław (zbiorkom) on 2026-11-19: existing slugs gained a random suffix and the
+# stop names changed format, so name matching alone cannot find them.
+WROCLAW_STOPS = {
+    "smolec-chlopska-glowna80370001-vlqwk": {"name": "Smolec - Chłopska/Główna 80370001"},
+    "smolec-chlopska-glowna80370002-vlm9v": {"name": "Smolec - Chłopska/Główna 80370002"},
+    "mokronos-gorny-wroclawska-gwarna80370005-wqn52": {"name": "Mokronos Górny - Wrocławska/Gwarna 80370005"},
+    "mokronos-gorny-wroclawska-gwarna80370006-wqwec": {"name": "Mokronos Górny - Wrocławska/Gwarna 80370006"},
+    "mokronos-gorny-topolowa-jarzebinowa80000007-whifl": {"name": "Mokronos Górny - Topolowa/Jarzębinowa 80000007"},
+    "mokronos-gorny-topolowa-jarzebinowa80000008-whifl": {"name": "Mokronos Górny - Topolowa/Jarzębinowa 80000008"},
+}
+
+
+def test_slug_with_new_random_suffix_is_resolved():
+    assert (
+        resolve_stop_id(WROCLAW_STOPS, "smolec-chlopska-glowna80370002", "Smolec Chłopska Główna")
+        == "smolec-chlopska-glowna80370002-vlm9v"
+    )
+    assert (
+        resolve_stop_id(
+            WROCLAW_STOPS,
+            "mokronos-gorny-wroclawska-gwarna80370005",
+            "Mokronos Górny Wrocławska Gwarna",
+        )
+        == "mokronos-gorny-wroclawska-gwarna80370005-wqn52"
+    )
+
+
+def test_changed_random_suffix_is_resolved_by_embedded_code():
+    assert (
+        resolve_stop_id(WROCLAW_STOPS, "smolec-chlopska-glowna80370001-abcde", "Smolec")
+        == "smolec-chlopska-glowna80370001-vlqwk"
+    )
+
+
+def test_shared_suffix_does_not_mix_platforms():
+    assert (
+        resolve_stop_id(
+            WROCLAW_STOPS, "mokronos-gorny-topolowa-jarzebinowa80000008", "Topolowa"
+        )
+        == "mokronos-gorny-topolowa-jarzebinowa80000008-whifl"
+    )
+
+
+def test_unknown_slug_code_is_not_guessed():
+    assert resolve_stop_id(WROCLAW_STOPS, "smolec-chlopska-glowna80379999", "Nieznany") is None

@@ -35,6 +35,19 @@ def _platform_suffix(name: str) -> str | None:
     return match.group(1).lstrip("0") or "0"
 
 
+_SLUG_SUFFIX_RE = re.compile(r"[a-z0-9]{5}")
+
+
+def _slug_stop_code(stop_id: str) -> str | None:
+    """Return the numeric stop code embedded in a zbiorkom slug, if any.
+
+    "smolec-chlopska-glowna80370002-vlm9v" and "smolec-chlopska-glowna80370002"
+    both give "80370002". Short numbers (platforms like "majdanek01") are ignored.
+    """
+    match = re.search(r"[a-z](\d{4,})(?:-[a-z0-9]{5})?$", str(stop_id or ""))
+    return match.group(1) if match else None
+
+
 def resolve_stop_id(stops: dict, old_id: str, old_name: str) -> str | None:
     """Resolve a stale stop ID after an operator changes GTFS stop identifiers.
 
@@ -46,6 +59,30 @@ def resolve_stop_id(stops: dict, old_id: str, old_name: str) -> str | None:
     old_id = str(old_id or "")
     if old_id in stops:
         return old_id
+
+    # zbiorkom feeds (Wrocław on 2026-11-19) append a random 5-char suffix to
+    # existing slugs: "smolec-chlopska-glowna80370002" became
+    # "smolec-chlopska-glowna80370002-vlm9v", while the stop names changed
+    # format too ("Smolec - Chłopska/Główna 80370002"), so name matching fails.
+    if old_id:
+        prefixed = [
+            str(stop_id)
+            for stop_id in stops
+            if str(stop_id).startswith(old_id + "-")
+            and _SLUG_SUFFIX_RE.fullmatch(str(stop_id)[len(old_id) + 1:])
+        ]
+        if len(prefixed) == 1:
+            return prefixed[0]
+
+    # The suffix itself can change again; the embedded stop code stays stable.
+    if old_id and not old_id.isdigit():
+        code = _slug_stop_code(old_id)
+        if code:
+            same_code = [
+                str(stop_id) for stop_id in stops if _slug_stop_code(str(stop_id)) == code
+            ]
+            if len(same_code) == 1:
+                return same_code[0]
 
     base = _stop_base_name(old_name)
     if not base:
