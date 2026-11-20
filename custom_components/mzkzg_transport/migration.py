@@ -37,6 +37,28 @@ from .const import (
 _LOGGER = logging.getLogger(__name__)
 
 
+def _find_device(
+    dev_reg: dr.DeviceRegistry,
+    identifier: tuple[str, str],
+    config_entry_ids: list[str] | tuple[str, ...] = (),
+) -> dr.DeviceEntry | None:
+    """Find a device without the deprecated ``async_get_device(identifiers=...)``.
+
+    Identifiers are no longer unique across config entries, so current Home
+    Assistant releases look devices up per config entry. Older releases (before
+    the per-entry API existed) still use ``async_get_device``, which is not
+    deprecated there.
+    """
+    lookup = getattr(dev_reg, "async_get_device_by_identifier", None)
+    if lookup is not None and config_entry_ids:
+        for entry_id in config_entry_ids:
+            device = lookup(identifier, entry_id)
+            if device is not None:
+                return device
+        return None
+    return dev_reg.async_get_device(identifiers={identifier})
+
+
 def slugify(value: object) -> str:
     """Create a stable Home Assistant object-id fragment."""
     text = str(value or "").replace("ł", "l").replace("Ł", "L")
@@ -337,13 +359,14 @@ async def async_heal_entity_ids(hass: HomeAssistant) -> None:
         if not stops:
             continue
 
-        hub_device = dev_reg.async_get_device(identifiers={(DOMAIN, provider)})
+        entry_ids = [entry.entry_id for entry in entries]
+        hub_device = _find_device(dev_reg, (DOMAIN, provider), entry_ids)
         hub_device_id = hub_device.id if hub_device else None
         stop_devices: dict[str, str] = {}
         for stop in stops:
             stop_id = stop["stop_id"]
-            device = dev_reg.async_get_device(
-                identifiers={(DOMAIN, f"{provider}_{stop_id}")}
+            device = _find_device(
+                dev_reg, (DOMAIN, f"{provider}_{stop_id}"), entry_ids
             )
             if device:
                 stop_devices[stop_id] = device.id
@@ -445,8 +468,8 @@ def async_remove_stop_entities(
         return
     dev_reg = dr.async_get(hass)
     ent_reg = er.async_get(hass)
-    device = dev_reg.async_get_device(
-        identifiers={(DOMAIN, f"{provider}_{stop_id}")}
+    device = _find_device(
+        dev_reg, (DOMAIN, f"{provider}_{stop_id}"), (entry.entry_id,)
     )
     if device is None:
         return

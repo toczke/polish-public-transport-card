@@ -1,5 +1,16 @@
 # Changelog
 
+## [Unreleased]
+
+### Fixed
+- **GTFS-RT stop IDs with a new random suffix** - zbiorkom feeds (MPK Wrocław on
+  2026-11-19) appended a random 5-character suffix to existing stop slugs
+  (`smolec-chlopska-glowna80370002` -> `smolec-chlopska-glowna80370002-vlm9v`) and
+  changed the stop-name format, so configured stops found no departures. The stop
+  resolver now matches by slug prefix and by the embedded numeric stop code.
+- Migration no longer calls the deprecated `device_registry.async_get_device`
+  (removed in Home Assistant 2027.8); it uses the per-entry lookup when available.
+
 ## [2.0.4] - 2026-11-10
 
 ### Changed
