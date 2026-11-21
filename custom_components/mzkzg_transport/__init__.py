@@ -214,16 +214,21 @@ async def _register_card(hass: HomeAssistant) -> None:
         if lovelace and hasattr(lovelace, "resources"):
             resources = lovelace.resources
             if hasattr(resources, "async_items") and isinstance(resources, ResourceStorageCollection):
+                # The collection loads lazily and async_items() is empty until then,
+                # so without this the card is added again next to the stored entry.
+                await resources.async_get_info()
                 existing = [
                     r for r in resources.async_items()
                     if f"/{DOMAIN}/" in (r.get("url") or "") or "/polish_transport/" in (r.get("url") or "")
                 ]
+                keep = next((r for r in existing if r.get("url") == CARD_URL), None)
                 # Create the current entry first — deleting first would leave the
                 # dashboard with no card resource at all if creation then fails.
-                if not any(r.get("url") == CARD_URL for r in existing):
+                if keep is None:
                     await resources.async_create_item({"res_type": "module", "url": CARD_URL})
+                # Old versions and duplicates of the current one.
                 for r in existing:
-                    if r.get("url") != CARD_URL:
+                    if r is not keep:
                         await resources.async_delete_item(r["id"])
             else:
                 _LOGGER.warning(
